@@ -40,8 +40,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   void _scorePoint(Player scorer) {
     if (!_engine.canScore) return;
-    final server = _engine.currentServer;
     final event = _engine.addPoint(scorer);
+    final server = _engine.currentServer; // who serves next, not who just served
     setState(() {});
 
     _voice.announce(announcementForPoint(

@@ -44,8 +44,9 @@ bool _isMatchPointFor(TableTennisScoringEngine engine, Player player) {
 }
 
 /// Decides what to announce for the point just scored, where [server] is
-/// whoever served that point (read *before* [TableTennisScoringEngine.
-/// addPoint] was called) and [event] is what that call returned. Reads
+/// whoever serves *next* (read *after* [TableTennisScoringEngine.addPoint]
+/// was called, so it reflects any service-rotation change caused by the
+/// point just played) and [event] is what that call returned. Reads
 /// [engine] state *after* the point has been applied.
 Announcement announcementForPoint({
   required TableTennisScoringEngine engine,

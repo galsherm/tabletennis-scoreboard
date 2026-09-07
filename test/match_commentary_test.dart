@@ -17,19 +17,41 @@ void main() {
       expect(announcement.clipKeys, ['number_1', 'number_0']);
     });
 
-    test('orders the numbers by server first, not by who just scored', () {
+    test(
+        'orders the numbers by who serves next, not by who just served or '
+        'who just scored', () {
       final engine =
           TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
-      engine.addPoint(Player.one); // 1-0, server still Player.one
-      final server = engine.currentServer;
-      final event = engine.addPoint(Player.two); // 1-1
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      for (var i = 0; i < 9; i++) {
+        engine.addPoint(Player.one);
+        engine.addPoint(Player.two);
+      }
+      engine.addPoint(Player.one); // 10-9
+      engine.addPoint(Player.two); // 10-10, deuce: service now rotates every
+      // point, so the very next point is a service-rotation boundary.
 
-      final expectedServer =
-          server == Player.one ? engine.player1Points : engine.player2Points;
-      final expectedReceiver =
-          server == Player.one ? engine.player2Points : engine.player1Points;
+      final serverWhoJustServed = engine.currentServer;
+      final event = engine.addPoint(Player.one); // 11-10
+      final serverWhoServesNext = engine.currentServer;
+
+      // Guard: if this scenario stopped crossing a service-rotation
+      // boundary (e.g. after an unrelated engine change), the assertion
+      // below would pass by coincidence instead of actually exercising the
+      // ordering, exactly like the bug this test was written to catch.
+      expect(serverWhoJustServed, isNot(serverWhoServesNext));
+
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: serverWhoServesNext,
+      );
+
+      final expectedServer = serverWhoServesNext == Player.one
+          ? engine.player1Points
+          : engine.player2Points;
+      final expectedReceiver = serverWhoServesNext == Player.one
+          ? engine.player2Points
+          : engine.player1Points;
       expect(announcement.speech, '$expectedServer, $expectedReceiver');
     });
   });
