@@ -92,6 +92,35 @@ void main() {
 
       expect(find.text('New match'), findsOneWidget);
     });
+
+    testWidgets(
+        'falls back to English for an unsupported RTL device locale '
+        '(Arabic) without crashing or leaving a broken layout',
+        (tester) async {
+      _setDeviceLocale(tester, const Locale('ar'));
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('New match'), findsOneWidget);
+      expect(find.text('Toss coin'), findsOneWidget);
+
+      // The resolved locale is English, so the UI should render
+      // left-to-right — not a half-RTL layout left over from the
+      // device's actual (unsupported) locale.
+      final directionality = Directionality.of(
+        tester.element(find.text('New match')),
+      );
+      expect(directionality, TextDirection.ltr);
+
+      // The rest of the setup screen (segmented button, toss/start
+      // buttons) should be present and tappable, not just the app bar
+      // title — i.e. this isn't a partially-broken/blank screen.
+      expect(find.byKey(const Key('bestOfSelector')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pump();
+      expect(find.byKey(const Key('startMatchButton')), findsOneWidget);
+    });
   });
 
   group('manual language override', () {
@@ -130,6 +159,33 @@ void main() {
           tester, const Key('languageOptionDe'));
       expect(find.text('Neues Spiel'), findsOneWidget);
 
+      await _openLanguageMenuAndSelect(
+          tester, const Key('languageOptionSystem'));
+      expect(find.text('New match'), findsOneWidget);
+    });
+
+    testWidgets(
+        'the manual override is still reachable and works after the device '
+        'falls back to English from an unsupported (Arabic) locale',
+        (tester) async {
+      _setDeviceLocale(tester, const Locale('ar'));
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+      // Confirm we're actually starting from the fallback-to-English case
+      // this test is meant to cover, not accidentally already localized.
+      expect(find.text('New match'), findsOneWidget);
+
+      await _openLanguageMenuAndSelect(
+          tester, const Key('languageOptionDe'));
+      expect(tester.takeException(), isNull);
+      expect(find.text('Neues Spiel'), findsOneWidget);
+
+      await _openLanguageMenuAndSelect(
+          tester, const Key('languageOptionFr'));
+      expect(find.text('Nouveau match'), findsOneWidget);
+
+      // And back to system default, which re-resolves to the (still
+      // unsupported) Arabic device locale -> English fallback again.
       await _openLanguageMenuAndSelect(
           tester, const Key('languageOptionSystem'));
       expect(find.text('New match'), findsOneWidget);

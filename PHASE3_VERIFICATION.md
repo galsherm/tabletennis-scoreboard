@@ -7,10 +7,12 @@ verify terminology myself), which strings are flagged as guesses rather
 than confirmed terminology, test results, and two real bugs found and fixed
 during implementation.
 
-**Status:** built and passing (77/77 tests). Two real bugs found in this
+**Status:** built and passing (79/79 tests). Two real bugs found in this
 phase's own new code during verification (not pre-existing) — both fixed,
-see §5. One scope decision needs your confirmation before Phase 4: no real
-German/French bundled voice clips ship yet (see §4).
+see §5. A follow-up verification pass (§7) confirmed locale fallback for
+unsupported/RTL languages (Spanish, Arabic) works correctly and added two
+more tests. One scope decision needs your confirmation before Phase 4: no
+real German/French bundled voice clips ship yet (see §4).
 
 ---
 
@@ -215,10 +217,11 @@ device locale" and "'System default' reverts a manual override" tests.
 
 ```
 flutter analyze → No issues found!
-flutter test    → 00:15 +77: All tests passed!
+flutter test    → 00:05 +79: All tests passed!
 ```
 
-77 tests total: the 53 from Phases 1–2, plus 24 new for Phase 3 —
+79 tests total: the 53 from Phases 1–2, plus 24 new for Phase 3, plus 2
+more added in the §7 follow-up verification pass —
 
 - `test/match_commentary_test.dart`: +6 (`CommentaryLanguage.fromLanguageCode`
   mapping, `CommentaryStrings.forLanguage`, and a full-event-coverage test
@@ -241,3 +244,54 @@ keep compiling/passing after this phase's changes (adding
 parameter to existing `announcementForPoint` calls in
 `match_commentary_test.dart`, and updating one test's `CheckedPopupMenuItem`
 generic type after Bug A's fix changed it from `Locale?` to a private enum).
+
+## 7. Follow-up verification: locale fallback for unsupported languages
+
+A later request specifically asked me to re-verify locale-fallback
+behavior for device languages entirely outside en/de/fr (e.g. Spanish,
+Arabic), since that's the scenario Bug B (§5) was about. Findings:
+
+**1. Is there an explicit resolution callback?** Yes —
+`_resolveDeviceLocale` in `lib/main.dart`, wired up via
+`MaterialApp.localeListResolutionCallback`. It matches the device's
+preferred locales against `AppLocalizations.supportedLocales` by language
+code and returns `Locale('en')` if nothing matches. This is the same fix
+from Bug B; nothing new was needed here, since it already covers "any
+locale outside en/de/fr," not just the Spanish case originally tested.
+
+**2. Does an unsupported locale crash or produce a broken UI?** No —
+confirmed with a new test using **Arabic** (`Locale('ar')`) specifically,
+not just Spanish, since Arabic is right-to-left and a more meaningful
+stress case than another LTR language would be:
+- `tester.takeException()` is `null` (no crash).
+- The setup screen renders normally in English ("New match", "Toss coin").
+- `Directionality.of(context)` resolves to `TextDirection.ltr` — the
+  layout follows the *resolved* (English) locale, not a leftover
+  right-to-left layout from the device's actual Arabic locale, which
+  would otherwise look broken (mirrored layout with English text).
+- The rest of the screen (segmented best-of selector, toss button, start
+  button) is present and interactive, not just the app bar title —
+  ruling out a partially-rendered/blank screen.
+
+**3. Is the manual override still reachable after this fallback?** Yes —
+confirmed with a new test: starting from an Arabic (unsupported) device
+locale, so the screen is already showing the English fallback, the
+language menu still opens and correctly switches to German, then French,
+then back to "System default" (which correctly re-resolves to English,
+since the device locale is still the unsupported Arabic one). No
+exceptions at any step.
+
+**New tests** (both in `test/localization_widget_test.dart`):
+- `device-locale auto-detection` › *"falls back to English for an
+  unsupported RTL device locale (Arabic) without crashing or leaving a
+  broken layout"*
+- `manual language override` › *"the manual override is still reachable
+  and works after the device falls back to English from an unsupported
+  (Arabic) locale"*
+
+```
+flutter analyze → No issues found!
+flutter test    → 00:05 +79: All tests passed!
+```
+
+No regressions; the two new tests bring the suite from 77 to 79.

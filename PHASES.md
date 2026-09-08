@@ -5,7 +5,7 @@ explicitly defer, and why — so whoever/whatever implements it (including a
 future Claude session working directly in this codebase) has the context
 without needing the original research reports.
 
-**Status:** Phases 1–3 complete and verified (77/77 tests passing). See
+**Status:** Phases 1–3 complete and verified (79/79 tests passing). See
 PHASE3_VERIFICATION.md for the full German/French string list, confidence
 flags for a native-speaker review, and one open item (no real German/French
 bundled voice clips ship yet — architecture only, see that doc §4).
