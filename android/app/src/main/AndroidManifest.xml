@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for both AdMob and Play Billing (Phase 5) — debug/profile
+         builds already get this from their own manifests, but a release
+         build only reads this one. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="tabletennis_scoreboard"
         android:name="${applicationName}"
@@ -30,6 +34,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- AdMob (Phase 5) — this is Google's published TEST App ID, safe
+             to ship during development but MUST be replaced with the real
+             App ID from the AdMob console before release. See
+             PHASE5_MONETIZATION.md / README.md for what to change. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

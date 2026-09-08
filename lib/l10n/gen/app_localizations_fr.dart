@@ -128,4 +128,58 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get themeDarkOption => 'Sombre';
+
+  @override
+  String get proMenuTooltip => 'Supprimer les publicités / Pro';
+
+  @override
+  String get proDialogTitle => 'Supprimer les publicités / Pro';
+
+  @override
+  String get proDialogDescriptionFree =>
+      'Achat unique : supprime les publicités et débloque l\'exportation des résultats de match.';
+
+  @override
+  String get proDialogAlreadyProTitle => 'Vous êtes Pro !';
+
+  @override
+  String get proDialogAlreadyProBody =>
+      'Les publicités sont supprimées et l\'exportation des matchs est débloquée. Merci pour votre soutien !';
+
+  @override
+  String get proBuyButton => 'Supprimer les publicités (achat unique)';
+
+  @override
+  String get proRestoreButton => 'Restaurer les achats';
+
+  @override
+  String get proStatusPending => 'Achat en cours…';
+
+  @override
+  String get proStatusSuccess => 'Achat réussi — publicités supprimées !';
+
+  @override
+  String get proStatusRestored => 'Achat restauré — publicités supprimées !';
+
+  @override
+  String get proStatusCancelled => 'Achat annulé.';
+
+  @override
+  String get proStatusError =>
+      'Une erreur est survenue lors de l\'achat. Veuillez réessayer.';
+
+  @override
+  String get proStatusRestoreNotFound => 'Aucun achat précédent trouvé.';
+
+  @override
+  String get exportMatchButton => 'Exporter le résultat du match';
+
+  @override
+  String get exportMatchCopied =>
+      'Résultat du match copié dans le presse-papiers';
+
+  @override
+  String exportGameLine(int number, int player1Points, int player2Points) {
+    return 'Manche $number : $player1Points-$player2Points';
+  }
 }

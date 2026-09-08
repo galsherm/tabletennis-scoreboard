@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
 import '../models/player_names.dart';
 import '../models/scoring_engine.dart';
+import '../services/ads_service.dart';
 import '../services/commentary_strings.dart';
+import '../services/match_export.dart';
+import '../services/monetization_controller.dart';
+import '../services/pro_status_store.dart';
+import '../services/purchase_gateway.dart';
 import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
@@ -24,12 +30,20 @@ class ScoreboardScreen extends StatefulWidget {
   /// this screen is showing, names render as plain, uneditable text.
   final PlayerNames? initialNames;
 
+  /// Owns ads/purchases/Pro status (Phase 5) — overridable for tests to
+  /// inject fakes; defaults to a real, self-initializing instance
+  /// otherwise, matching [voiceAnnouncer]'s optional-with-safe-default
+  /// pattern. See [SetupScreen.monetization] for the ownership rule this
+  /// follows.
+  final MonetizationController? monetization;
+
   const ScoreboardScreen({
     super.key,
     required this.bestOf,
     required this.firstServer,
     this.voiceAnnouncer,
     this.initialNames,
+    this.monetization,
   });
 
   @override
@@ -49,6 +63,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   /// permanently lose it until the user backs all the way out to setup.
   late final PlayerNames _names;
 
+  late final MonetizationController _monetization;
+  late final bool _ownsMonetization;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +74,25 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       firstServer: widget.firstServer,
     );
     _names = widget.initialNames ?? PlayerNames();
+    final injected = widget.monetization;
+    if (injected != null) {
+      _monetization = injected;
+      _ownsMonetization = false;
+    } else {
+      _monetization = MonetizationController(
+        ads: AdMobAdsService(),
+        purchases: InAppPurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+      );
+      _ownsMonetization = true;
+      _monetization.initialize();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_ownsMonetization) _monetization.dispose();
+    super.dispose();
   }
 
   @override
@@ -165,6 +201,12 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   void _showMatchCompleteDialog(Player winner) {
     final l10n = AppLocalizations.of(context);
+    // Fire-and-forget: on a real device, a loaded interstitial takes over
+    // the full screen and the dialog beneath it simply appears once
+    // dismissed; if Pro has removed ads or none was ready, this is a
+    // no-op and the dialog shows immediately, exactly as before Phase 5.
+    _monetization.maybeShowMatchEndAd();
+    final isPro = _monetization.isPro;
     showDialog(
       context: context,
       builder: (_) => MatchCompleteDialog(
@@ -172,12 +214,37 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         titleText: l10n.matchCompleteDialogTitle,
         messageText: l10n.matchCompleteMessage(_playerLabel(winner)),
         buttonText: l10n.newMatchButton,
+        exportButtonText: isPro ? l10n.exportMatchButton : null,
+        onExport: isPro ? () => _exportMatch(winner) : null,
+        exportedConfirmationText: isPro ? l10n.exportMatchCopied : null,
         onNewMatch: () {
           Navigator.of(context).pop();
           _resetMatch();
         },
       ),
     );
+  }
+
+  /// Pro-only (Phase 5): copies a plain-text summary of the just-completed
+  /// match to the clipboard — the minimal "match-history export" scoped
+  /// for this phase (one match, not a saved history). The dialog itself
+  /// shows the "copied" confirmation (see [MatchCompleteDialog.
+  /// exportedConfirmationText]) rather than a SnackBar here, since a
+  /// SnackBar triggered from within an open dialog never actually
+  /// animates into view. See PHASE5_MONETIZATION.md.
+  void _exportMatch(Player winner) {
+    final l10n = AppLocalizations.of(context);
+    final summary = buildMatchExportSummary(
+      appTitle: l10n.appTitle,
+      player1Label: _playerLabel(Player.one),
+      player2Label: _playerLabel(Player.two),
+      completedGames: _engine.completedGames,
+      bestOf: widget.bestOf,
+      gameLine: (number, p1Points, p2Points) =>
+          l10n.exportGameLine(number, p1Points, p2Points),
+      winnerMessage: l10n.matchCompleteMessage(_playerLabel(winner)),
+    );
+    Clipboard.setData(ClipboardData(text: summary));
   }
 
   @override

@@ -14,7 +14,17 @@ import '../theme/app_theme.dart';
 /// sports broadcast" direction the match-start transition set. The
 /// winner announcement itself is large, bold, and centered, rather than
 /// the small muted body text a default `AlertDialog` gives its content.
-class MatchCompleteDialog extends StatelessWidget {
+///
+/// Stateful since Phase 5, purely to show the "copied" confirmation for
+/// the export button (see [_MatchCompleteDialogState._exported]) inline,
+/// rather than via a `ScaffoldMessenger` SnackBar: Flutter freezes the
+/// ticker on a route once another route is pushed above it, so a SnackBar
+/// triggered by a button *inside* this dialog would sit on the obscured
+/// Scaffold underneath and never actually animate into view — a real bug
+/// a real user would hit, not just a test artifact. Showing the
+/// confirmation inside the dialog's own (current, un-paused) route
+/// sidesteps that entirely. See PHASE5_MONETIZATION.md.
+class MatchCompleteDialog extends StatefulWidget {
   /// e.g. "Match complete" — shown as a small muted eyebrow heading.
   final String titleText;
 
@@ -27,13 +37,42 @@ class MatchCompleteDialog extends StatelessWidget {
   final String buttonText;
   final VoidCallback onNewMatch;
 
+  /// Pro-only "Export match result" action (Phase 5) — both null together
+  /// means no export button at all (free users, or Pro not yet loaded),
+  /// so callers gate this by passing non-null only when
+  /// `MonetizationController.isPro` is true rather than needing a
+  /// separate boolean flag. See PHASE5_MONETIZATION.md.
+  final String? exportButtonText;
+  final VoidCallback? onExport;
+
+  /// Shown in place of [exportButtonText] once [onExport] has been
+  /// tapped, e.g. "Match result copied to clipboard" — required whenever
+  /// [exportButtonText] is, since the button always needs *some* label to
+  /// switch to once tapped.
+  final String? exportedConfirmationText;
+
   const MatchCompleteDialog({
     super.key,
     required this.titleText,
     required this.messageText,
     required this.buttonText,
     required this.onNewMatch,
+    this.exportButtonText,
+    this.onExport,
+    this.exportedConfirmationText,
   });
+
+  @override
+  State<MatchCompleteDialog> createState() => _MatchCompleteDialogState();
+}
+
+class _MatchCompleteDialogState extends State<MatchCompleteDialog> {
+  bool _exported = false;
+
+  void _handleExport() {
+    widget.onExport?.call();
+    setState(() => _exported = true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,12 +100,12 @@ class MatchCompleteDialog extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              titleText.toUpperCase(),
+              widget.titleText.toUpperCase(),
               style: AppTypography.eyebrow(context),
             ),
             const SizedBox(height: 10),
             Text(
-              messageText,
+              widget.messageText,
               key: const Key('matchCompleteMessageText'),
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -82,10 +121,25 @@ class MatchCompleteDialog extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 key: const Key('newMatchButton'),
-                onPressed: onNewMatch,
-                child: Text(buttonText),
+                onPressed: widget.onNewMatch,
+                child: Text(widget.buttonText),
               ),
             ),
+            if (widget.exportButtonText != null && widget.onExport != null) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  key: const Key('exportMatchButton'),
+                  onPressed: _exported ? null : _handleExport,
+                  icon: Icon(_exported ? Icons.check : Icons.ios_share),
+                  label: Text(_exported
+                      ? (widget.exportedConfirmationText ??
+                          widget.exportButtonText!)
+                      : widget.exportButtonText!),
+                ),
+              ),
+            ],
           ],
         ),
       ),

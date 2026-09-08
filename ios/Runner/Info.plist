@@ -24,6 +24,15 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- AdMob (Phase 5) — this is Google's published TEST App ID, safe to
+	     ship during development but MUST be replaced with the real App ID
+	     from the AdMob console before release. See PHASE5_MONETIZATION.md
+	     / README.md for what to change, including the SKAdNetworkItems
+	     entries and NSUserTrackingUsageDescription that Apple also
+	     requires before a real (non-test) ad unit can serve personalized
+	     ads on iOS. -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

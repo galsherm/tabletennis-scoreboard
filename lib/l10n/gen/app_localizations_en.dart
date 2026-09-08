@@ -128,4 +128,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeDarkOption => 'Dark';
+
+  @override
+  String get proMenuTooltip => 'Remove Ads / Pro';
+
+  @override
+  String get proDialogTitle => 'Remove Ads / Pro';
+
+  @override
+  String get proDialogDescriptionFree =>
+      'A one-time purchase that removes ads and unlocks exporting your match results.';
+
+  @override
+  String get proDialogAlreadyProTitle => 'You\'re Pro!';
+
+  @override
+  String get proDialogAlreadyProBody =>
+      'Ads are removed and match export is unlocked. Thanks for your support!';
+
+  @override
+  String get proBuyButton => 'Remove Ads (One-Time Purchase)';
+
+  @override
+  String get proRestoreButton => 'Restore purchases';
+
+  @override
+  String get proStatusPending => 'Purchase pending…';
+
+  @override
+  String get proStatusSuccess => 'Purchase successful — ads removed!';
+
+  @override
+  String get proStatusRestored => 'Purchase restored — ads removed!';
+
+  @override
+  String get proStatusCancelled => 'Purchase cancelled.';
+
+  @override
+  String get proStatusError =>
+      'Something went wrong with the purchase. Please try again.';
+
+  @override
+  String get proStatusRestoreNotFound => 'No previous purchase found.';
+
+  @override
+  String get exportMatchButton => 'Export match result';
+
+  @override
+  String get exportMatchCopied => 'Match result copied to clipboard';
+
+  @override
+  String exportGameLine(int number, int player1Points, int player2Points) {
+    return 'Game $number: $player1Points-$player2Points';
+  }
 }

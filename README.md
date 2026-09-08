@@ -81,3 +81,69 @@ A few specific things worth double-checking once you can run it:
   UI as one `PointEvent` per point, rather than the UI polling engine state
   after every tap. A completed game always implies a change of ends, so the
   UI shows one banner per point, never two stacked ones.
+
+## Phase 5 — Monetization: what to configure before release
+
+See `PHASE5_MONETIZATION.md` for the full design writeup. This section is
+just the release checklist — everything here currently points at
+Google/Apple's published **test** IDs, which work out of the box for
+development but must never ship to a real store listing.
+
+### AdMob
+
+1. Create a real AdMob app (one for Android, one for iOS) in the
+   [AdMob console](https://apps.admob.com/), linked to your Play Console /
+   App Store Connect listing.
+2. Replace the test **App ID** in:
+   - `android/app/src/main/AndroidManifest.xml` — the
+     `com.google.android.gms.ads.APPLICATION_ID` meta-data value (currently
+     `ca-app-pub-3940256099942544~3347511713`, Google's published Android
+     test App ID).
+   - `ios/Runner/Info.plist` — the `GADApplicationIdentifier` value
+     (currently `ca-app-pub-3940256099942544~1458002511`, Google's
+     published iOS test App ID).
+3. Create a real **interstitial ad unit** (one per platform) and replace the
+   test ad unit IDs in `lib/services/ads_service.dart`
+   (`_testInterstitialAdUnitId`) — currently
+   `ca-app-pub-3940256099942544/1033173712` (Android) and
+   `ca-app-pub-3940256099942544/4411468910` (iOS), Google's published test
+   interstitial units.
+4. iOS only: before a real (non-test) ad unit can serve personalized ads,
+   Apple requires `SKAdNetworkItems` entries in `Info.plist` (a list Google
+   publishes and updates) and, if you want personalized ads at all, an App
+   Tracking Transparency prompt (`NSUserTrackingUsageDescription` +
+   `AppTrackingTransparency.requestTrackingAuthorization`) — neither is
+   implemented yet, since it isn't needed for test ads. Non-personalized
+   ads (`AdRequest(nonPersonalizedAds: true)`) are simpler and avoid this
+   entirely if you'd rather skip it.
+
+### Google Play Billing (in-app purchase)
+
+1. In Play Console, create a non-consumable **in-app product** with a real
+   product ID and set its price (the design target was **~€2.99**,
+   localized per store — Play Console handles per-country pricing).
+2. Replace `proProductId` in `lib/services/purchase_gateway.dart` (currently
+   the placeholder `remove_ads_pro_test`) with that real product ID.
+3. For testing real purchases before release, add license testers in Play
+   Console (Setup → License testing) — test-track purchases by license
+   testers don't charge real money.
+4. iOS: create the matching non-consumable In-App Purchase in App Store
+   Connect with the **same product ID** used in
+   `purchase_gateway.dart` (the `in_app_purchase` plugin uses one product ID
+   across both stores) and use a Sandbox tester account for pre-release
+   testing.
+
+### What's already handled
+
+- Ads never show mid-match — only a single interstitial at match end, and
+  never at all once Pro is purchased.
+- Purchases restore via "Restore purchases" in the Pro dialog (setup
+  screen's app-bar icon), with localized (en/de/fr) feedback for every
+  outcome: pending, success, restored, cancelled, error, and "nothing to
+  restore."
+- Nothing in `lib/services/ads_service.dart` or
+  `lib/services/purchase_gateway.dart` can crash the app if the platform
+  plugin is unavailable (e.g. running in `flutter test`, or on a platform
+  without Play Services) — every real call is wrapped and degrades to "no
+  ad" / "not Pro" silently, the same pattern already used for
+  `VoiceAnnouncer` and `ThemePreference`.

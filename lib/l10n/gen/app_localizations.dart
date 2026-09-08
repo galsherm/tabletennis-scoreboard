@@ -321,6 +321,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dark'**
   String get themeDarkOption;
+
+  /// Tooltip on the app-bar icon that opens the Pro purchase dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Ads / Pro'**
+  String get proMenuTooltip;
+
+  /// Title of the Pro purchase dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Ads / Pro'**
+  String get proDialogTitle;
+
+  /// Body text shown in the Pro dialog when the user has not purchased Pro yet.
+  ///
+  /// In en, this message translates to:
+  /// **'A one-time purchase that removes ads and unlocks exporting your match results.'**
+  String get proDialogDescriptionFree;
+
+  /// Heading shown in the Pro dialog once the user already owns Pro.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re Pro!'**
+  String get proDialogAlreadyProTitle;
+
+  /// Body text shown in the Pro dialog once the user already owns Pro.
+  ///
+  /// In en, this message translates to:
+  /// **'Ads are removed and match export is unlocked. Thanks for your support!'**
+  String get proDialogAlreadyProBody;
+
+  /// Button that starts the Pro purchase flow. Deliberately has no price baked in — the OS purchase sheet shows the real, store-localized price; see PHASE5_MONETIZATION.md for the target ~€2.99 price to configure in Play Console.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Ads (One-Time Purchase)'**
+  String get proBuyButton;
+
+  /// Button that re-queries the store for a previous purchase (required by store policy, and essential after a reinstall or device switch).
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases'**
+  String get proRestoreButton;
+
+  /// Feedback shown while a purchase is pending (e.g. awaiting parental approval or slow network).
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase pending…'**
+  String get proStatusPending;
+
+  /// Feedback shown when a new purchase completes successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase successful — ads removed!'**
+  String get proStatusSuccess;
+
+  /// Feedback shown when Restore purchases finds and reinstates a previous purchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase restored — ads removed!'**
+  String get proStatusRestored;
+
+  /// Feedback shown when the user cancels the purchase flow (e.g. dismisses the OS payment sheet).
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase cancelled.'**
+  String get proStatusCancelled;
+
+  /// Feedback shown when a purchase or restore attempt fails for any reason (network, store unavailable, product misconfigured).
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong with the purchase. Please try again.'**
+  String get proStatusError;
+
+  /// Feedback shown when Restore purchases finds nothing to restore.
+  ///
+  /// In en, this message translates to:
+  /// **'No previous purchase found.'**
+  String get proStatusRestoreNotFound;
+
+  /// Pro-only button on the match-complete dialog that copies a plain-text summary of the match to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Export match result'**
+  String get exportMatchButton;
+
+  /// Confirmation shown after exportMatchButton is tapped.
+  ///
+  /// In en, this message translates to:
+  /// **'Match result copied to clipboard'**
+  String get exportMatchCopied;
+
+  /// One line per completed game in the exported match-result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Game {number}: {player1Points}-{player2Points}'**
+  String exportGameLine(int number, int player1Points, int player2Points);
 }
 
 class _AppLocalizationsDelegate

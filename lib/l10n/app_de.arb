@@ -36,5 +36,21 @@
   "themeMenuTooltip": "Design",
   "themeSystemOption": "Systemstandard",
   "themeLightOption": "Hell",
-  "themeDarkOption": "Dunkel"
+  "themeDarkOption": "Dunkel",
+  "proMenuTooltip": "Werbung entfernen / Pro",
+  "proDialogTitle": "Werbung entfernen / Pro",
+  "proDialogDescriptionFree": "Einmaliger Kauf: entfernt Werbung und schaltet den Export der Spielergebnisse frei.",
+  "proDialogAlreadyProTitle": "Du bist Pro!",
+  "proDialogAlreadyProBody": "Werbung ist entfernt und der Spielexport ist freigeschaltet. Danke für deine Unterstützung!",
+  "proBuyButton": "Werbung entfernen (einmaliger Kauf)",
+  "proRestoreButton": "Käufe wiederherstellen",
+  "proStatusPending": "Kauf wird bearbeitet …",
+  "proStatusSuccess": "Kauf erfolgreich — Werbung entfernt!",
+  "proStatusRestored": "Kauf wiederhergestellt — Werbung entfernt!",
+  "proStatusCancelled": "Kauf abgebrochen.",
+  "proStatusError": "Beim Kauf ist ein Fehler aufgetreten. Bitte versuche es erneut.",
+  "proStatusRestoreNotFound": "Kein vorheriger Kauf gefunden.",
+  "exportMatchButton": "Spielergebnis exportieren",
+  "exportMatchCopied": "Spielergebnis in die Zwischenablage kopiert",
+  "exportGameLine": "Satz {number}: {player1Points}-{player2Points}"
 }

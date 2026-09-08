@@ -5,9 +5,14 @@ import 'package:flutter/material.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
 import '../models/player_names.dart';
+import '../services/ads_service.dart';
+import '../services/monetization_controller.dart';
+import '../services/pro_status_store.dart';
+import '../services/purchase_gateway.dart';
 import '../theme/app_theme.dart';
 import '../widgets/coin_flip_indicator.dart';
 import '../widgets/editable_name_label.dart';
+import '../widgets/pro_dialog.dart';
 import 'doubles_scoreboard_screen.dart';
 import 'match_transition_screen.dart';
 import 'scoreboard_screen.dart';
@@ -37,12 +42,24 @@ class SetupScreen extends StatefulWidget {
   /// Called with the newly chosen theme mode.
   final ValueChanged<ThemeMode> onThemeModeChanged;
 
+  /// Owns ads/purchases/Pro status (Phase 5). Overridable for tests, so
+  /// they can inject a controller backed by fake [AdsService]/
+  /// [PurchaseGateway] implementations instead of touching real AdMob/
+  /// Billing; defaults to a real, self-initializing instance otherwise —
+  /// same optional-with-safe-default pattern as [ScoreboardScreen.
+  /// voiceAnnouncer]. When not given, this screen owns the instance's
+  /// lifecycle (initializes it, disposes it); when given (as `main.dart`
+  /// does, so Pro status survives navigating to and from the scoreboard),
+  /// the caller owns it instead.
+  final MonetizationController? monetization;
+
   const SetupScreen({
     super.key,
     required this.currentLocaleOverride,
     required this.onLocaleChanged,
     required this.themeMode,
     required this.onThemeModeChanged,
+    this.monetization,
   });
 
   @override
@@ -73,6 +90,40 @@ class _SetupScreenState extends State<SetupScreen> {
   /// updating an existing one in place (the same one-clean-mount pattern
   /// `AnimatedScoreText` uses, keyed on the score instead).
   int _tossSequence = 0;
+
+  late final MonetizationController _monetization;
+  late final bool _ownsMonetization;
+
+  @override
+  void initState() {
+    super.initState();
+    final injected = widget.monetization;
+    if (injected != null) {
+      _monetization = injected;
+      _ownsMonetization = false;
+    } else {
+      _monetization = MonetizationController(
+        ads: AdMobAdsService(),
+        purchases: InAppPurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+      );
+      _ownsMonetization = true;
+      _monetization.initialize();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_ownsMonetization) _monetization.dispose();
+    super.dispose();
+  }
+
+  void _openProDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => ProDialog(monetization: _monetization),
+    );
+  }
 
   void _tossCoin() {
     setState(() {
@@ -109,11 +160,13 @@ class _SetupScreenState extends State<SetupScreen> {
             bestOf: _bestOf,
             firstServingTeam: firstServer,
             initialNames: _names,
+            monetization: _monetization,
           )
         : ScoreboardScreen(
             bestOf: _bestOf,
             firstServer: firstServer,
             initialNames: _names,
+            monetization: _monetization,
           );
     // A brief ball-flyby transition plays first, then replaces itself
     // with `destination` — see MatchTransitionScreen and
@@ -210,6 +263,17 @@ class _SetupScreenState extends State<SetupScreen> {
                 child: const Text('Français'),
               ),
             ],
+          ),
+          ListenableBuilder(
+            listenable: _monetization,
+            builder: (context, _) => IconButton(
+              key: const Key('proMenuButton'),
+              icon: Icon(_monetization.isPro
+                  ? Icons.verified
+                  : Icons.workspace_premium),
+              tooltip: l10n.proMenuTooltip,
+              onPressed: _openProDialog,
+            ),
           ),
           const SizedBox(width: 4),
         ],

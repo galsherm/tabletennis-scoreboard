@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../models/doubles_seat.dart';
 import '../models/player.dart';
 import '../models/player_names.dart';
 import '../models/scoring_engine.dart';
+import '../services/ads_service.dart';
 import '../services/commentary_strings.dart';
 import '../services/doubles_rotation.dart';
+import '../services/match_export.dart';
+import '../services/monetization_controller.dart';
+import '../services/pro_status_store.dart';
+import '../services/purchase_gateway.dart';
 import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
@@ -51,12 +57,19 @@ class DoublesScoreboardScreen extends StatefulWidget {
   /// default labels) if not given.
   final PlayerNames? initialNames;
 
+  /// Owns ads/purchases/Pro status (Phase 5) — overridable for tests to
+  /// inject fakes; defaults to a real, self-initializing instance
+  /// otherwise. See [ScoreboardScreen.monetization]/[SetupScreen.
+  /// monetization] for the ownership rule this follows.
+  final MonetizationController? monetization;
+
   const DoublesScoreboardScreen({
     super.key,
     required this.bestOf,
     required this.firstServingTeam,
     this.voiceAnnouncer,
     this.initialNames,
+    this.monetization,
   });
 
   @override
@@ -70,6 +83,9 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
   bool _voiceInitialized = false;
   late final PlayerNames _names;
 
+  late final MonetizationController _monetization;
+  late final bool _ownsMonetization;
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +94,25 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
       firstServer: widget.firstServingTeam,
     );
     _names = widget.initialNames ?? PlayerNames();
+    final injected = widget.monetization;
+    if (injected != null) {
+      _monetization = injected;
+      _ownsMonetization = false;
+    } else {
+      _monetization = MonetizationController(
+        ads: AdMobAdsService(),
+        purchases: InAppPurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+      );
+      _ownsMonetization = true;
+      _monetization.initialize();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_ownsMonetization) _monetization.dispose();
+    super.dispose();
   }
 
   @override
@@ -199,6 +234,10 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
 
   void _showMatchCompleteDialog(Player winner) {
     final l10n = AppLocalizations.of(context);
+    // Fire-and-forget: see ScoreboardScreen._showMatchCompleteDialog for
+    // why this doesn't block/gate the dialog.
+    _monetization.maybeShowMatchEndAd();
+    final isPro = _monetization.isPro;
     showDialog(
       context: context,
       builder: (_) => MatchCompleteDialog(
@@ -206,12 +245,37 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
         titleText: l10n.matchCompleteDialogTitle,
         messageText: l10n.matchCompleteMessage(_teamLabel(winner)),
         buttonText: l10n.newMatchButton,
+        exportButtonText: isPro ? l10n.exportMatchButton : null,
+        onExport: isPro ? () => _exportMatch(winner) : null,
+        exportedConfirmationText: isPro ? l10n.exportMatchCopied : null,
         onNewMatch: () {
           Navigator.of(context).pop();
           _resetMatch();
         },
       ),
     );
+  }
+
+  /// Pro-only (Phase 5): copies a plain-text summary of the just-completed
+  /// match to the clipboard. Uses team labels (not individual player
+  /// names), matching how this screen names sides everywhere else — see
+  /// [_teamLabel]. The dialog itself shows the "copied" confirmation (see
+  /// [MatchCompleteDialog.exportedConfirmationText]) rather than a
+  /// SnackBar here — see [ScoreboardScreen._exportMatch] for why. See
+  /// PHASE5_MONETIZATION.md.
+  void _exportMatch(Player winner) {
+    final l10n = AppLocalizations.of(context);
+    final summary = buildMatchExportSummary(
+      appTitle: l10n.appTitle,
+      player1Label: _teamLabel(Player.one),
+      player2Label: _teamLabel(Player.two),
+      completedGames: _engine.completedGames,
+      bestOf: widget.bestOf,
+      gameLine: (number, p1Points, p2Points) =>
+          l10n.exportGameLine(number, p1Points, p2Points),
+      winnerMessage: l10n.matchCompleteMessage(_teamLabel(winner)),
+    );
+    Clipboard.setData(ClipboardData(text: summary));
   }
 
   @override

@@ -128,4 +128,57 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get themeDarkOption => 'Dunkel';
+
+  @override
+  String get proMenuTooltip => 'Werbung entfernen / Pro';
+
+  @override
+  String get proDialogTitle => 'Werbung entfernen / Pro';
+
+  @override
+  String get proDialogDescriptionFree =>
+      'Einmaliger Kauf: entfernt Werbung und schaltet den Export der Spielergebnisse frei.';
+
+  @override
+  String get proDialogAlreadyProTitle => 'Du bist Pro!';
+
+  @override
+  String get proDialogAlreadyProBody =>
+      'Werbung ist entfernt und der Spielexport ist freigeschaltet. Danke für deine Unterstützung!';
+
+  @override
+  String get proBuyButton => 'Werbung entfernen (einmaliger Kauf)';
+
+  @override
+  String get proRestoreButton => 'Käufe wiederherstellen';
+
+  @override
+  String get proStatusPending => 'Kauf wird bearbeitet …';
+
+  @override
+  String get proStatusSuccess => 'Kauf erfolgreich — Werbung entfernt!';
+
+  @override
+  String get proStatusRestored => 'Kauf wiederhergestellt — Werbung entfernt!';
+
+  @override
+  String get proStatusCancelled => 'Kauf abgebrochen.';
+
+  @override
+  String get proStatusError =>
+      'Beim Kauf ist ein Fehler aufgetreten. Bitte versuche es erneut.';
+
+  @override
+  String get proStatusRestoreNotFound => 'Kein vorheriger Kauf gefunden.';
+
+  @override
+  String get exportMatchButton => 'Spielergebnis exportieren';
+
+  @override
+  String get exportMatchCopied => 'Spielergebnis in die Zwischenablage kopiert';
+
+  @override
+  String exportGameLine(int number, int player1Points, int player2Points) {
+    return 'Satz $number: $player1Points-$player2Points';
+  }
 }

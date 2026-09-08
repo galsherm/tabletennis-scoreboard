@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'l10n/gen/app_localizations.dart';
 import 'screens/setup_screen.dart';
+import 'services/ads_service.dart';
+import 'services/monetization_controller.dart';
+import 'services/pro_status_store.dart';
+import 'services/purchase_gateway.dart';
 import 'services/theme_preference.dart';
 import 'theme/app_theme.dart';
 
@@ -30,12 +34,30 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
   ThemeMode _themeMode = ThemeMode.dark;
   final _themePreference = ThemePreference();
 
+  /// Owns ads + purchases + the persisted Pro flag for the app's entire
+  /// lifetime (Phase 5) — one instance, created here and threaded down
+  /// through [SetupScreen] into whichever scoreboard screen is active, so
+  /// Pro status and a preloaded ad survive navigating between them. See
+  /// PHASE5_MONETIZATION.md.
+  final _monetization = MonetizationController(
+    ads: AdMobAdsService(),
+    purchases: InAppPurchaseGateway(),
+    proStatusStore: ProStatusStore(),
+  );
+
   @override
   void initState() {
     super.initState();
     _themePreference.load().then((mode) {
       if (mounted) setState(() => _themeMode = mode);
     });
+    _monetization.initialize();
+  }
+
+  @override
+  void dispose() {
+    _monetization.dispose();
+    super.dispose();
   }
 
   void _setLocaleOverride(Locale? locale) {
@@ -91,6 +113,7 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
         onLocaleChanged: _setLocaleOverride,
         themeMode: _themeMode,
         onThemeModeChanged: _setThemeMode,
+        monetization: _monetization,
       ),
     );
   }

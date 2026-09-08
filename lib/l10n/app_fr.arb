@@ -36,5 +36,21 @@
   "themeMenuTooltip": "Thème",
   "themeSystemOption": "Système",
   "themeLightOption": "Clair",
-  "themeDarkOption": "Sombre"
+  "themeDarkOption": "Sombre",
+  "proMenuTooltip": "Supprimer les publicités / Pro",
+  "proDialogTitle": "Supprimer les publicités / Pro",
+  "proDialogDescriptionFree": "Achat unique : supprime les publicités et débloque l'exportation des résultats de match.",
+  "proDialogAlreadyProTitle": "Vous êtes Pro !",
+  "proDialogAlreadyProBody": "Les publicités sont supprimées et l'exportation des matchs est débloquée. Merci pour votre soutien !",
+  "proBuyButton": "Supprimer les publicités (achat unique)",
+  "proRestoreButton": "Restaurer les achats",
+  "proStatusPending": "Achat en cours…",
+  "proStatusSuccess": "Achat réussi — publicités supprimées !",
+  "proStatusRestored": "Achat restauré — publicités supprimées !",
+  "proStatusCancelled": "Achat annulé.",
+  "proStatusError": "Une erreur est survenue lors de l'achat. Veuillez réessayer.",
+  "proStatusRestoreNotFound": "Aucun achat précédent trouvé.",
+  "exportMatchButton": "Exporter le résultat du match",
+  "exportMatchCopied": "Résultat du match copié dans le presse-papiers",
+  "exportGameLine": "Manche {number} : {player1Points}-{player2Points}"
 }
