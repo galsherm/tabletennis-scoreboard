@@ -201,9 +201,9 @@
   "@proDialogAlreadyProBody": {
     "description": "Body text shown in the Pro dialog once the user already owns Pro."
   },
-  "proBuyButton": "Remove Ads (One-Time Purchase)",
+  "proBuyButton": "Remove Ads",
   "@proBuyButton": {
-    "description": "Button that starts the Pro purchase flow. Deliberately has no price baked in — the OS purchase sheet shows the real, store-localized price; see PHASE5_MONETIZATION.md for the target ~€2.99 price to configure in Play Console."
+    "description": "Button that starts the Pro purchase flow. Deliberately short (a longer 'Remove Ads (One-Time Purchase)' overflowed the button, especially in German/French — the dialog's own body text right above already explains it's a one-time purchase) and has no price baked in — the OS purchase sheet shows the real, store-localized price; see PHASE5_MONETIZATION.md for the target ~€2.99 price to configure in Play Console."
   },
   "proRestoreButton": "Restore purchases",
   "@proRestoreButton": {

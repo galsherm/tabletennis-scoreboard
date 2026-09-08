@@ -352,10 +352,10 @@ abstract class AppLocalizations {
   /// **'Ads are removed and match export is unlocked. Thanks for your support!'**
   String get proDialogAlreadyProBody;
 
-  /// Button that starts the Pro purchase flow. Deliberately has no price baked in — the OS purchase sheet shows the real, store-localized price; see PHASE5_MONETIZATION.md for the target ~€2.99 price to configure in Play Console.
+  /// Button that starts the Pro purchase flow. Deliberately short (a longer 'Remove Ads (One-Time Purchase)' overflowed the button, especially in German/French — the dialog's own body text right above already explains it's a one-time purchase) and has no price baked in — the OS purchase sheet shows the real, store-localized price; see PHASE5_MONETIZATION.md for the target ~€2.99 price to configure in Play Console.
   ///
   /// In en, this message translates to:
-  /// **'Remove Ads (One-Time Purchase)'**
+  /// **'Remove Ads'**
   String get proBuyButton;
 
   /// Button that re-queries the store for a previous purchase (required by store policy, and essential after a reinstall or device switch).

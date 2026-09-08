@@ -147,7 +147,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Ads are removed and match export is unlocked. Thanks for your support!';
 
   @override
-  String get proBuyButton => 'Remove Ads (One-Time Purchase)';
+  String get proBuyButton => 'Remove Ads';
 
   @override
   String get proRestoreButton => 'Restore purchases';

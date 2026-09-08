@@ -104,6 +104,49 @@ class MonetizationController extends ChangeNotifier {
     await ads.showMatchEndInterstitial();
   }
 
+  /// How many completed matches must pass before the occasional,
+  /// unprompted "Remove Ads" upsell is offered again — real-device
+  /// testing found it appearing after *every* match felt naggy. This
+  /// only gates the automatic offer; the purchase flow itself (via
+  /// [ProDialog]) always stays reachable at any time through the setup
+  /// screen's persistent app-bar icon, match count notwithstanding.
+  static const upsellIntervalMatches = 3;
+
+  int _matchesSinceLastUpsell = 0;
+  bool _upsellDismissedThisSession = false;
+
+  /// Whether the automatic post-match "Remove Ads" upsell should be
+  /// shown right now — never while Pro is already owned, never more than
+  /// once per [upsellIntervalMatches] completed matches, and never again
+  /// this session once the user has closed it without buying (see
+  /// [dismissUpsell]). Only ever checked at match-end, never mid-match.
+  bool get shouldOfferUpsell =>
+      !_isPro &&
+      !_upsellDismissedThisSession &&
+      _matchesSinceLastUpsell >= upsellIntervalMatches;
+
+  /// Call once per completed match, regardless of whether an ad was
+  /// shown for it — the upsell cadence is measured in matches played,
+  /// not ads seen.
+  void recordMatchCompleted() {
+    _matchesSinceLastUpsell++;
+  }
+
+  /// Call right before actually presenting the automatic upsell, so the
+  /// next offer waits another [upsellIntervalMatches] matches regardless
+  /// of what the user does with this one.
+  void markUpsellShown() {
+    _matchesSinceLastUpsell = 0;
+  }
+
+  /// Call once the automatic upsell dialog has closed without the user
+  /// having purchased Pro — suppresses further automatic offers for the
+  /// rest of this session. Has no effect on the manually-opened purchase
+  /// dialog, which is unaffected by this and always available.
+  void dismissUpsell() {
+    _upsellDismissedThisSession = true;
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();

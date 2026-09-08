@@ -17,6 +17,7 @@ import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
 import '../widgets/match_complete_dialog.dart';
+import '../widgets/pro_dialog.dart';
 
 /// Doubles scoreboard: reuses [TableTennisScoringEngine] exactly as
 /// singles does (it only ever knows about two *sides* scoring points —
@@ -237,6 +238,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
     // Fire-and-forget: see ScoreboardScreen._showMatchCompleteDialog for
     // why this doesn't block/gate the dialog.
     _monetization.maybeShowMatchEndAd();
+    _monetization.recordMatchCompleted();
     final isPro = _monetization.isPro;
     showDialog(
       context: context,
@@ -253,7 +255,22 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
           _resetMatch();
         },
       ),
-    );
+    ).then((_) => _maybeShowUpsell());
+  }
+
+  /// An occasional, unprompted "Remove Ads" nudge — see
+  /// ScoreboardScreen._maybeShowUpsell for the full reasoning (same
+  /// cadence gate, same session-dismissal rule, same "purchase flow
+  /// stays reachable via the app-bar icon regardless" guarantee).
+  void _maybeShowUpsell() {
+    if (!mounted || !_monetization.shouldOfferUpsell) return;
+    _monetization.markUpsellShown();
+    showDialog(
+      context: context,
+      builder: (_) => ProDialog(monetization: _monetization),
+    ).then((_) {
+      if (!_monetization.isPro) _monetization.dismissUpsell();
+    });
   }
 
   /// Pro-only (Phase 5): copies a plain-text summary of the just-completed

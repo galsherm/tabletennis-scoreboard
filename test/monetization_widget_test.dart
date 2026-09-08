@@ -82,6 +82,19 @@ class _NoopClipPlayer implements ClipPlayer {
 VoiceAnnouncer _silentVoice() =>
     VoiceAnnouncer(ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
 
+/// Plays a straight-2-0 best-of-3 match to completion on whichever
+/// scoreboard screen is currently showing (player1Zone taps throughout),
+/// leaving the match-complete dialog on screen.
+Future<void> _playMatchToCompletion(WidgetTester tester) async {
+  for (var game = 0; game < 2; game++) {
+    for (var i = 0; i < 11; i++) {
+      await tester.tap(find.byKey(const Key('player1Zone')));
+      await tester.pump();
+    }
+  }
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -127,8 +140,8 @@ void main() {
 
     testWidgets(
         'tapping "Remove Ads" starts the purchase flow, and a successful '
-        'purchase switches the dialog to the already-Pro state with a '
-        'success SnackBar', (tester) async {
+        'purchase switches the dialog to the already-Pro state with an '
+        'inline success message', (tester) async {
       final purchases = _FakePurchaseGateway();
       final monetization = MonetizationController(
         ads: _FakeAdsService(),
@@ -169,8 +182,8 @@ void main() {
 
     testWidgets(
         'tapping "Restore purchases" with nothing to restore eventually '
-        'shows a "no previous purchase found" SnackBar, never leaving the '
-        'user with no feedback at all', (tester) async {
+        'shows an inline "no previous purchase found" message, never '
+        'leaving the user with no feedback at all', (tester) async {
       final purchases = _FakePurchaseGateway();
       final monetization = MonetizationController(
         ads: _FakeAdsService(),
@@ -208,16 +221,6 @@ void main() {
   });
 
   group('Match export (Phase 5 — Pro-only)', () {
-    Future<void> playToMatchEnd(WidgetTester tester) async {
-      for (var game = 0; game < 2; game++) {
-        for (var i = 0; i < 11; i++) {
-          await tester.tap(find.byKey(const Key('player1Zone')));
-          await tester.pump();
-        }
-      }
-      await tester.pumpAndSettle();
-    }
-
     testWidgets(
         'a free user sees no export button on the match-complete dialog',
         (tester) async {
@@ -240,7 +243,7 @@ void main() {
         ),
       ));
 
-      await playToMatchEnd(tester);
+      await _playMatchToCompletion(tester);
 
       expect(find.byKey(const Key('matchCompleteDialog')), findsOneWidget);
       expect(find.byKey(const Key('exportMatchButton')), findsNothing);
@@ -251,7 +254,7 @@ void main() {
 
     testWidgets(
         'a Pro user sees the export button, and tapping it copies a match '
-        'summary to the clipboard and confirms with a SnackBar',
+        'summary to the clipboard and confirms inline',
         (tester) async {
       final fakeAds = _FakeAdsService();
       final purchases = _FakePurchaseGateway();
@@ -293,7 +296,7 @@ void main() {
         ),
       ));
 
-      await playToMatchEnd(tester);
+      await _playMatchToCompletion(tester);
 
       expect(find.byKey(const Key('matchCompleteDialog')), findsOneWidget);
       // Pro removes ads — the match-end ad path must not fire.
@@ -327,6 +330,123 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+  });
+
+  group('Ad-removal upsell cadence (Phase 5 real-device fix)', () {
+    testWidgets(
+        'the automatic "Remove Ads" upsell does not appear after the '
+        '1st or 2nd completed match, only the 3rd', (tester) async {
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: _FakePurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 3,
+          firstServer: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          monetization: monetization,
+        ),
+      ));
+
+      // Match 1: complete it, dismiss via "New match" — no upsell.
+      await _playMatchToCompletion(tester);
+      await tester.tap(find.byKey(const Key('newMatchButton')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('proDialogTitleText')), findsNothing);
+
+      // Match 2: same — still no upsell.
+      await _playMatchToCompletion(tester);
+      await tester.tap(find.byKey(const Key('newMatchButton')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('proDialogTitleText')), findsNothing);
+
+      // Match 3: the upsell should now appear automatically.
+      await _playMatchToCompletion(tester);
+      await tester.tap(find.byKey(const Key('newMatchButton')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('proDialogTitleText')), findsOneWidget);
+      // The purchase flow inside it is the same reachable-anytime dialog.
+      expect(find.byKey(const Key('proBuyButton')), findsOneWidget);
+    });
+
+    testWidgets(
+        'once dismissed without buying, the upsell never reappears again '
+        'this session even after another full interval of matches',
+        (tester) async {
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: _FakePurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 3,
+          firstServer: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          monetization: monetization,
+        ),
+      ));
+
+      for (var match = 0; match < 3; match++) {
+        await _playMatchToCompletion(tester);
+        await tester.tap(find.byKey(const Key('newMatchButton')));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byKey(const Key('proDialogTitleText')), findsOneWidget);
+
+      // Dismiss it by tapping the modal barrier (a corner well outside
+      // the centered dialog card) without buying.
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('proDialogTitleText')), findsNothing);
+      expect(monetization.isPro, isFalse);
+
+      // Another full interval of matches should NOT bring it back.
+      for (var match = 0; match < 3; match++) {
+        await _playMatchToCompletion(tester);
+        await tester.tap(find.byKey(const Key('newMatchButton')));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byKey(const Key('proDialogTitleText')), findsNothing);
+    });
+
+    testWidgets(
+        'the purchase flow stays reachable via the app-bar icon even '
+        'when the automatic upsell has not (yet) triggered', (tester) async {
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: _FakePurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SetupScreen(
+          currentLocaleOverride: null,
+          onLocaleChanged: (_) {},
+          themeMode: ThemeMode.dark,
+          onThemeModeChanged: (_) {},
+          monetization: monetization,
+        ),
+      ));
+
+      expect(monetization.shouldOfferUpsell, isFalse);
+      await tester.tap(find.byKey(const Key('proMenuButton')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('proBuyButton')), findsOneWidget);
     });
   });
 }

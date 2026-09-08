@@ -42,7 +42,7 @@
   "proDialogDescriptionFree": "Einmaliger Kauf: entfernt Werbung und schaltet den Export der Spielergebnisse frei.",
   "proDialogAlreadyProTitle": "Du bist Pro!",
   "proDialogAlreadyProBody": "Werbung ist entfernt und der Spielexport ist freigeschaltet. Danke für deine Unterstützung!",
-  "proBuyButton": "Werbung entfernen (einmaliger Kauf)",
+  "proBuyButton": "Werbung entfernen",
   "proRestoreButton": "Käufe wiederherstellen",
   "proStatusPending": "Kauf wird bearbeitet …",
   "proStatusSuccess": "Kauf erfolgreich — Werbung entfernt!",

@@ -276,6 +276,78 @@ void main() {
     });
   });
 
+  group('MonetizationController.shouldOfferUpsell (ad-prompt cadence)', () {
+    test('is false until upsellIntervalMatches matches have completed',
+        () async {
+      await controller.initialize();
+      expect(controller.shouldOfferUpsell, isFalse);
+      for (var i = 0; i < MonetizationController.upsellIntervalMatches - 1;
+          i++) {
+        controller.recordMatchCompleted();
+      }
+      expect(controller.shouldOfferUpsell, isFalse);
+    });
+
+    test('becomes true once upsellIntervalMatches matches have completed',
+        () async {
+      await controller.initialize();
+      for (var i = 0; i < MonetizationController.upsellIntervalMatches; i++) {
+        controller.recordMatchCompleted();
+      }
+      expect(controller.shouldOfferUpsell, isTrue);
+    });
+
+    test('markUpsellShown resets the count, so the next offer waits '
+        'another full interval', () async {
+      await controller.initialize();
+      for (var i = 0; i < MonetizationController.upsellIntervalMatches; i++) {
+        controller.recordMatchCompleted();
+      }
+      expect(controller.shouldOfferUpsell, isTrue);
+
+      controller.markUpsellShown();
+      expect(controller.shouldOfferUpsell, isFalse);
+
+      for (var i = 0; i < MonetizationController.upsellIntervalMatches - 1;
+          i++) {
+        controller.recordMatchCompleted();
+      }
+      expect(controller.shouldOfferUpsell, isFalse);
+      controller.recordMatchCompleted();
+      expect(controller.shouldOfferUpsell, isTrue);
+    });
+
+    test('dismissUpsell suppresses further offers for the rest of the '
+        'session, even after another full interval passes', () async {
+      await controller.initialize();
+      for (var i = 0; i < MonetizationController.upsellIntervalMatches; i++) {
+        controller.recordMatchCompleted();
+      }
+      controller.dismissUpsell();
+      expect(controller.shouldOfferUpsell, isFalse);
+
+      for (var i = 0; i < MonetizationController.upsellIntervalMatches; i++) {
+        controller.recordMatchCompleted();
+      }
+      expect(controller.shouldOfferUpsell, isFalse);
+    });
+
+    test('never offers the upsell once Pro is purchased, regardless of '
+        'match count', () async {
+      await controller.initialize();
+      purchases.emit(const PurchaseUpdate(
+        productId: proProductId,
+        outcome: PurchaseOutcome.purchased,
+      ));
+      await pumpEventQueue();
+
+      for (var i = 0; i < MonetizationController.upsellIntervalMatches; i++) {
+        controller.recordMatchCompleted();
+      }
+      expect(controller.shouldOfferUpsell, isFalse);
+    });
+  });
+
   group('MonetizationController.dispose', () {
     test('disposes both the ads service and the purchase gateway', () async {
       await controller.initialize();

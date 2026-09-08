@@ -127,6 +127,13 @@ development but must never ship to a real store listing.
 3. For testing real purchases before release, add license testers in Play
    Console (Setup → License testing) — test-track purchases by license
    testers don't charge real money.
+   **Important:** a purchase dialog cannot appear at all in a debug build
+   installed via `flutter run`/`adb install`, no matter how correctly
+   everything above is configured — Play Billing only works for a build
+   installed through the Play Store itself. Upload a build to at least an
+   Internal Testing track and install it via that track's Play Store
+   opt-in link before testing purchases. See PHASE5_MONETIZATION.md §10.4
+   for the full explanation.
 4. iOS: create the matching non-consumable In-App Purchase in App Store
    Connect with the **same product ID** used in
    `purchase_gateway.dart` (the `in_app_purchase` plugin uses one product ID

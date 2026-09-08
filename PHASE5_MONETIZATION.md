@@ -5,8 +5,12 @@ Ads / Pro" purchase via `in_app_purchase` (Play Billing / StoreKit),
 unlocking ad removal and a minimal match-result export. Subscriptions
 and the ad-free-only variant were both explicitly ruled out — see §1.
 
-**Status:** built and passing (234/234 tests — 212 pre-existing,
-unchanged, + 22 new for this phase). `flutter analyze`: no issues.
+**Status:** built and passing (242/242 tests — 212 original + 22 from
+this phase's first pass + 8 from the real-device-testing fixes below).
+`flutter analyze`: no issues.
+
+**Update (real-device testing round):** four issues were found running
+a real build on a connected device and fixed — see §10.
 
 ---
 
@@ -214,3 +218,148 @@ project's established vocabulary from earlier phases (e.g. German
 each ARB file) rather than invented fresh. As with prior phases' German
 and French additions, a native speaker's review before release is
 still worthwhile — these are reasoned translations, not verified ones.
+
+## 10. Real-device testing round: four issues found and fixed
+
+A build run on a connected device (not `flutter test`) surfaced four
+problems the test suite hadn't caught, since three of them are purely
+about real-plugin behavior and cadence/UX judgment that fakes and
+`flutter test`'s plugin-less environment can't exercise.
+
+### 10.1 No ad ever appeared, and no way to tell why
+
+**What was reported:** no ad visible anywhere on screen.
+
+**First finding — there is no banner ad in this app.** Only an
+interstitial exists, shown once at match end (§5's reasoning against a
+persistent banner is unchanged). If a banner was expected, none was
+ever built; this wasn't a regression, it's the original Phase 5 design.
+Worth flagging explicitly in case that's what was actually being looked
+for — say so and a banner can be added, though it reintroduces exactly
+the "ad visible for the whole match" complaint the original research
+flagged.
+
+**Second finding — the ad unit IDs are genuine.** Cross-checked against
+Google's own published test-ad documentation:
+`ca-app-pub-3940256099942544/1033173712` (Android interstitial) and
+`ca-app-pub-3940256099942544/4411468910` (iOS interstitial) are both
+real, official Google test IDs, not placeholders. Not the problem.
+
+**Third finding — the actual bug.** `MobileAds.instance.initialize()`
+*is* called before any load is attempted (`MonetizationController.
+initialize()` awaits `ads.initialize()` before `ads.loadInterstitial()`
+— correct order), and `InterstitialAd.load()`'s `onAdLoaded`/
+`onAdFailedToLoad` callbacks were wired up. But:
+- Every failure path — SDK init, load failure, show failure — was
+  caught and silently discarded with an empty `catch (_) {}` or a
+  callback that just set a field to `null`. There was **no way to see**
+  whether an ad failed to load, or why. Fixed: every failure path in
+  `lib/services/ads_service.dart` now logs via `debugPrint` (e.g.
+  `AdMobAdsService: interstitial failed to load: <error>`), matching
+  the "no interstitial ready to show at match end" line visible in this
+  phase's own test output above.
+- **There was no retry after a failed load.** A preload was only
+  re-attempted after successfully *showing* an ad (in the dismiss/
+  fail-to-show callbacks) — if the very first load attempt after app
+  launch failed for any transient reason (a network hiccup at cold
+  start, no fill yet), ads were silently disabled for the rest of the
+  session, since nothing would ever try loading again. This is very
+  plausibly the actual root cause of "no ad ever appears" on a real
+  device, where transient failures are common and `flutter test`'s
+  fake/absent ad plugin never exercises this path at all. Fixed: a
+  failed load now schedules a retry with exponential backoff (5s
+  initial, doubling up to a 2-minute cap, resetting on success).
+
+### 10.2 "Remove Ads" button text overflow
+
+`proBuyButton` was "Remove Ads (One-Time Purchase)" / "Werbung
+entfernen (einmaliger Kauf)" / "Supprimer les publicités (achat
+unique)" — all three overflowed the button at normal font scale, worst
+in German and French. Shortened to just "Remove Ads" / "Werbung
+entfernen" / "Supprimer les publicités" in all three ARB files: the
+dialog's own body text directly above the button already says it's a
+one-time purchase, so the parenthetical was redundant as well as too
+long.
+
+### 10.3 A second, related SnackBar-behind-a-dialog bug
+
+While investigating why "Remove Ads" appeared to do nothing (§10.4),
+`ProDialog`'s error/status feedback turned out to have the **same
+ticker-freeze bug** already found and fixed for the match-export
+confirmation (§3): it showed feedback via a `ScaffoldMessenger`
+SnackBar triggered from a button inside an open dialog, which can never
+actually animate into view. This meant that even the "Something went
+wrong with the purchase" error message — the one thing that would have
+told a real user *why* nothing seemed to happen — was itself invisible.
+Fixed the same way: `ProDialog` now shows purchase/restore feedback as
+inline text within its own body instead of a SnackBar. This is a
+genuine correctness fix, not just a test fix — a real user tapping
+"Remove Ads" without Play Console/Internal Testing set up (§10.4) would
+previously have seen literally nothing happen, with no error message
+either, which reads as "the button is broken."
+
+### 10.4 Why tapping "Remove Ads" does nothing when run via `flutter run`
+
+This is expected, and not fixable from the app's code. **Confirmed
+understanding:** Google Play Billing requires the app to be installed
+through the Play Store's own distribution pipeline before a real
+purchase sheet can appear at all — a debug build installed via
+`flutter run`/`adb install` is not, and never can be, sufficient. Play
+Billing's `queryProductDetails()` call (in
+`lib/services/purchase_gateway.dart`) asks Play Console "does this
+package name have this product ID configured," and Play Console only
+answers that for a package that has actually been uploaded there —
+there's no local/offline mode. Concretely, before a real purchase
+dialog can appear on a device:
+
+1. The app must exist as an app listing in Play Console (package name
+   registered).
+2. The non-consumable in-app product must be created there with the
+   exact same product ID used in code (`proProductId`, currently the
+   placeholder `remove_ads_pro_test`).
+3. A build must be uploaded to at least an **Internal Testing** track.
+4. The testing Google account must be added as a tester on that track
+   **and** as a Play Console **license tester** (Setup → License
+   testing) — license testers can complete purchases through the real
+   flow without being charged.
+5. The tester must install the app via the **Play Store opt-in link**
+   Play Console generates for that track — not a sideloaded APK, even
+   if it's byte-for-byte the same build.
+
+Without all five, `isAvailable()`/`queryProductDetails()` will either
+report Billing as unavailable or return no matching product (exactly
+what §10.3's now-visible inline error message will show), and
+`buyNonConsumable()` has nothing valid to launch a purchase sheet for.
+This is a Google Play policy/architecture constraint, not a bug in this
+app — there is no debug-build or local-testing workaround for it. The
+README's "Phase 5 — Monetization" section already lists steps 1–4 as
+pre-release setup; this section exists to confirm explicitly that
+step 5 (Play Store install, not `flutter run`) is also required before
+any purchase testing can happen at all, debug or release build alike.
+
+### 10.5 Ad-prompt cadence: an occasional upsell instead of one after every ad
+
+The purchase dialog previously only ever opened when the user
+deliberately tapped the setup screen's app-bar Pro icon — there was no
+automatic prompt at all. Real-device testing asked for an *occasional*
+unprompted nudge instead of relying purely on user-initiated discovery,
+while explicitly avoiding it feeling naggy. Added to
+`MonetizationController`:
+
+- `recordMatchCompleted()` — called once per completed match (both
+  scoreboard screens), regardless of whether an ad showed for it.
+- `shouldOfferUpsell` — true only once every `upsellIntervalMatches`
+  (3) completed matches, never while Pro is already owned, and never
+  again this session after `dismissUpsell()` has been called.
+- `markUpsellShown()` / `dismissUpsell()` — reset the match counter
+  when the upsell is actually shown, and suppress it for the rest of
+  the session once it closes without a purchase.
+
+Both scoreboard screens now chain `_maybeShowUpsell()` onto the
+match-complete dialog's `showDialog(...).then(...)` — so the earliest
+the upsell can appear is *after* the match-complete dialog has already
+closed (i.e. after "New match" is tapped), never mid-match, and it
+reuses the exact same `ProDialog` the app-bar icon opens. **The
+purchase flow itself is never gated by this** — the app-bar Pro icon on
+the setup screen opens the same dialog at any time, on any match count,
+whether or not the automatic upsell has fired or been dismissed.

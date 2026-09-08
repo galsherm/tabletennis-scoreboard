@@ -6,13 +6,24 @@ import '../l10n/gen/app_localizations.dart';
 import '../services/monetization_controller.dart';
 import '../theme/app_theme.dart';
 
-/// The Pro purchase dialog, opened from the setup screen's app bar
-/// (Phase 5). Shows the buy/restore flow when the user hasn't purchased
-/// Pro yet, or a simple confirmation once they have. Listens to
-/// [MonetizationController.feedback] to show a localized SnackBar for
+/// The Pro purchase dialog — opened either from the setup screen's
+/// app-bar icon at any time, or automatically as an occasional post-match
+/// upsell (see `MonetizationController.shouldOfferUpsell`). Shows the
+/// buy/restore flow when the user hasn't purchased Pro yet, or a simple
+/// confirmation once they have. Listens to
+/// [MonetizationController.feedback] to show an inline status message for
 /// every purchase-flow state — pending, success, restored, cancelled,
 /// error, or "no previous purchase found" — so nothing about a tap on
-/// "Remove Ads" or "Restore purchases" is ever silent. See
+/// "Remove Ads" or "Restore purchases" is ever silent.
+///
+/// The status message is shown inline (a `Text` inside this dialog's own
+/// build), not via a `ScaffoldMessenger` SnackBar: a real-device bug
+/// report ("tapping Remove Ads does nothing") traced back to exactly
+/// that — Flutter freezes the ticker on a route once another route is
+/// pushed above it, so a SnackBar triggered from a button *inside* this
+/// dialog sits on the obscured Scaffold underneath and never actually
+/// animates into view. The same bug, and the same fix, applied to
+/// `MatchCompleteDialog`'s export confirmation in Phase 5 — see
 /// PHASE5_MONETIZATION.md.
 class ProDialog extends StatefulWidget {
   final MonetizationController monetization;
@@ -25,17 +36,20 @@ class ProDialog extends StatefulWidget {
 
 class _ProDialogState extends State<ProDialog> {
   StreamSubscription<PurchaseFeedback>? _subscription;
+  PurchaseFeedback? _feedback;
 
   @override
   void initState() {
     super.initState();
-    _subscription = widget.monetization.feedback.listen(_onFeedback);
+    _subscription = widget.monetization.feedback.listen((feedback) {
+      if (!mounted) return;
+      setState(() => _feedback = feedback);
+    });
   }
 
-  void _onFeedback(PurchaseFeedback feedback) {
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context);
-    final message = switch (feedback) {
+  String? _feedbackMessage(AppLocalizations l10n) {
+    return switch (_feedback) {
+      null => null,
       PurchaseFeedback.pending => l10n.proStatusPending,
       PurchaseFeedback.purchased => l10n.proStatusSuccess,
       PurchaseFeedback.restored => l10n.proStatusRestored,
@@ -43,9 +57,6 @@ class _ProDialogState extends State<ProDialog> {
       PurchaseFeedback.error => l10n.proStatusError,
       PurchaseFeedback.restoreNotFound => l10n.proStatusRestoreNotFound,
     };
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(key: const Key('proFeedbackSnackBar'), content: Text(message)),
-    );
   }
 
   @override
@@ -58,6 +69,7 @@ class _ProDialogState extends State<ProDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final palette = context.palette;
+    final feedbackMessage = _feedbackMessage(l10n);
     return ListenableBuilder(
       listenable: widget.monetization,
       builder: (context, _) {
@@ -110,6 +122,18 @@ class _ProDialogState extends State<ProDialog> {
                       key: const Key('proRestoreButton'),
                       onPressed: widget.monetization.restorePurchases,
                       child: Text(l10n.proRestoreButton),
+                    ),
+                  ),
+                ],
+                if (feedbackMessage != null) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    feedbackMessage,
+                    key: const Key('proFeedbackText'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: palette.mutedText,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                 ],

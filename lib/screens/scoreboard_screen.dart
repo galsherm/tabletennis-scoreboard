@@ -15,6 +15,7 @@ import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
 import '../widgets/match_complete_dialog.dart';
+import '../widgets/pro_dialog.dart';
 
 class ScoreboardScreen extends StatefulWidget {
   final int bestOf;
@@ -206,6 +207,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     // dismissed; if Pro has removed ads or none was ready, this is a
     // no-op and the dialog shows immediately, exactly as before Phase 5.
     _monetization.maybeShowMatchEndAd();
+    _monetization.recordMatchCompleted();
     final isPro = _monetization.isPro;
     showDialog(
       context: context,
@@ -222,7 +224,26 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           _resetMatch();
         },
       ),
-    );
+    ).then((_) => _maybeShowUpsell());
+  }
+
+  /// An occasional, unprompted "Remove Ads" nudge — never mid-match (this
+  /// only ever runs right after the match-complete dialog above closes),
+  /// and gated by [MonetizationController.shouldOfferUpsell] so it
+  /// appears every few matches at most, never every single one, and
+  /// never twice in the same session once dismissed. The purchase flow
+  /// itself is unaffected by this gate — it's always reachable via the
+  /// setup screen's app-bar Pro icon regardless. See
+  /// PHASE5_MONETIZATION.md.
+  void _maybeShowUpsell() {
+    if (!mounted || !_monetization.shouldOfferUpsell) return;
+    _monetization.markUpsellShown();
+    showDialog(
+      context: context,
+      builder: (_) => ProDialog(monetization: _monetization),
+    ).then((_) {
+      if (!_monetization.isPro) _monetization.dismissUpsell();
+    });
   }
 
   /// Pro-only (Phase 5): copies a plain-text summary of the just-completed

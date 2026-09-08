@@ -42,7 +42,7 @@
   "proDialogDescriptionFree": "Achat unique : supprime les publicités et débloque l'exportation des résultats de match.",
   "proDialogAlreadyProTitle": "Vous êtes Pro !",
   "proDialogAlreadyProBody": "Les publicités sont supprimées et l'exportation des matchs est débloquée. Merci pour votre soutien !",
-  "proBuyButton": "Supprimer les publicités (achat unique)",
+  "proBuyButton": "Supprimer les publicités",
   "proRestoreButton": "Restaurer les achats",
   "proStatusPending": "Achat en cours…",
   "proStatusSuccess": "Achat réussi — publicités supprimées !",

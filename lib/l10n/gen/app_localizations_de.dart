@@ -147,7 +147,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Werbung ist entfernt und der Spielexport ist freigeschaltet. Danke für deine Unterstützung!';
 
   @override
-  String get proBuyButton => 'Werbung entfernen (einmaliger Kauf)';
+  String get proBuyButton => 'Werbung entfernen';
 
   @override
   String get proRestoreButton => 'Käufe wiederherstellen';

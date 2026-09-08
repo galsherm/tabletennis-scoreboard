@@ -147,7 +147,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les publicités sont supprimées et l\'exportation des matchs est débloquée. Merci pour votre soutien !';
 
   @override
-  String get proBuyButton => 'Supprimer les publicités (achat unique)';
+  String get proBuyButton => 'Supprimer les publicités';
 
   @override
   String get proRestoreButton => 'Restaurer les achats';
