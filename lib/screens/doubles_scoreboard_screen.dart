@@ -10,7 +10,6 @@ import '../services/doubles_rotation.dart';
 import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
-import '../widgets/editable_name_label.dart';
 import '../widgets/match_complete_dialog.dart';
 
 /// Doubles scoreboard: reuses [TableTennisScoringEngine] exactly as
@@ -46,8 +45,9 @@ class DoublesScoreboardScreen extends StatefulWidget {
   /// [ScoreboardScreen].
   final VoiceAnnouncer? voiceAnnouncer;
 
-  /// Custom names for the 4 on-court slots, usually carried over from
-  /// the setup screen's preview (Phase 4F) — defaults to empty (all 4
+  /// Custom names for the 4 on-court slots and the 2 optional team
+  /// names, set on the setup screen before this match started — the
+  /// *only* place they can be edited (Phase 4H). Defaults to empty (all
   /// default labels) if not given.
   final PlayerNames? initialNames;
 
@@ -130,12 +130,11 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
 
   void _undo() => setState(() => _engine.undo());
 
-  /// Resets both the match and any custom on-court names — "New match"
-  /// starts genuinely fresh. See PHASE4F_THEME_AND_NAMES.md.
-  void _resetMatch() => setState(() {
-        _engine.resetMatch();
-        _names.clear();
-      });
+  /// Resets the match itself. Custom names are *not* cleared — since
+  /// Phase 4H, names can only be edited on the setup screen, so clearing
+  /// them here would permanently lose them until the user backs all the
+  /// way out to setup. See PHASE4H_NAME_EDITING_REFINEMENT.md.
+  void _resetMatch() => setState(() => _engine.resetMatch());
 
   /// The side's team-level display name for banners/dialogs/headings —
   /// "Team 1"/"Team 2" by default, not "Player 1"/"Player 2" (with 4
@@ -153,11 +152,6 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
     return _names.resolveTeam(teamNumber, defaultLabel);
   }
 
-  String _defaultTeamLabel(Player team) {
-    final l10n = AppLocalizations.of(context);
-    return team == Player.one ? l10n.team1Label : l10n.team2Label;
-  }
-
   /// Like [_teamLabel], but falls back to the voice layer's own language
   /// default ([VoiceAnnouncer.strings.teamLabel]) instead of the UI's
   /// [AppLocalizations] when no custom team name is set — mirrors
@@ -168,11 +162,6 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
   String _voiceTeamNameFor(Player team) {
     final teamNumber = team == Player.one ? 1 : 2;
     return _names.resolveTeam(teamNumber, _voice.strings.teamLabel(team));
-  }
-
-  void _setTeamName(Player team, String? name) {
-    final teamNumber = team == Player.one ? 1 : 2;
-    setState(() => _names.setTeam(teamNumber, name));
   }
 
   String _defaultSlotLabel(int slot) {
@@ -186,9 +175,6 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
   }
 
   String _slotLabel(int slot) => _names.resolve(slot, _defaultSlotLabel(slot));
-
-  void _setSlotName(int slot, String? name) =>
-      setState(() => _names.set(slot, name));
 
   void _showChangeEndsBanner() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -270,17 +256,9 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
             child: _DoublesTeamZone(
               key: const Key('team1Zone'),
               teamHeading: _teamLabel(Player.one),
-              teamHeadingDefault: _defaultTeamLabel(Player.one),
               teamHeadingKey: const Key('team1Heading'),
-              teamHeadingFieldKey: const Key('team1HeadingField'),
-              onTeamNameChanged: (name) => _setTeamName(Player.one, name),
               slot0Label: _slotLabel(1),
-              slot0DefaultLabel: _defaultSlotLabel(1),
               slot1Label: _slotLabel(2),
-              slot1DefaultLabel: _defaultSlotLabel(2),
-              editHint: l10n.editNameHint,
-              onSlot0NameChanged: (name) => _setSlotName(1, name),
-              onSlot1NameChanged: (name) => _setSlotName(2, name),
               slot0Serving: isServing(const DoublesSeat(Player.one, 0)),
               slot0Receiving: isReceiving(const DoublesSeat(Player.one, 0)),
               slot1Serving: isServing(const DoublesSeat(Player.one, 1)),
@@ -295,9 +273,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
               slot1ServerIconKey: const Key('team1Slot1ServerIcon'),
               slot1ReceiverIconKey: const Key('team1Slot1ReceiverIcon'),
               slot0NameTextKey: const Key('player1NameText'),
-              slot0NameFieldKey: const Key('player1NameField'),
               slot1NameTextKey: const Key('player2NameText'),
-              slot1NameFieldKey: const Key('player2NameField'),
               onTap: () => _scorePoint(Player.one),
             ),
           ),
@@ -306,17 +282,9 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
             child: _DoublesTeamZone(
               key: const Key('team2Zone'),
               teamHeading: _teamLabel(Player.two),
-              teamHeadingDefault: _defaultTeamLabel(Player.two),
               teamHeadingKey: const Key('team2Heading'),
-              teamHeadingFieldKey: const Key('team2HeadingField'),
-              onTeamNameChanged: (name) => _setTeamName(Player.two, name),
               slot0Label: _slotLabel(3),
-              slot0DefaultLabel: _defaultSlotLabel(3),
               slot1Label: _slotLabel(4),
-              slot1DefaultLabel: _defaultSlotLabel(4),
-              editHint: l10n.editNameHint,
-              onSlot0NameChanged: (name) => _setSlotName(3, name),
-              onSlot1NameChanged: (name) => _setSlotName(4, name),
               slot0Serving: isServing(const DoublesSeat(Player.two, 0)),
               slot0Receiving: isReceiving(const DoublesSeat(Player.two, 0)),
               slot1Serving: isServing(const DoublesSeat(Player.two, 1)),
@@ -331,9 +299,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
               slot1ServerIconKey: const Key('team2Slot1ServerIcon'),
               slot1ReceiverIconKey: const Key('team2Slot1ReceiverIcon'),
               slot0NameTextKey: const Key('player3NameText'),
-              slot0NameFieldKey: const Key('player3NameField'),
               slot1NameTextKey: const Key('player4NameText'),
-              slot1NameFieldKey: const Key('player4NameField'),
               onTap: () => _scorePoint(Player.two),
             ),
           ),
@@ -349,17 +315,9 @@ class _DoublesTeamZone extends StatelessWidget {
   /// pair of names forms one team, rather than having to infer it from
   /// two unlabeled stacked rows. See PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
   final String teamHeading;
-  final String teamHeadingDefault;
   final Key teamHeadingKey;
-  final Key teamHeadingFieldKey;
-  final ValueChanged<String?> onTeamNameChanged;
   final String slot0Label;
-  final String slot0DefaultLabel;
   final String slot1Label;
-  final String slot1DefaultLabel;
-  final String editHint;
-  final ValueChanged<String?> onSlot0NameChanged;
-  final ValueChanged<String?> onSlot1NameChanged;
   final bool slot0Serving;
   final bool slot0Receiving;
   final bool slot1Serving;
@@ -374,25 +332,15 @@ class _DoublesTeamZone extends StatelessWidget {
   final Key slot1ServerIconKey;
   final Key slot1ReceiverIconKey;
   final Key slot0NameTextKey;
-  final Key slot0NameFieldKey;
   final Key slot1NameTextKey;
-  final Key slot1NameFieldKey;
   final VoidCallback onTap;
 
   const _DoublesTeamZone({
     super.key,
     required this.teamHeading,
-    required this.teamHeadingDefault,
     required this.teamHeadingKey,
-    required this.teamHeadingFieldKey,
-    required this.onTeamNameChanged,
     required this.slot0Label,
-    required this.slot0DefaultLabel,
     required this.slot1Label,
-    required this.slot1DefaultLabel,
-    required this.editHint,
-    required this.onSlot0NameChanged,
-    required this.onSlot1NameChanged,
     required this.slot0Serving,
     required this.slot0Receiving,
     required this.slot1Serving,
@@ -407,9 +355,7 @@ class _DoublesTeamZone extends StatelessWidget {
     required this.slot1ServerIconKey,
     required this.slot1ReceiverIconKey,
     required this.slot0NameTextKey,
-    required this.slot0NameFieldKey,
     required this.slot1NameTextKey,
-    required this.slot1NameFieldKey,
     required this.onTap,
   });
 
@@ -433,25 +379,18 @@ class _DoublesTeamZone extends StatelessWidget {
                   color: context.palette.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                // An optional custom team name (Phase 4G) — tap to set a
-                // club or nickname; left alone, it just keeps showing the
-                // generic "Team 1"/"Team 2" default.
-                child: EditableNameLabel(
-                  displayName: teamHeading,
-                  defaultLabel: teamHeadingDefault,
+                // A custom team name (if set on the setup screen) or the
+                // generic "Team 1"/"Team 2" default — plain, uneditable
+                // text here (Phase 4H locks editing to the setup screen).
+                child: Text(
+                  teamHeading,
+                  key: teamHeadingKey,
                   style: AppTypography.eyebrow(context),
-                  editHint: editHint,
-                  textKey: teamHeadingKey,
-                  fieldKey: teamHeadingFieldKey,
-                  onChanged: onTeamNameChanged,
                 ),
               ),
               const SizedBox(height: 8),
               _DoublesPlayerRow(
                 label: slot0Label,
-                defaultLabel: slot0DefaultLabel,
-                editHint: editHint,
-                onNameChanged: onSlot0NameChanged,
                 serving: slot0Serving,
                 receiving: slot0Receiving,
                 servingTooltip: servingTooltip,
@@ -459,14 +398,10 @@ class _DoublesTeamZone extends StatelessWidget {
                 serverIconKey: slot0ServerIconKey,
                 receiverIconKey: slot0ReceiverIconKey,
                 nameTextKey: slot0NameTextKey,
-                nameFieldKey: slot0NameFieldKey,
               ),
               const SizedBox(height: 6),
               _DoublesPlayerRow(
                 label: slot1Label,
-                defaultLabel: slot1DefaultLabel,
-                editHint: editHint,
-                onNameChanged: onSlot1NameChanged,
                 serving: slot1Serving,
                 receiving: slot1Receiving,
                 servingTooltip: servingTooltip,
@@ -474,7 +409,6 @@ class _DoublesTeamZone extends StatelessWidget {
                 serverIconKey: slot1ServerIconKey,
                 receiverIconKey: slot1ReceiverIconKey,
                 nameTextKey: slot1NameTextKey,
-                nameFieldKey: slot1NameFieldKey,
               ),
               Expanded(
                 child: Center(
@@ -493,9 +427,6 @@ class _DoublesTeamZone extends StatelessWidget {
 
 class _DoublesPlayerRow extends StatelessWidget {
   final String label;
-  final String defaultLabel;
-  final String editHint;
-  final ValueChanged<String?> onNameChanged;
   final bool serving;
   final bool receiving;
   final String servingTooltip;
@@ -503,13 +434,9 @@ class _DoublesPlayerRow extends StatelessWidget {
   final Key serverIconKey;
   final Key receiverIconKey;
   final Key nameTextKey;
-  final Key nameFieldKey;
 
   const _DoublesPlayerRow({
     required this.label,
-    required this.defaultLabel,
-    required this.editHint,
-    required this.onNameChanged,
     required this.serving,
     required this.receiving,
     required this.servingTooltip,
@@ -517,7 +444,6 @@ class _DoublesPlayerRow extends StatelessWidget {
     required this.serverIconKey,
     required this.receiverIconKey,
     required this.nameTextKey,
-    required this.nameFieldKey,
   });
 
   @override
@@ -558,14 +484,14 @@ class _DoublesPlayerRow extends StatelessWidget {
                   : null,
         ),
         const SizedBox(width: 6),
-        EditableNameLabel(
-          displayName: label,
-          defaultLabel: defaultLabel,
+        // Plain, uneditable text — Phase 4H locks name editing to the
+        // setup screen only.
+        Text(
+          label,
+          key: nameTextKey,
           style: AppTypography.compactPlayerLabel(context),
-          editHint: editHint,
-          textKey: nameTextKey,
-          fieldKey: nameFieldKey,
-          onChanged: onNameChanged,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ],
     );

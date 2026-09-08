@@ -54,11 +54,13 @@ class _SetupScreenState extends State<SetupScreen> {
   bool _isDoubles = false;
   Player? _firstServer;
 
-  /// Custom names for the doubles preview's 4 slots (Phase 4F) — carried
-  /// into `DoublesScoreboardScreen` when the match starts. Singles has no
-  /// setup-screen name UI (there's nothing to preview before tossing), so
-  /// singles names are only ever edited on the scoreboard itself.
-  final _doublesNames = PlayerNames();
+  /// Custom names set on this screen — slots 1/2 for singles, slots 1-4
+  /// (plus optional team names) for doubles — carried into the
+  /// scoreboard screen when the match starts. Since Phase 4H, this is
+  /// the *only* place names can be edited: once a match starts, the
+  /// scoreboard renders whatever's here as plain, uneditable text. See
+  /// PHASE4H_NAME_EDITING_REFINEMENT.md.
+  final _names = PlayerNames();
 
   /// The toss outcome, decided the instant the coin is tossed — not
   /// withheld for suspense, since the flip's job is purely to show it
@@ -106,11 +108,12 @@ class _SetupScreenState extends State<SetupScreen> {
         ? DoublesScoreboardScreen(
             bestOf: _bestOf,
             firstServingTeam: firstServer,
-            initialNames: _doublesNames,
+            initialNames: _names,
           )
         : ScoreboardScreen(
             bestOf: _bestOf,
             firstServer: firstServer,
+            initialNames: _names,
           );
     // A brief ball-flyby transition plays first, then replaces itself
     // with `destination` — see MatchTransitionScreen and
@@ -235,7 +238,43 @@ class _SetupScreenState extends State<SetupScreen> {
                 curve: Curves.easeOutCubic,
                 alignment: Alignment.topCenter,
                 child: !_isDoubles
-                    ? const SizedBox(width: double.infinity)
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        // The same tap-to-rename preview doubles already
+                        // had — singles previously had no equivalent
+                        // step at all. See
+                        // PHASE4H_NAME_EDITING_REFINEMENT.md.
+                        child: Row(
+                          key: const Key('singlesPlayerNames'),
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            EditableNameLabel(
+                              displayName:
+                                  _names.resolve(1, l10n.player1Label),
+                              defaultLabel: l10n.player1Label,
+                              style: AppTypography.playerLabel(context),
+                              editHint: l10n.editNameHint,
+                              textKey: const Key('player1PreviewNameText'),
+                              fieldKey:
+                                  const Key('player1PreviewNameField'),
+                              onChanged: (name) =>
+                                  setState(() => _names.set(1, name)),
+                            ),
+                            EditableNameLabel(
+                              displayName:
+                                  _names.resolve(2, l10n.player2Label),
+                              defaultLabel: l10n.player2Label,
+                              style: AppTypography.playerLabel(context),
+                              editHint: l10n.editNameHint,
+                              textKey: const Key('player2PreviewNameText'),
+                              fieldKey:
+                                  const Key('player2PreviewNameField'),
+                              onChanged: (name) =>
+                                  setState(() => _names.set(2, name)),
+                            ),
+                          ],
+                        ),
+                      )
                     : Padding(
                         padding: const EdgeInsets.only(top: 20),
                         child: Row(
@@ -251,12 +290,12 @@ class _SetupScreenState extends State<SetupScreen> {
                                 l10n.player1Label,
                                 l10n.player2Label
                               ],
-                              names: _doublesNames,
+                              names: _names,
                               editHint: l10n.editNameHint,
                               onNameChanged: (slot, name) =>
-                                  setState(() => _doublesNames.set(slot, name)),
+                                  setState(() => _names.set(slot, name)),
                               onTeamNameChanged: (name) => setState(
-                                  () => _doublesNames.setTeam(1, name)),
+                                  () => _names.setTeam(1, name)),
                             ),
                             _TeamSlotPreview(
                               teamNumber: 2,
@@ -267,12 +306,12 @@ class _SetupScreenState extends State<SetupScreen> {
                                 l10n.player3Label,
                                 l10n.player4Label
                               ],
-                              names: _doublesNames,
+                              names: _names,
                               editHint: l10n.editNameHint,
                               onNameChanged: (slot, name) =>
-                                  setState(() => _doublesNames.set(slot, name)),
+                                  setState(() => _names.set(slot, name)),
                               onTeamNameChanged: (name) => setState(
-                                  () => _doublesNames.setTeam(2, name)),
+                                  () => _names.setTeam(2, name)),
                             ),
                           ],
                         ),

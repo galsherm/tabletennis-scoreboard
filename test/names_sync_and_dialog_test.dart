@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tabletennis_scoreboard/l10n/gen/app_localizations.dart';
 import 'package:tabletennis_scoreboard/main.dart';
 import 'package:tabletennis_scoreboard/models/player.dart';
+import 'package:tabletennis_scoreboard/models/player_names.dart';
 import 'package:tabletennis_scoreboard/screens/doubles_scoreboard_screen.dart';
 import 'package:tabletennis_scoreboard/screens/scoreboard_screen.dart';
 import 'package:tabletennis_scoreboard/services/clip_player.dart';
@@ -32,6 +33,8 @@ class _NoopClipPlayer implements ClipPlayer {
 VoiceAnnouncer _silentVoice() =>
     VoiceAnnouncer(ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
 
+/// Only meaningful on the *setup* screen since Phase 4H — the only place
+/// names are still editable.
 Future<void> _renameField(
     WidgetTester tester, Key textKey, Key fieldKey, String newName) async {
   await tester.tap(find.byKey(textKey));
@@ -41,11 +44,62 @@ Future<void> _renameField(
   await tester.pump();
 }
 
+bool _hasDashedUnderline(Text text) =>
+    text.style?.decoration == TextDecoration.underline &&
+    text.style?.decorationStyle == TextDecorationStyle.dashed;
+
 void main() {
-  group('Name editing discoverability (Phase 4G)', () {
-    testWidgets('every editable name in singles shows a visible edit icon '
-        '— not just a tooltip that only appears on long-press/hover',
-        (tester) async {
+  group('Name editing affordance (Phase 4H: dashed underline, setup-only)',
+      () {
+    testWidgets(
+        'setup screen (singles): the two preview names show a dashed '
+        'underline — not an icon', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      expect(
+        _hasDashedUnderline(tester
+            .widget<Text>(find.byKey(const Key('player1PreviewNameText')))),
+        isTrue,
+      );
+      expect(
+        _hasDashedUnderline(tester
+            .widget<Text>(find.byKey(const Key('player2PreviewNameText')))),
+        isTrue,
+      );
+      expect(find.byIcon(Icons.edit), findsNothing,
+          reason: 'the pencil icon was replaced by the underline in '
+              'PHASE4H_NAME_EDITING_REFINEMENT.md');
+    });
+
+    testWidgets(
+        'setup screen (doubles): all 4 player names and both team '
+        'headings show the dashed underline', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Doubles'));
+      await tester.pumpAndSettle();
+
+      for (final key in [
+        'player1PreviewNameText',
+        'player2PreviewNameText',
+        'player3PreviewNameText',
+        'player4PreviewNameText',
+        'team1PreviewHeading',
+        'team2PreviewHeading',
+      ]) {
+        expect(
+          _hasDashedUnderline(tester.widget<Text>(find.byKey(Key(key)))),
+          isTrue,
+          reason: '$key should show the dashed-underline affordance',
+        );
+      }
+      expect(find.byIcon(Icons.edit), findsNothing);
+    });
+
+    testWidgets(
+        'scoreboard (singles): names show no edit affordance at all, and '
+        'tapping one does nothing', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -57,23 +111,22 @@ void main() {
       ));
 
       expect(
-        find.descendant(
-          of: find.byKey(const Key('player1Zone')),
-          matching: find.byIcon(Icons.edit),
-        ),
-        findsOneWidget,
+        _hasDashedUnderline(
+            tester.widget<Text>(find.byKey(const Key('player1NameText')))),
+        isFalse,
       );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('player2Zone')),
-          matching: find.byIcon(Icons.edit),
-        ),
-        findsOneWidget,
-      );
+      expect(find.byIcon(Icons.edit), findsNothing);
+
+      await tester.tap(find.byKey(const Key('player1NameText')));
+      await tester.pump();
+      expect(find.byType(TextField), findsNothing,
+          reason: 'tapping a name during a match must not start editing');
+      expect(find.text('Player 1'), findsOneWidget);
     });
 
-    testWidgets('every editable name in doubles shows a visible edit icon '
-        '— all 4 player names plus both team headings', (tester) async {
+    testWidgets(
+        'scoreboard (doubles): all 4 names and both team headings show no '
+        'edit affordance, and tapping does nothing', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -84,51 +137,320 @@ void main() {
         ),
       ));
 
-      // 2 player names + 1 team heading per side = 3 edit icons per zone.
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('team1Zone')),
-          matching: find.byIcon(Icons.edit),
-        ),
-        findsNWidgets(3),
-      );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('team2Zone')),
-          matching: find.byIcon(Icons.edit),
-        ),
-        findsNWidgets(3),
-      );
+      for (final key in [
+        'player1NameText',
+        'player2NameText',
+        'player3NameText',
+        'player4NameText',
+        'team1Heading',
+        'team2Heading',
+      ]) {
+        expect(
+          _hasDashedUnderline(tester.widget<Text>(find.byKey(Key(key)))),
+          isFalse,
+          reason: '$key must not show the editable underline in-match',
+        );
+      }
+      expect(find.byIcon(Icons.edit), findsNothing);
+
+      await tester.tap(find.byKey(const Key('team1Heading')));
+      await tester.pump();
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Team 1'), findsOneWidget);
     });
   });
 
-  group('Optional custom team name (Phase 4G)', () {
-    Future<void> pumpDoubles(WidgetTester tester, {VoiceAnnouncer? voice}) {
-      return tester.pumpWidget(MaterialApp(
+  group('Singles name editing on the setup screen (Phase 4H)', () {
+    testWidgets(
+        'singles mode shows an editable Player 1/Player 2 preview by '
+        'default — this step did not exist before Phase 4H',
+        (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('singlesPlayerNames')), findsOneWidget);
+      expect(find.text('Player 1'), findsOneWidget);
+      expect(find.text('Player 2'), findsOneWidget);
+    });
+
+    testWidgets('tapping a singles preview name reveals an editable field '
+        'pre-filled with the current name', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('player1PreviewNameText')));
+      await tester.pump();
+
+      final field = tester
+          .widget<TextField>(find.byKey(const Key('player1PreviewNameField')));
+      expect(field.controller!.text, 'Player 1');
+    });
+
+    testWidgets(
+        'renaming a singles player on setup carries into the started '
+        'match, where it is then locked', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      await _renameField(tester, const Key('player1PreviewNameText'),
+          const Key('player1PreviewNameField'), 'Alex');
+      expect(find.text('Alex'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('startMatchButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alex'), findsOneWidget);
+      // Locked: tapping it on the scoreboard does nothing.
+      await tester.tap(find.byKey(const Key('player1NameText')));
+      await tester.pump();
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('clearing a singles name on setup reverts it to the '
+        'default before the match even starts', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      await _renameField(tester, const Key('player1PreviewNameText'),
+          const Key('player1PreviewNameField'), 'Alex');
+      expect(find.text('Alex'), findsOneWidget);
+
+      await _renameField(tester, const Key('player1PreviewNameText'),
+          const Key('player1PreviewNameField'), '   ');
+      expect(find.text('Player 1'), findsOneWidget);
+      expect(find.text('Alex'), findsNothing);
+    });
+  });
+
+  group('Names are locked once a match starts (Phase 4H)', () {
+    testWidgets('singles: a name set before the match displays correctly '
+        'and cannot be edited on the scoreboard', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 5,
+          firstServer: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..set(1, 'Alex'),
+        ),
+      ));
+
+      expect(find.text('Alex'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('player1NameText')));
+      await tester.pump();
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('singles: a custom name appears in the game-complete '
+        'banner', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 5,
+          firstServer: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..set(1, 'Alex'),
+        ),
+      ));
+
+      for (var i = 0; i < 11; i++) {
+        await tester.tap(find.byKey(const Key('player1Zone')));
+        await tester.pump();
+      }
+
+      expect(find.textContaining('Alex wins the game'), findsOneWidget);
+    });
+
+    testWidgets('singles: a custom name is spoken by voice for a match '
+        'win', (tester) async {
+      final tts = _RecordingTtsEngine();
+      final voice =
+          VoiceAnnouncer(ttsEngine: tts, clipPlayer: _NoopClipPlayer());
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 3,
+          firstServer: Player.one,
+          voiceAnnouncer: voice,
+          initialNames: PlayerNames()..set(1, 'Alex'),
+        ),
+      ));
+
+      for (var game = 0; game < 2; game++) {
+        for (var i = 0; i < 11; i++) {
+          await tester.tap(find.byKey(const Key('player1Zone')));
+          await tester.pump();
+        }
+      }
+      await tester.pump();
+
+      expect(tts.spoken.last, contains('Alex'));
+      expect(tts.spoken.last, isNot(contains('Player 1')));
+    });
+
+    testWidgets(
+        'singles: "New match" keeps the custom name — it can no longer '
+        'be re-edited from the scoreboard, so clearing it would lose it '
+        'permanently', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 3,
+          firstServer: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..set(1, 'Alex'),
+        ),
+      ));
+
+      for (var game = 0; game < 2; game++) {
+        for (var i = 0; i < 11; i++) {
+          await tester.tap(find.byKey(const Key('player1Zone')));
+          await tester.pump();
+        }
+      }
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('newMatchButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alex'), findsOneWidget);
+    });
+
+    testWidgets('singles: a maximum-length name renders without overflow',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 5,
+          firstServer: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..set(1, 'A' * PlayerNames.maxLength),
+        ),
+      ));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('doubles: a name set for one slot only shows in that slot',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 5,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..set(1, 'Alex'),
+        ),
+      ));
+
+      expect(find.text('Alex'), findsOneWidget);
+      expect(find.text('Player 2'), findsOneWidget);
+      expect(find.text('Player 3'), findsOneWidget);
+      expect(find.text('Player 4'), findsOneWidget);
+    });
+
+    testWidgets(
+        'doubles: an individual custom name never changes the "Team 1" '
+        'match-complete banner', (tester) async {
+      await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: DoublesScoreboardScreen(
           bestOf: 3,
           firstServingTeam: Player.one,
-          voiceAnnouncer: voice ?? _silentVoice(),
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..set(1, 'Alex'),
         ),
       ));
-    }
 
+      for (var game = 0; game < 2; game++) {
+        for (var i = 0; i < 11; i++) {
+          await tester.tap(find.byKey(const Key('team1Zone')));
+          await tester.pump();
+        }
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.text('Team 1 wins the match!'), findsOneWidget);
+    });
+
+    testWidgets('doubles: a 16-character name renders without overflow',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 5,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..set(1, 'A' * PlayerNames.maxLength),
+        ),
+      ));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('doubles: "New match" keeps custom names', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 3,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..set(1, 'Alex'),
+        ),
+      ));
+
+      for (var game = 0; game < 2; game++) {
+        for (var i = 0; i < 11; i++) {
+          await tester.tap(find.byKey(const Key('team1Zone')));
+          await tester.pump();
+        }
+      }
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('newMatchButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alex'), findsOneWidget);
+    });
+  });
+
+  group('Optional custom team name (setup-only per Phase 4H)', () {
     testWidgets('with no custom team name, the heading still shows the '
         'generic "Team 1"/"Team 2" default, exactly as before',
         (tester) async {
-      await pumpDoubles(tester);
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 3,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: _silentVoice(),
+        ),
+      ));
       expect(find.text('Team 1'), findsOneWidget);
       expect(find.text('Team 2'), findsOneWidget);
     });
 
-    testWidgets('setting a custom team name updates the heading '
-        'immediately', (tester) async {
-      await pumpDoubles(tester);
+    testWidgets('setting a custom team name on the setup screen updates '
+        'its preview heading immediately', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Doubles'));
+      await tester.pumpAndSettle();
 
-      await _renameField(tester, const Key('team1Heading'),
-          const Key('team1HeadingField'), 'The Smashers');
+      await _renameField(tester, const Key('team1PreviewHeading'),
+          const Key('team1PreviewHeadingField'), 'The Smashers');
 
       expect(find.text('The Smashers'), findsOneWidget);
       expect(find.text('Team 1'), findsNothing);
@@ -136,28 +458,37 @@ void main() {
           reason: 'team 2 is unaffected');
     });
 
-    testWidgets('a custom team name does not change either individual '
-        'player name, and renaming a player does not change the team '
+    testWidgets(
+        'a custom team name does not change either individual player '
         'name', (tester) async {
-      await pumpDoubles(tester);
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 3,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..setTeam(1, 'The Smashers'),
+        ),
+      ));
 
-      await _renameField(tester, const Key('team1Heading'),
-          const Key('team1HeadingField'), 'The Smashers');
+      expect(find.text('The Smashers'), findsOneWidget);
       expect(find.text('Player 1'), findsOneWidget);
       expect(find.text('Player 2'), findsOneWidget);
-
-      await _renameField(tester, const Key('player1NameText'),
-          const Key('player1NameField'), 'Alex');
-      expect(find.text('The Smashers'), findsOneWidget,
-          reason: 'renaming a player must not touch the team name');
     });
 
     testWidgets('a custom team name appears in the game-complete banner',
         (tester) async {
-      await pumpDoubles(tester);
-
-      await _renameField(tester, const Key('team1Heading'),
-          const Key('team1HeadingField'), 'The Smashers');
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 3,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..setTeam(1, 'The Smashers'),
+        ),
+      ));
 
       for (var i = 0; i < 11; i++) {
         await tester.tap(find.byKey(const Key('team1Zone')));
@@ -171,10 +502,16 @@ void main() {
     testWidgets(
         'a custom team name appears in the match-complete dialog message',
         (tester) async {
-      await pumpDoubles(tester);
-
-      await _renameField(tester, const Key('team1Heading'),
-          const Key('team1HeadingField'), 'The Smashers');
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 3,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..setTeam(1, 'The Smashers'),
+        ),
+      ));
 
       for (var game = 0; game < 2; game++) {
         for (var i = 0; i < 11; i++) {
@@ -194,10 +531,16 @@ void main() {
       final tts = _RecordingTtsEngine();
       final voice =
           VoiceAnnouncer(ttsEngine: tts, clipPlayer: _NoopClipPlayer());
-      await pumpDoubles(tester, voice: voice);
-
-      await _renameField(tester, const Key('team1Heading'),
-          const Key('team1HeadingField'), 'The Smashers');
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 3,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: voice,
+          initialNames: PlayerNames()..setTeam(1, 'The Smashers'),
+        ),
+      ));
 
       for (var game = 0; game < 2; game++) {
         for (var i = 0; i < 11; i++) {
@@ -211,16 +554,21 @@ void main() {
       expect(tts.spoken.last, isNot(contains('Team 1')));
     });
 
-    testWidgets(
-        'a custom team name is SPOKEN by voice for a game win too',
+    testWidgets('a custom team name is SPOKEN by voice for a game win too',
         (tester) async {
       final tts = _RecordingTtsEngine();
       final voice =
           VoiceAnnouncer(ttsEngine: tts, clipPlayer: _NoopClipPlayer());
-      await pumpDoubles(tester, voice: voice);
-
-      await _renameField(tester, const Key('team1Heading'),
-          const Key('team1HeadingField'), 'The Smashers');
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 5,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: voice,
+          initialNames: PlayerNames()..setTeam(1, 'The Smashers'),
+        ),
+      ));
 
       for (var i = 0; i < 11; i++) {
         await tester.tap(find.byKey(const Key('team1Zone')));
@@ -253,19 +601,32 @@ void main() {
       expect(find.text('The Smashers'), findsOneWidget);
     });
 
-    testWidgets('"New match" resets a custom team name back to the '
-        'generic default', (tester) async {
-      await pumpDoubles(tester);
+    testWidgets(
+        '"New match" keeps a custom team name — it can no longer be '
+        're-edited from the scoreboard', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DoublesScoreboardScreen(
+          bestOf: 3,
+          firstServingTeam: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          initialNames: PlayerNames()..setTeam(1, 'The Smashers'),
+        ),
+      ));
 
-      await _renameField(tester, const Key('team1Heading'),
-          const Key('team1HeadingField'), 'The Smashers');
+      for (var game = 0; game < 2; game++) {
+        for (var i = 0; i < 11; i++) {
+          await tester.tap(find.byKey(const Key('team1Zone')));
+          await tester.pump();
+        }
+      }
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('newMatchButton')));
+      await tester.pumpAndSettle();
+
       expect(find.text('The Smashers'), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('resetButton')));
-      await tester.pump();
-
-      expect(find.text('Team 1'), findsOneWidget);
-      expect(find.text('The Smashers'), findsNothing);
     });
   });
 

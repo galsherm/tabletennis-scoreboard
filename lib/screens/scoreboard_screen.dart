@@ -8,7 +8,6 @@ import '../services/commentary_strings.dart';
 import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
-import '../widgets/editable_name_label.dart';
 import '../widgets/match_complete_dialog.dart';
 
 class ScoreboardScreen extends StatefulWidget {
@@ -20,10 +19,9 @@ class ScoreboardScreen extends StatefulWidget {
   /// language the widget tree is currently displaying.
   final VoiceAnnouncer? voiceAnnouncer;
 
-  /// Custom player names set before the match started (Phase 4F) —
-  /// singles has no setup-screen name UI, so this is normally only
-  /// populated by tests; a real match's names are all edited here, on
-  /// the scoreboard itself.
+  /// Custom player names, set on the setup screen before this match
+  /// started — the *only* place names can be edited (Phase 4H). Once
+  /// this screen is showing, names render as plain, uneditable text.
   final PlayerNames? initialNames;
 
   const ScoreboardScreen({
@@ -43,8 +41,12 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   late VoiceAnnouncer _voice;
   bool _voiceInitialized = false;
 
-  /// Custom names for this match (Phase 4F) — reset on "New match" (see
-  /// [_resetMatch]), never persisted beyond the current match.
+  /// Custom names for this match (Phase 4F), fixed for the lifetime of
+  /// this screen — set once from [widget.initialNames] on the setup
+  /// screen and never mutated here (Phase 4H locks editing to setup
+  /// only), including across a "New match" reset: since there's no way
+  /// to re-edit a name from this screen, clearing it on reset would
+  /// permanently lose it until the user backs all the way out to setup.
   late final PlayerNames _names;
 
   @override
@@ -116,14 +118,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   void _undo() => setState(() => _engine.undo());
 
-  /// Resets both the match itself and any custom names back to their
-  /// defaults — "New match" starts genuinely fresh, per
-  /// PHASE4F_THEME_AND_NAMES.md ("names ... reset to defaults for a new
-  /// match").
-  void _resetMatch() => setState(() {
-        _engine.resetMatch();
-        _names.clear();
-      });
+  /// Resets the match itself. Custom names are *not* cleared — see the
+  /// [_names] doc comment (Phase 4H changed this from Phase 4F's
+  /// behavior, where "New match" used to reset names too).
+  void _resetMatch() => setState(() => _engine.resetMatch());
 
   String _defaultPlayerLabel(Player player) {
     final l10n = AppLocalizations.of(context);
@@ -142,11 +140,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   String _voiceNameFor(Player player) {
     final slot = player == Player.one ? 1 : 2;
     return _names.resolve(slot, _voice.strings.playerLabel(player));
-  }
-
-  void _setPlayerName(Player player, String? name) {
-    final slot = player == Player.one ? 1 : 2;
-    setState(() => _names.set(slot, name));
   }
 
   void _showChangeEndsBanner() {
@@ -225,9 +218,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
             child: _PlayerZone(
               key: const Key('player1Zone'),
               label: _playerLabel(Player.one),
-              defaultLabel: _defaultPlayerLabel(Player.one),
-              editHint: l10n.editNameHint,
-              onNameChanged: (name) => _setPlayerName(Player.one, name),
               points: _engine.player1Points,
               gamesLabel: l10n.gamesCountLabel(_engine.player1Games),
               isServer: server == Player.one,
@@ -235,7 +225,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               pointsKey: const Key('player1PointsText'),
               serverIconKey: const Key('player1ServerIcon'),
               nameTextKey: const Key('player1NameText'),
-              nameFieldKey: const Key('player1NameField'),
               onTap: () => _scorePoint(Player.one),
             ),
           ),
@@ -244,9 +233,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
             child: _PlayerZone(
               key: const Key('player2Zone'),
               label: _playerLabel(Player.two),
-              defaultLabel: _defaultPlayerLabel(Player.two),
-              editHint: l10n.editNameHint,
-              onNameChanged: (name) => _setPlayerName(Player.two, name),
               points: _engine.player2Points,
               gamesLabel: l10n.gamesCountLabel(_engine.player2Games),
               isServer: server == Player.two,
@@ -254,7 +240,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               pointsKey: const Key('player2PointsText'),
               serverIconKey: const Key('player2ServerIcon'),
               nameTextKey: const Key('player2NameText'),
-              nameFieldKey: const Key('player2NameField'),
               onTap: () => _scorePoint(Player.two),
             ),
           ),
@@ -270,9 +255,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 /// [AppTypography]) so the eye lands on the number first.
 class _PlayerZone extends StatelessWidget {
   final String label;
-  final String defaultLabel;
-  final String editHint;
-  final ValueChanged<String?> onNameChanged;
   final int points;
   final String gamesLabel;
   final bool isServer;
@@ -280,15 +262,11 @@ class _PlayerZone extends StatelessWidget {
   final Key pointsKey;
   final Key serverIconKey;
   final Key nameTextKey;
-  final Key nameFieldKey;
   final VoidCallback onTap;
 
   const _PlayerZone({
     super.key,
     required this.label,
-    required this.defaultLabel,
-    required this.editHint,
-    required this.onNameChanged,
     required this.points,
     required this.gamesLabel,
     required this.isServer,
@@ -296,7 +274,6 @@ class _PlayerZone extends StatelessWidget {
     required this.pointsKey,
     required this.serverIconKey,
     required this.nameTextKey,
-    required this.nameFieldKey,
     required this.onTap,
   });
 
@@ -331,14 +308,15 @@ class _PlayerZone extends StatelessWidget {
                     : null,
               ),
               const SizedBox(height: 6),
-              EditableNameLabel(
-                displayName: label,
-                defaultLabel: defaultLabel,
+              // Plain, uneditable text — names can only be set on the
+              // setup screen (Phase 4H); the in-match screen stays
+              // focused purely on score, with no edit affordance at all.
+              Text(
+                label,
+                key: nameTextKey,
                 style: AppTypography.playerLabel(context),
-                editHint: editHint,
-                textKey: nameTextKey,
-                fieldKey: nameFieldKey,
-                onChanged: onNameChanged,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
               Expanded(
                 child: Center(

@@ -10,13 +10,19 @@ import '../theme/app_theme.dart';
 /// commits the trimmed result, or reverts to [defaultLabel] if left
 /// blank.
 ///
-/// A small pencil icon sits right after the text in read mode — added in
-/// PHASE4G_NAMES_SYNC_AND_DIALOG.md after user testing found the name
-/// was tappable but gave no visible sign of it: a `Tooltip` alone only
-/// appears on long-press/hover, which isn't a visible affordance at all,
-/// so nothing on screen suggested a name could be renamed. The icon is
-/// deliberately small and muted (`faintText`) so it reads as a quiet
-/// hint, not competing with the name itself for attention.
+/// Only ever used on the setup screen (Phase 4H) — once a match starts,
+/// names render as plain, uneditable `Text` instead (see
+/// `ScoreboardScreen`/`DoublesScoreboardScreen`), keeping the in-match
+/// screen focused purely on score.
+///
+/// The affordance is a thin dashed underline beneath the name (Phase
+/// 4H), not an icon: an icon was tried first (PHASE4G_NAMES_SYNC_AND_
+/// DIALOG.md) to fix a real discoverability gap — a `Tooltip` alone
+/// only appears on long-press/hover, so nothing on screen suggested a
+/// name could be renamed — but user testing preferred the subtler,
+/// established "dashed underline means editable" convention (as used
+/// e.g. by Google Contacts) over adding a second glyph next to every
+/// name.
 class EditableNameLabel extends StatefulWidget {
   /// The name currently shown — either a previously-set custom name or
   /// [defaultLabel].
@@ -120,38 +126,25 @@ class _EditableNameLabelState extends State<EditableNameLabel> {
         ),
       );
     }
-    // A small edit-pencil sized relative to the name's own font, so it
-    // stays proportionate whether it's sitting next to a 19pt singles
-    // name or a 15pt compact doubles one.
-    final iconSize = (widget.style.fontSize ?? 16) * 0.68;
     return InkWell(
       key: widget.textKey == null ? null : Key('${widget.textKey}_tap'),
       onTap: _startEditing,
       child: Tooltip(
         message: widget.editHint,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                widget.displayName,
-                key: widget.textKey,
-                style: widget.style,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-            const SizedBox(width: 3),
-            Icon(
-              Icons.edit,
-              key: widget.textKey == null
-                  ? null
-                  : Key('${widget.textKey}_editIcon'),
-              size: iconSize,
-              color: context.palette.faintText,
-            ),
-          ],
+        child: Text(
+          widget.displayName,
+          key: widget.textKey,
+          // A thin dashed underline signals "this is editable" without
+          // an icon competing with the name for attention — see the
+          // class doc comment.
+          style: widget.style.copyWith(
+            decoration: TextDecoration.underline,
+            decorationStyle: TextDecorationStyle.dashed,
+            decorationColor: context.palette.faintText,
+            decorationThickness: 1.2,
+          ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ),
     );
