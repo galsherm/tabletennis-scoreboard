@@ -226,7 +226,7 @@ void main() {
 
   group('DoublesScoreboardScreen: localized tooltips', () {
     testWidgets('server/receiver tooltips use the German terms Aufschlag '
-        'and Annahme', (tester) async {
+        'and Rückschläger', (tester) async {
       final voice = VoiceAnnouncer(
           ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
       await tester.pumpWidget(MaterialApp(
@@ -251,7 +251,7 @@ void main() {
         of: find.byKey(const Key('team2Slot0ReceiverIcon')),
         matching: find.byType(Tooltip),
       ));
-      expect(receiverIcon.message, 'Annahme');
+      expect(receiverIcon.message, 'Rückschläger');
     });
   });
 

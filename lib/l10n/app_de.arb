@@ -20,7 +20,7 @@
   "player2Label": "Spieler 2",
   "player3Label": "Spieler 3",
   "player4Label": "Spieler 4",
-  "receivingTooltip": "Annahme",
+  "receivingTooltip": "Rückschläger",
   "modeSinglesOption": "Einzel",
   "modeDoublesOption": "Doppel",
   "gamesCountLabel": "Sätze: {count}",

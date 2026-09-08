@@ -9,10 +9,12 @@ plus 11 new doubles-rotation unit tests and 14 new doubles widget tests).
 No bugs found in existing code this time — the rotation logic was derived
 and hand-verified against the standard ITTF doubles sequence *before*
 writing the implementation (§1), and every test passed on the first real
-run once one trivial missing-import compile error was fixed. Several
-design decisions were made where the spec allowed judgment; §3 lists them
-for your review, most notably §3.1 (fixed partner order for the whole
-match, not re-chosen each game) and §3.2 (doubles game/match-won
+run once one trivial missing-import compile error was fixed. §4 has since
+been corrected: both the German and French receiver terms were wrong,
+caught via external research citing DTTB's and FFTT's own official rules
+text. Several design decisions were made where the spec allowed judgment;
+§3 lists them for your review, most notably §3.1 (fixed partner order for
+the whole match, not re-chosen each game) and §3.2 (doubles game/match-won
 announcements say "Player 1"/"Player 2" generically, not the specific
 pair's names).
 
@@ -56,8 +58,9 @@ derivation and how it was checked.
   shows its two players stacked, with a serving icon (🏓, reusing the
   existing "Aufschlag"/"Serving"/"Service" tooltip) on whichever one of
   the four is currently serving, and a new receiving icon (↩, new
-  "Annahme"/"Receiving"/"Réception" tooltip) on whichever one is currently
-  the designated receiver — never more than one of each, and never both on
+  "Rückschläger"/"Receiving"/"Relanceur" tooltip — corrected from an
+  initial wrong choice, see §4) on whichever one is currently the
+  designated receiver — never more than one of each, and never both on
   the same two people twice on either side (see the rotation cycle below).
 - New ARB keys (`app_en.arb`/`app_de.arb`/`app_fr.arb`): `player3Label`,
   `player4Label`, `receivingTooltip`, `modeSinglesOption`,
@@ -203,21 +206,42 @@ prefer one.
 
 ## 4. Terminology note
 
-No German/French terminology research was needed for this phase — the
-only new user-facing vocabulary is "Receiving" (English), which needed a
-German and French counterpart:
-- German: **Annahme** — this pairs with the existing "Aufschlag" (serve)
-  exactly the way "Aufschlag und Annahme" (serve and return of serve) is
-  a standard, commonly used pairing in German racket-sports vocabulary.
-  Moderate-high confidence, but — consistent with how Phase 3 flagged its
-  own non-spec-given terms — not something I can verify natively myself;
-  worth a quick native check like Phase 3's other flagged terms.
-- French: **Réception** — pairs with the existing "Service" the same way;
-  "service et réception" is standard French tennis/table-tennis
-  vocabulary. Similarly moderate-high confidence, not independently
-  verified.
+The only new user-facing vocabulary this phase introduced was "Receiving"
+(English) and its German/French counterparts for `receivingTooltip`. Both
+of my original choices were wrong, in the same way, and have been
+corrected.
 
-Everything else reused already-established, already-flagged-or-confirmed
-vocabulary from Phase 3 (Aufschlag, Seitenwechsel, Spielformat, Sätze,
-Spieler N, Manche, Joueur N, etc.) — no new domain terms beyond the two
-above.
+**What was wrong:** the initial choices — German "Annahme," French
+"Réception" — each name the *technique* of returning a serve (the skill),
+not the *role/person* doing it. The receiving tooltip labels a specific
+player, so it needs the role noun, not the technique noun. Both were
+originally flagged here as "moderate-high confidence, not independently
+verified" — that caution turned out to be warranted.
+
+**How it was caught:** external research, not native-speaker review —
+same pattern as Phase 3's "Einstand"/"Gleichstand" correction. Official
+sources for the receiving *role* are consistent: DTTB's own tischtennis.de
+and FFTT's own official rules PDF both use the dedicated role noun rather
+than the technique word — **Rückschläger** (German) and **relanceur**
+(French).
+
+**Fix applied:** `receivingTooltip` changed from "Annahme"/"Réception" to
+"Rückschläger"/"Relanceur" in `lib/l10n/app_de.arb` and `app_fr.arb` (the
+only place either word was used), regenerated via `flutter gen-l10n`.
+`test/doubles_widget_test.dart` had one test asserting the old German
+tooltip text ("server/receiver tooltips use the German terms Aufschlag
+and Annahme"); updated to assert "Rückschläger." No French test asserted
+the literal old string, so no other test changes were needed.
+
+```
+flutter analyze → No issues found!
+flutter test    → 00:07 +108: All tests passed!
+```
+
+Test count unchanged (108) — this was a value correction, not new
+coverage, exactly like Phase 3's deuce-term fix.
+
+Everything else in this phase reused already-established,
+already-flagged-or-confirmed vocabulary from Phase 3 (Aufschlag,
+Seitenwechsel, Spielformat, Sätze, Spieler N, Manche, Joueur N, etc.) — no
+other new domain terms.

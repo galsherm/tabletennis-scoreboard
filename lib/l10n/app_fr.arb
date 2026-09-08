@@ -20,7 +20,7 @@
   "player2Label": "Joueur 2",
   "player3Label": "Joueur 3",
   "player4Label": "Joueur 4",
-  "receivingTooltip": "Réception",
+  "receivingTooltip": "Relanceur",
   "modeSinglesOption": "Simple",
   "modeDoublesOption": "Double",
   "gamesCountLabel": "Manches : {count}",

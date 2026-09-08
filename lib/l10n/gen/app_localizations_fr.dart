@@ -73,7 +73,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get player4Label => 'Joueur 4';
 
   @override
-  String get receivingTooltip => 'Réception';
+  String get receivingTooltip => 'Relanceur';
 
   @override
   String get modeSinglesOption => 'Simple';
