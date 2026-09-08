@@ -248,8 +248,9 @@ void main() {
     });
 
     testWidgets(
-        'individual on-court labels stay Player 1-4 in doubles, unaffected '
-        'by the coin/toss wording', (tester) async {
+        'individual on-court labels stay Player 1-4 in doubles, grouped '
+        'under (not replaced by) a Team 1/Team 2 heading — see '
+        'PHASE4D_TEAM_CLARITY_AND_TRANSITION.md', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -264,8 +265,11 @@ void main() {
       expect(find.text('Player 2'), findsOneWidget);
       expect(find.text('Player 3'), findsOneWidget);
       expect(find.text('Player 4'), findsOneWidget);
-      expect(find.text('Team 1'), findsNothing);
-      expect(find.text('Team 2'), findsNothing);
+      // Exactly one heading per side — not duplicated per player.
+      expect(find.byKey(const Key('team1Heading')), findsOneWidget);
+      expect(find.byKey(const Key('team2Heading')), findsOneWidget);
+      expect(find.text('Team 1'), findsOneWidget);
+      expect(find.text('Team 2'), findsOneWidget);
     });
 
     testWidgets('German doubles toss shows "Team 1"/"Team 2" on the coin',

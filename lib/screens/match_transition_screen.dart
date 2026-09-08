@@ -1,0 +1,36 @@
+import 'package:flutter/material.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/ball_flyby_indicator.dart';
+
+/// A brief, full-screen ping-pong-ball flyby shown between tapping "Start
+/// match" on the setup screen and actually landing on the scoreboard —
+/// see PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
+///
+/// [destination] is pushed as a replacement (not a second entry on top of
+/// this screen) once [BallFlybyIndicator] finishes, so the back stack
+/// reads as setup → scoreboard, with this screen never appearing in it —
+/// pressing back from the scoreboard returns straight to setup, not to a
+/// blank transition frame.
+class MatchTransitionScreen extends StatelessWidget {
+  final Widget destination;
+
+  const MatchTransitionScreen({super.key, required this.destination});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: BallFlybyIndicator(
+          key: const Key('ballFlybyIndicator'),
+          onComplete: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => destination),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

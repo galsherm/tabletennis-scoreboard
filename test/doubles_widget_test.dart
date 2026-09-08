@@ -142,6 +142,10 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
+      // The doubles team-preview boxes (PHASE4D_TEAM_CLARITY_AND_TRANSITION.md)
+      // push "Start match" below the fold on the default test viewport —
+      // scroll it into view first, same as a real short screen would need.
+      await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
       await tester.tap(find.byKey(const Key('startMatchButton')));
       await tester.pumpAndSettle();
 
@@ -223,6 +227,29 @@ void main() {
       await tester.pump();
 
       expect(tts.spoken, ['1, 0']);
+    });
+
+    testWidgets(
+        'a doubles match win is announced by voice as "Team 1," matching '
+        'the on-screen banner — not "Player 1" (Phase 4D bug fix; see '
+        'PHASE4D_TEAM_CLARITY_AND_TRANSITION.md)', (tester) async {
+      final tts = _RecordingTtsEngine();
+      final voice =
+          VoiceAnnouncer(ttsEngine: tts, clipPlayer: _NoopClipPlayer());
+      await _pumpDoublesScoreboard(tester, voice: voice, bestOf: 3);
+
+      for (var game = 0; game < 2; game++) {
+        for (var i = 0; i < 11; i++) {
+          await tester.tap(find.byKey(const Key('team1Zone')));
+          await tester.pump();
+        }
+      }
+      await tester.pumpAndSettle();
+
+      expect(tts.spoken.last, contains('Team 1'));
+      expect(tts.spoken.last, isNot(contains('Player 1')));
+      // Matches the on-screen match-complete dialog exactly.
+      expect(find.text('Team 1 wins the match!'), findsOneWidget);
     });
   });
 

@@ -21,11 +21,13 @@ import '../widgets/animated_score_text.dart';
 /// [_teamLabel] — Phase 4C), distinct from the on-court display's four
 /// individually-numbered players, since "Player 1" winning would be
 /// ambiguous about whether that means one person or their whole side.
-/// Voice announcements still say "Player 1"/"Player 2" via the same
-/// [CommentaryStrings] singles uses — not redesigned for doubles, per
-/// PHASE4_VERIFICATION.md — so voice and the on-screen banner
-/// deliberately differ in wording for the same event; see
-/// PHASE4C_TOSS_AND_TEAM_LABELS.md for why that split is acceptable here.
+/// Voice announcements use the same "Team 1"/"Team 2" wording for a
+/// doubles game/match win, via [CommentaryStrings.teamLabel] — they used
+/// to say "Player 1"/"Player 2" here even in doubles (a bug: voice and
+/// the on-screen banner disagreed about the same event), fixed in
+/// PHASE4D_TEAM_CLARITY_AND_TRANSITION.md. A team heading above each
+/// side's two player names (also Phase 4D) makes the pairing visually
+/// obvious without inferring it from layout alone.
 class DoublesScoreboardScreen extends StatefulWidget {
   final int bestOf;
   final Player firstServingTeam;
@@ -82,7 +84,12 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
     final server = _engine.currentServer; // who serves next, not who just served
     setState(() {});
 
-    _voice.announcePoint(engine: _engine, event: event, server: server);
+    // isDoubles: true — voice must say "Team 1"/"Team 2" for a doubles
+    // game/match win, matching the on-screen banner (_teamLabel below).
+    // Previously this fell through to the singles "Player 1"/"Player 2"
+    // wording even in doubles — see PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
+    _voice.announcePoint(
+        engine: _engine, event: event, server: server, isDoubles: true);
 
     if (event.matchCompleted) {
       _showMatchCompleteDialog(event.matchWinner!);
@@ -193,6 +200,8 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
           Expanded(
             child: _DoublesTeamZone(
               key: const Key('team1Zone'),
+              teamHeading: l10n.team1Label,
+              teamHeadingKey: const Key('team1Heading'),
               slot0Label: l10n.player1Label,
               slot1Label: l10n.player2Label,
               slot0Serving: isServing(const DoublesSeat(Player.one, 0)),
@@ -215,6 +224,8 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
           Expanded(
             child: _DoublesTeamZone(
               key: const Key('team2Zone'),
+              teamHeading: l10n.team2Label,
+              teamHeadingKey: const Key('team2Heading'),
               slot0Label: l10n.player3Label,
               slot1Label: l10n.player4Label,
               slot0Serving: isServing(const DoublesSeat(Player.two, 0)),
@@ -240,6 +251,12 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
 }
 
 class _DoublesTeamZone extends StatelessWidget {
+  /// "Team 1"/"Team 2" (or localized equivalent) — a heading above this
+  /// side's two player names so it's visually obvious at a glance which
+  /// pair of names forms one team, rather than having to infer it from
+  /// two unlabeled stacked rows. See PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
+  final String teamHeading;
+  final Key teamHeadingKey;
   final String slot0Label;
   final String slot1Label;
   final bool slot0Serving;
@@ -259,6 +276,8 @@ class _DoublesTeamZone extends StatelessWidget {
 
   const _DoublesTeamZone({
     super.key,
+    required this.teamHeading,
+    required this.teamHeadingKey,
     required this.slot0Label,
     required this.slot1Label,
     required this.slot0Serving,
@@ -290,6 +309,20 @@ class _DoublesTeamZone extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  teamHeading,
+                  key: teamHeadingKey,
+                  style: AppTypography.eyebrow,
+                ),
+              ),
+              const SizedBox(height: 8),
               _DoublesPlayerRow(
                 label: slot0Label,
                 serving: slot0Serving,

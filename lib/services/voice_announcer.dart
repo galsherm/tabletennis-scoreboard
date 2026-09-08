@@ -82,17 +82,19 @@ class VoiceAnnouncer {
   /// Convenience wrapper: decides what to say for the point just scored
   /// (via [announcementForPoint], using [strings] for the current
   /// language) and speaks it. See [announcementForPoint] for the meaning
-  /// of [server].
+  /// of [server] and [isDoubles].
   Future<void> announcePoint({
     required TableTennisScoringEngine engine,
     required PointEvent event,
     required Player server,
+    bool isDoubles = false,
   }) {
     return announce(announcementForPoint(
       engine: engine,
       event: event,
       server: server,
       strings: strings,
+      isDoubles: isDoubles,
     ));
   }
 

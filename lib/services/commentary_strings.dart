@@ -50,6 +50,15 @@ class CommentaryStrings {
 
   final String Function(Player player) playerLabel;
 
+  /// Side-level label used in [gameWon]/[matchWon] for a *doubles* match
+  /// instead of [playerLabel] — "Team 1"/"Team 2" (or the localized
+  /// equivalent), matching `DoublesScoreboardScreen`'s on-screen game/
+  /// match-complete banner exactly (see PHASE4C_TOSS_AND_TEAM_LABELS.md).
+  /// "Player 1" is ambiguous with 4 people on screen, so voice and the
+  /// banner must agree on this — see
+  /// PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
+  final String Function(Player player) teamLabel;
+
   const CommentaryStrings({
     required this.ttsLocale,
     required this.clipFolder,
@@ -60,6 +69,7 @@ class CommentaryStrings {
     required this.matchWon,
     required this.matchPointSuffix,
     required this.playerLabel,
+    required this.teamLabel,
   });
 
   static CommentaryStrings forLanguage(CommentaryLanguage language) {
@@ -83,6 +93,7 @@ class CommentaryStrings {
     matchWon: _matchWonEn,
     matchPointSuffix: '. Match point.',
     playerLabel: _playerLabelEn,
+    teamLabel: _teamLabelEn,
   );
 
   static const de = CommentaryStrings(
@@ -95,6 +106,7 @@ class CommentaryStrings {
     matchWon: _matchWonDe,
     matchPointSuffix: '. Matchball.',
     playerLabel: _playerLabelDe,
+    teamLabel: _teamLabelDe,
   );
 
   static const fr = CommentaryStrings(
@@ -107,6 +119,7 @@ class CommentaryStrings {
     matchWon: _matchWonFr,
     matchPointSuffix: '. Balle de match.',
     playerLabel: _playerLabelFr,
+    teamLabel: _teamLabelFr,
   );
 }
 
@@ -128,3 +141,11 @@ String _matchWonFr(String w) => 'Match. $w gagne le match.';
 String _playerLabelEn(Player p) => p == Player.one ? 'Player 1' : 'Player 2';
 String _playerLabelDe(Player p) => p == Player.one ? 'Spieler 1' : 'Spieler 2';
 String _playerLabelFr(Player p) => p == Player.one ? 'Joueur 1' : 'Joueur 2';
+
+// Matches team1Label/team2Label in lib/l10n/app_{en,de,fr}.arb exactly —
+// German keeps the English loanword "Team" (same call as "Best of"),
+// French uses "Paire" rather than "Équipe" (a club team, not a doubles
+// pairing — see PHASE4C_TOSS_AND_TEAM_LABELS.md §7).
+String _teamLabelEn(Player p) => p == Player.one ? 'Team 1' : 'Team 2';
+String _teamLabelDe(Player p) => p == Player.one ? 'Team 1' : 'Team 2';
+String _teamLabelFr(Player p) => p == Player.one ? 'Paire 1' : 'Paire 2';

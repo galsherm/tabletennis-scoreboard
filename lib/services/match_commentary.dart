@@ -53,19 +53,31 @@ bool _isMatchPointFor(TableTennisScoringEngine engine, Player player) {
 /// supplies the phrase templates for whichever language voice output is
 /// currently using. Reads [engine] state *after* the point has been
 /// applied.
+///
+/// [isDoubles] controls only the game/match-won winner label: `true` uses
+/// [CommentaryStrings.teamLabel] ("Team 1"/"Team 2") instead of
+/// [CommentaryStrings.playerLabel], so voice output for a doubles match
+/// agrees with the on-screen game/match-complete banner, which has said
+/// "Team 1"/"Team 2" since PHASE4C_TOSS_AND_TEAM_LABELS.md — see
+/// PHASE4D_TEAM_CLARITY_AND_TRANSITION.md for the bug this fixes. Nothing
+/// else about the announcement (scores, deuce, change-ends, match-point)
+/// differs between singles and doubles.
 Announcement announcementForPoint({
   required TableTennisScoringEngine engine,
   required PointEvent event,
   required Player server,
   required CommentaryStrings strings,
+  bool isDoubles = false,
 }) {
+  final sideLabel = isDoubles ? strings.teamLabel : strings.playerLabel;
+
   if (event.matchCompleted) {
-    final winner = strings.playerLabel(event.matchWinner!);
+    final winner = sideLabel(event.matchWinner!);
     return Announcement(strings.matchWon(winner), const []);
   }
 
   if (event.gameCompleted) {
-    final winner = strings.playerLabel(event.gameWinner!);
+    final winner = sideLabel(event.gameWinner!);
     return Announcement(
       strings.gameWon(winner),
       const ['game', 'change_ends'],

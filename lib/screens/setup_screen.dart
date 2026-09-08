@@ -7,6 +7,7 @@ import '../models/player.dart';
 import '../theme/app_theme.dart';
 import '../widgets/coin_flip_indicator.dart';
 import 'doubles_scoreboard_screen.dart';
+import 'match_transition_screen.dart';
 import 'scoreboard_screen.dart';
 
 /// Menu-item identity for the language picker. A plain `PopupMenuButton
@@ -84,17 +85,21 @@ class _SetupScreenState extends State<SetupScreen> {
   void _start() {
     final firstServer = _firstServer;
     if (firstServer == null) return;
+    final destination = _isDoubles
+        ? DoublesScoreboardScreen(
+            bestOf: _bestOf,
+            firstServingTeam: firstServer,
+          )
+        : ScoreboardScreen(
+            bestOf: _bestOf,
+            firstServer: firstServer,
+          );
+    // A brief ball-flyby transition plays first, then replaces itself
+    // with `destination` — see MatchTransitionScreen and
+    // PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => _isDoubles
-            ? DoublesScoreboardScreen(
-                bestOf: _bestOf,
-                firstServingTeam: firstServer,
-              )
-            : ScoreboardScreen(
-                bestOf: _bestOf,
-                firstServer: firstServer,
-              ),
+        builder: (_) => MatchTransitionScreen(destination: destination),
       ),
     );
   }
@@ -194,9 +199,13 @@ class _SetupScreenState extends State<SetupScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             _TeamSlotPreview(
+                              teamLabel: l10n.team1Label,
+                              teamLabelKey: const Key('team1PreviewHeading'),
                               names: [l10n.player1Label, l10n.player2Label],
                             ),
                             _TeamSlotPreview(
+                              teamLabel: l10n.team2Label,
+                              teamLabelKey: const Key('team2PreviewHeading'),
                               names: [l10n.player3Label, l10n.player4Label],
                             ),
                           ],
@@ -275,22 +284,41 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 }
 
+/// A team's pair of player names, grouped visually under a "Team
+/// 1"/"Team 2" heading and a light bordered box — without it, two
+/// unlabeled name columns read as "four separate players," not
+/// obviously two pairs. See PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
 class _TeamSlotPreview extends StatelessWidget {
+  final String teamLabel;
+  final Key teamLabelKey;
   final List<String> names;
 
-  const _TeamSlotPreview({required this.names});
+  const _TeamSlotPreview({
+    required this.teamLabel,
+    required this.teamLabelKey,
+    required this.names,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final name in names)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Text(name, style: AppTypography.compactPlayerLabel),
-          ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.divider),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(teamLabel, key: teamLabelKey, style: AppTypography.eyebrow),
+          const SizedBox(height: 6),
+          for (final name in names)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(name, style: AppTypography.compactPlayerLabel),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -241,6 +241,90 @@ void main() {
     });
   });
 
+  group('doubles winner wording (Phase 4D bug fix)', () {
+    // Previously, a doubles game/match win was always announced with
+    // strings.playerLabel ("Player 1"/"Player 2"/"Spieler 1"/"Joueur 1"),
+    // even though the on-screen banner has said "Team 1"/"Team 2" (or
+    // "Paire 1"/"Paire 2" in French) since PHASE4C_TOSS_AND_TEAM_LABELS.md
+    // — voice and the banner disagreed about the same event. isDoubles:
+    // true fixes this by using strings.teamLabel instead. Checked in all
+    // three languages, not just English, since the bug was in the shared
+    // isDoubles-agnostic code path.
+    for (final entry in {
+      CommentaryStrings.en: ('Team 1', 'Player 1'),
+      CommentaryStrings.de: ('Team 1', 'Spieler 1'),
+      CommentaryStrings.fr: ('Paire 1', 'Joueur 1'),
+    }.entries) {
+      final strings = entry.key;
+      final (teamWord, playerWord) = entry.value;
+
+      group(strings.ttsLocale, () {
+        test('a doubles game win says "$teamWord," not "$playerWord"', () {
+          final engine =
+              TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+          for (var i = 0; i < 10; i++) {
+            engine.addPoint(Player.one);
+          }
+          final server = engine.currentServer;
+          final event = engine.addPoint(Player.one); // wins game 1
+
+          final announcement = announcementForPoint(
+            engine: engine,
+            event: event,
+            server: server,
+            strings: strings,
+            isDoubles: true,
+          );
+
+          expect(announcement.speech, strings.gameWon(teamWord));
+          expect(announcement.speech, isNot(contains(playerWord)));
+        });
+
+        test('a doubles match win says "$teamWord," not "$playerWord"', () {
+          final engine =
+              TableTennisScoringEngine(bestOf: 3, firstServer: Player.one);
+          for (var i = 0; i < 21; i++) {
+            engine.addPoint(Player.one);
+          }
+          final server = engine.currentServer;
+          final event = engine.addPoint(Player.one); // wins game 2 + match
+
+          final announcement = announcementForPoint(
+            engine: engine,
+            event: event,
+            server: server,
+            strings: strings,
+            isDoubles: true,
+          );
+
+          expect(announcement.speech, strings.matchWon(teamWord));
+          expect(announcement.speech, isNot(contains(playerWord)));
+        });
+
+        test(
+            'a singles-mode (isDoubles: false, the default) win still says '
+            '"$playerWord" — unaffected by the doubles fix', () {
+          final engine =
+              TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+          for (var i = 0; i < 10; i++) {
+            engine.addPoint(Player.one);
+          }
+          final server = engine.currentServer;
+          final event = engine.addPoint(Player.one);
+
+          final announcement = announcementForPoint(
+            engine: engine,
+            event: event,
+            server: server,
+            strings: strings,
+          );
+
+          expect(announcement.speech, strings.gameWon(playerWord));
+        });
+      });
+    }
+  });
+
   group('localization (Phase 3)', () {
     test('CommentaryLanguage.fromLanguageCode maps known codes and falls '
         'back to English for anything else', () {
