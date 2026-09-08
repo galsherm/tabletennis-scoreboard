@@ -486,13 +486,30 @@ that the Ads SDK depends on for JS rendering not being ready on this
 device, rather than anything a code change in this repository can fix.
 
 **Practical next steps, all device-side (not app-code):**
-1. Restart the test device — this class of issue is often tied to a
-   stuck Play services module state that a restart clears.
+1. ~~Restart the test device~~ — **tried, did not help.** Rebooted the
+   same device (`adb reboot`, waited for `sys.boot_completed`,
+   relaunched the app fresh) and played another full match end-to-end.
+   Identical result, byte-for-byte the same error, on the very first
+   load attempt after reboot — before any of this app's own retry logic
+   even had a chance to run:
+   ```
+   AdMobAdsService: SDK initialized (com.google.android.gms.ads.MobileAds=notReady)
+   AdMobAdsService: requesting interstitial (ca-app-pub-3940256099942544/1033173712)
+   AdMobAdsService: interstitial failed to load — code=0 domain=com.google.android.gms.ads message=Unable to obtain a JavascriptEngine.
+   ```
+   This rules out a transient/stuck-process explanation — whatever's
+   wrong survives a full reboot, so it's a persistent state on this
+   device (most likely the Play services Dynamite module itself, or an
+   account/device-level Play services condition), not a one-off glitch
+   a restart clears. The graceful-degradation behavior held up
+   identically too: the match-complete dialog ("Player 1 wins the
+   match!") appeared normally on the second run as well, no crash, no
+   ad-shaped gap.
 2. Check for a pending Google Play services update (Play Store → search
    "Google Play services" → Update, if offered) — the Ads SDK's
-   rendering module is delivered through it.
+   rendering module is delivered through it. Not yet tried.
 3. Try the same build on a second device/emulator to confirm whether
-   it's specific to this one device or systemic.
+   it's specific to this one device or systemic. Not yet tried.
 4. For a first-party diagnostic beyond what this app's logging can show,
    Google's own [Ad Inspector](https://developers.google.com/admob/flutter/ad-inspector)
    tool can be wired in temporarily — it's what Google's own AdMob
@@ -501,4 +518,5 @@ device, rather than anything a code change in this repository can fix.
 None of the above require a code change in this repository, and nothing
 found in this investigation points to one — the app-side logging,
 retry, and graceful-degradation behavior added in §10.1 are already
-doing everything they can on this side of the failure.
+doing everything they can on this side of the failure, confirmed
+working identically across two consecutive fresh app launches.
