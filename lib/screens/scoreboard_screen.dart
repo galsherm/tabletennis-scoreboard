@@ -5,6 +5,8 @@ import '../models/player.dart';
 import '../models/scoring_engine.dart';
 import '../services/commentary_strings.dart';
 import '../services/voice_announcer.dart';
+import '../theme/app_theme.dart';
+import '../widgets/animated_score_text.dart';
 
 class ScoreboardScreen extends StatefulWidget {
   final int bestOf;
@@ -146,21 +148,25 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           IconButton(
             key: const Key('muteButton'),
             icon: Icon(_voice.isMuted ? Icons.volume_off : Icons.volume_up),
+            iconSize: AppMetrics.iconButtonSize,
             tooltip: _voice.isMuted ? l10n.unmuteTooltip : l10n.muteTooltip,
             onPressed: _toggleMute,
           ),
           IconButton(
             key: const Key('undoButton'),
             icon: const Icon(Icons.undo),
+            iconSize: AppMetrics.iconButtonSize,
             tooltip: l10n.undoTooltip,
             onPressed: _engine.canUndo ? _undo : null,
           ),
           IconButton(
             key: const Key('resetButton'),
             icon: const Icon(Icons.refresh),
+            iconSize: AppMetrics.iconButtonSize,
             tooltip: l10n.resetTooltip,
             onPressed: _resetMatch,
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Row(
@@ -170,7 +176,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               key: const Key('player1Zone'),
               label: l10n.player1Label,
               points: _engine.player1Points,
-              games: _engine.player1Games,
               gamesLabel: l10n.gamesCountLabel(_engine.player1Games),
               isServer: server == Player.one,
               servingTooltip: l10n.servingTooltip,
@@ -179,13 +184,12 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               onTap: () => _scorePoint(Player.one),
             ),
           ),
-          const VerticalDivider(width: 1),
+          const VerticalDivider(width: 1, color: AppColors.divider),
           Expanded(
             child: _PlayerZone(
               key: const Key('player2Zone'),
               label: l10n.player2Label,
               points: _engine.player2Points,
-              games: _engine.player2Games,
               gamesLabel: l10n.gamesCountLabel(_engine.player2Games),
               isServer: server == Player.two,
               servingTooltip: l10n.servingTooltip,
@@ -200,10 +204,13 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   }
 }
 
+/// A large, tap-anywhere half of the scoreboard. Layout defers entirely
+/// to the score digit at its center — the player label above and the
+/// games count below are deliberately small and muted (see
+/// [AppTypography]) so the eye lands on the number first.
 class _PlayerZone extends StatelessWidget {
   final String label;
   final int points;
-  final int games;
   final String gamesLabel;
   final bool isServer;
   final String servingTooltip;
@@ -215,7 +222,6 @@ class _PlayerZone extends StatelessWidget {
     super.key,
     required this.label,
     required this.points,
-    required this.games,
     required this.gamesLabel,
     required this.isServer,
     required this.servingTooltip,
@@ -226,37 +232,45 @@ class _PlayerZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        color: Colors.transparent,
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: 32,
-              child: isServer
-                  ? Tooltip(
-                      message: servingTooltip,
-                      child: Icon(Icons.sports_tennis, key: serverIconKey),
-                    )
-                  : null,
-            ),
-            Text(label, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              '$points',
-              key: pointsKey,
-              style: const TextStyle(
-                fontSize: 96,
-                fontWeight: FontWeight.bold,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        // A visible highlight while held, on top of the ripple — courtside
+        // taps are quick and imprecise, so the press feedback needs to be
+        // obvious, not subtle.
+        highlightColor: AppColors.accent.withValues(alpha: 0.12),
+        splashColor: AppColors.accent.withValues(alpha: 0.18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                height: 30,
+                child: isServer
+                    ? Tooltip(
+                        message: servingTooltip,
+                        child: Icon(
+                          Icons.sports_tennis,
+                          key: serverIconKey,
+                          color: AppColors.accent,
+                          size: 26,
+                        ),
+                      )
+                    : null,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(gamesLabel),
-          ],
+              const SizedBox(height: 6),
+              Text(label, style: AppTypography.playerLabel),
+              Expanded(
+                child: Center(
+                  child: AnimatedScoreText(points: points, scoreKey: pointsKey),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(gamesLabel, style: AppTypography.gamesLabel),
+            ],
+          ),
         ),
       ),
     );

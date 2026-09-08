@@ -212,48 +212,57 @@ void main() {
   });
 
   group('best-of selector localization (Gewinnsätze)', () {
-    testWidgets('English shows the raw best-of-N numbers', (tester) async {
+    testWidgets('English shows a "BEST OF" heading and raw best-of-N '
+        'numbers', (tester) async {
       _setDeviceLocale(tester, const Locale('en'));
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
+      // The heading is rendered as an uppercase "eyebrow" label (a
+      // styling choice — see PHASE4B_UI_POLISH.md — not a wording
+      // change: the underlying string is still "Best of").
+      expect(find.text('BEST OF'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
       expect(find.text('5'), findsOneWidget);
       expect(find.text('7'), findsOneWidget);
       expect(find.textContaining('Gewinnsätze'), findsNothing);
     });
 
-    testWidgets('French shows the raw best-of-N numbers, unchanged',
-        (tester) async {
+    testWidgets('French shows an "AU MEILLEUR DE" heading and raw '
+        'best-of-N numbers, unchanged', (tester) async {
       _setDeviceLocale(tester, const Locale('fr'));
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('Au meilleur de'), findsOneWidget);
+      expect(find.text('AU MEILLEUR DE'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
       expect(find.text('5'), findsOneWidget);
       expect(find.text('7'), findsOneWidget);
     });
 
     testWidgets(
-        'German shows "2/3/4 Gewinnsätze" (games needed to win) instead '
-        'of the raw 3/5/7 best-of-N numbers', (tester) async {
+        'German shows a "GEWINNSÄTZE" heading (moved out of the '
+        'segments) and bare 2/3/4 segment numbers, matching the same '
+        'bare-number structure English/French use', (tester) async {
       _setDeviceLocale(tester, const Locale('de'));
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('Spielformat'), findsOneWidget);
-      expect(find.text('2 Gewinnsätze'), findsOneWidget);
-      expect(find.text('3 Gewinnsätze'), findsOneWidget);
-      expect(find.text('4 Gewinnsätze'), findsOneWidget);
-      // The raw numbers should not appear as standalone segment labels.
-      expect(find.text('3'), findsNothing);
-      expect(find.text('5'), findsNothing);
-      expect(find.text('7'), findsNothing);
+      expect(find.text('GEWINNSÄTZE'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget);
+      // The old per-segment "N Gewinnsätze" phrasing — which is what
+      // caused the overflow — must not reappear anywhere.
+      expect(find.text('2 Gewinnsätze'), findsNothing);
+      expect(find.text('3 Gewinnsätze'), findsNothing);
+      expect(find.text('4 Gewinnsätze'), findsNothing);
+      // Nor should the old generic "Spielformat" heading.
+      expect(find.text('Spielformat'), findsNothing);
     });
 
     testWidgets(
-        'tapping "3 Gewinnsätze" in German starts a match identical to '
+        'tapping "3" (2nd German segment) starts a match identical to '
         'tapping "5" ("Best of 5") in English', (tester) async {
       _setDeviceLocale(tester, const Locale('de'));
       await tester.pumpWidget(const TableTennisScoreboardApp());
@@ -262,13 +271,13 @@ void main() {
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pump();
 
-      // Select away from the default first, then select "3 Gewinnsätze",
-      // so a pass here proves the tap itself drives the engine's bestOf
-      // value rather than coincidentally matching the initial default
-      // (which also happens to be bestOf=5 / "3 Gewinnsätze").
-      await tester.tap(find.text('2 Gewinnsätze'));
+      // Select away from the default first, then select "3", so a pass
+      // here proves the tap itself drives the engine's bestOf value
+      // rather than coincidentally matching the initial default (which
+      // also happens to be bestOf=5, German segment "3").
+      await tester.tap(find.text('2'));
       await tester.pump();
-      await tester.tap(find.text('3 Gewinnsätze'));
+      await tester.tap(find.text('3'));
       await tester.pump();
 
       await tester.tap(find.byKey(const Key('startMatchButton')));

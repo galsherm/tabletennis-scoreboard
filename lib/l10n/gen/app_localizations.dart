@@ -130,7 +130,7 @@ abstract class AppLocalizations {
   /// **'Best of'**
   String get bestOfLabel;
 
-  /// Label for one segment of the best-of-N selector. English/French show the raw best-of-N number (paired with bestOfLabel above it); German shows the number of *winning* games needed instead ("Gewinnsätze"), which is how German table tennis sources describe match format, e.g. "3 Gewinnsätze im Einzel" for what this app calls best-of-5 — see PHASE3_VERIFICATION.md.
+  /// Label for one segment of the best-of-N selector — always a bare number, paired with the explanatory word in bestOfLabel above it (the same structural pattern in all three languages). English/French show the raw best-of-N number; German shows the number of *winning* games needed instead (paired with the "Gewinnsätze" heading), which is how German table tennis sources describe match format, e.g. "3 Gewinnsätze im Einzel" for what this app calls best-of-5 — see PHASE3_VERIFICATION.md and PHASE4B_UI_POLISH.md (the word used to live inside this segment label itself, which is what caused it to overflow only for German).
   ///
   /// In en, this message translates to:
   /// **'{bestOf}'**

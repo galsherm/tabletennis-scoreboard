@@ -21,11 +21,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get languageSystemOption => 'Systemstandard';
 
   @override
-  String get bestOfLabel => 'Spielformat';
+  String get bestOfLabel => 'Gewinnsätze';
 
   @override
   String bestOfSegmentLabel(int bestOf, int gamesToWin) {
-    return '$gamesToWin Gewinnsätze';
+    return '$gamesToWin';
   }
 
   @override

@@ -7,6 +7,8 @@ import '../models/scoring_engine.dart';
 import '../services/commentary_strings.dart';
 import '../services/doubles_rotation.dart';
 import '../services/voice_announcer.dart';
+import '../theme/app_theme.dart';
+import '../widgets/animated_score_text.dart';
 
 /// Doubles scoreboard: reuses [TableTennisScoringEngine] exactly as
 /// singles does (it only ever knows about two *sides* scoring points —
@@ -159,21 +161,25 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
           IconButton(
             key: const Key('muteButton'),
             icon: Icon(_voice.isMuted ? Icons.volume_off : Icons.volume_up),
+            iconSize: AppMetrics.iconButtonSize,
             tooltip: _voice.isMuted ? l10n.unmuteTooltip : l10n.muteTooltip,
             onPressed: _toggleMute,
           ),
           IconButton(
             key: const Key('undoButton'),
             icon: const Icon(Icons.undo),
+            iconSize: AppMetrics.iconButtonSize,
             tooltip: l10n.undoTooltip,
             onPressed: _engine.canUndo ? _undo : null,
           ),
           IconButton(
             key: const Key('resetButton'),
             icon: const Icon(Icons.refresh),
+            iconSize: AppMetrics.iconButtonSize,
             tooltip: l10n.resetTooltip,
             onPressed: _resetMatch,
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Row(
@@ -199,7 +205,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
               onTap: () => _scorePoint(Player.one),
             ),
           ),
-          const VerticalDivider(width: 1),
+          const VerticalDivider(width: 1, color: AppColors.divider),
           Expanded(
             child: _DoublesTeamZone(
               key: const Key('team2Zone'),
@@ -267,46 +273,45 @@ class _DoublesTeamZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        color: Colors.transparent,
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _DoublesPlayerRow(
-              label: slot0Label,
-              serving: slot0Serving,
-              receiving: slot0Receiving,
-              servingTooltip: servingTooltip,
-              receivingTooltip: receivingTooltip,
-              serverIconKey: slot0ServerIconKey,
-              receiverIconKey: slot0ReceiverIconKey,
-            ),
-            const SizedBox(height: 4),
-            _DoublesPlayerRow(
-              label: slot1Label,
-              serving: slot1Serving,
-              receiving: slot1Receiving,
-              servingTooltip: servingTooltip,
-              receivingTooltip: receivingTooltip,
-              serverIconKey: slot1ServerIconKey,
-              receiverIconKey: slot1ReceiverIconKey,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '$points',
-              key: pointsKey,
-              style: const TextStyle(
-                fontSize: 72,
-                fontWeight: FontWeight.bold,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        highlightColor: AppColors.accent.withValues(alpha: 0.12),
+        splashColor: AppColors.accent.withValues(alpha: 0.18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _DoublesPlayerRow(
+                label: slot0Label,
+                serving: slot0Serving,
+                receiving: slot0Receiving,
+                servingTooltip: servingTooltip,
+                receivingTooltip: receivingTooltip,
+                serverIconKey: slot0ServerIconKey,
+                receiverIconKey: slot0ReceiverIconKey,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(gamesLabel),
-          ],
+              const SizedBox(height: 6),
+              _DoublesPlayerRow(
+                label: slot1Label,
+                serving: slot1Serving,
+                receiving: slot1Receiving,
+                servingTooltip: servingTooltip,
+                receivingTooltip: receivingTooltip,
+                serverIconKey: slot1ServerIconKey,
+                receiverIconKey: slot1ReceiverIconKey,
+              ),
+              Expanded(
+                child: Center(
+                  child: AnimatedScoreText(points: points, scoreKey: pointsKey),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(gamesLabel, style: AppTypography.gamesLabel),
+            ],
+          ),
         ),
       ),
     );
@@ -344,18 +349,20 @@ class _DoublesPlayerRow extends StatelessWidget {
               ? Tooltip(
                   message: servingTooltip,
                   child: Icon(Icons.sports_tennis,
-                      key: serverIconKey, size: 18),
+                      key: serverIconKey, size: 18, color: AppColors.accent),
                 )
               : receiving
                   ? Tooltip(
                       message: receivingTooltip,
                       child: Icon(Icons.call_received,
-                          key: receiverIconKey, size: 18),
+                          key: receiverIconKey,
+                          size: 18,
+                          color: AppColors.mutedText),
                     )
                   : null,
         ),
         const SizedBox(width: 6),
-        Text(label),
+        Text(label, style: AppTypography.compactPlayerLabel),
       ],
     );
   }

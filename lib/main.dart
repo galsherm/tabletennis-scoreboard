@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'l10n/gen/app_localizations.dart';
 import 'screens/setup_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const TableTennisScoreboardApp());
@@ -58,10 +59,14 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: _resolveDeviceLocale,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.blue,
-        useMaterial3: true,
-      ),
+      // Dark is the committed default, not just a supported alternative —
+      // this app is read at a glance courtside, often in bright or
+      // uneven gym lighting, where a near-black background with a
+      // high-contrast score reads far more reliably than a light theme.
+      // See PHASE4B_UI_POLISH.md.
+      themeMode: ThemeMode.dark,
+      darkTheme: buildAppTheme(),
+      theme: buildAppTheme(),
       home: SetupScreen(
         currentLocaleOverride: _localeOverride,
         onLocaleChanged: _setLocaleOverride,
