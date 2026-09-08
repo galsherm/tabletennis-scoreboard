@@ -5,9 +5,10 @@ Ads / Pro" purchase via `in_app_purchase` (Play Billing / StoreKit),
 unlocking ad removal and a minimal match-result export. Subscriptions
 and the ad-free-only variant were both explicitly ruled out — see §1.
 
-**Status:** built and passing (242/242 tests — 212 original + 22 from
-this phase's first pass + 8 from the real-device-testing fixes below).
-`flutter analyze`: no issues.
+**Status: Phase 5 complete.** Built and passing (242/242 tests — 212
+original + 22 from this phase's first pass + 8 from the
+real-device-testing fixes below). `flutter analyze`: no issues. The
+ad-loading pipeline is verified working end-to-end — see §12.
 
 **Update (real-device testing round):** four issues were found running
 a real build on a connected device and fixed — see §10.
@@ -18,6 +19,14 @@ lifecycle, and reproduced the failure live on a connected device by
 actually playing a match to completion — see §11 for the exact error
 this surfaced and why it's a device/Google-Play-Services condition, not
 a bug in this app's code.
+
+**Update (closing the investigation):** the ad-loading pipeline was
+confirmed working correctly on the Android emulator — a real AdMob test
+interstitial loaded and displayed successfully at match end. This
+confirms §11's conclusion: the app-side code (manifest, ad unit IDs,
+load/retry/show logic) was never the problem. The physical-device
+failure is closed out as a known, environment-specific quirk to monitor
+post-release rather than a blocker — see §12.
 
 ---
 
@@ -520,3 +529,56 @@ found in this investigation points to one — the app-side logging,
 retry, and graceful-degradation behavior added in §10.1 are already
 doing everything they can on this side of the failure, confirmed
 working identically across two consecutive fresh app launches.
+
+## 12. Closing the investigation: ad pipeline verified, Phase 5 complete
+
+Following §11's device-side dead end (same "Unable to obtain a
+JavascriptEngine" error, surviving a full reboot), the app was tested
+on the Android emulator: a real AdMob test interstitial **loaded and
+displayed successfully at match end**, confirmed by the user with a
+screenshot on file. This is the positive-case confirmation §11 couldn't
+reach on the physical device — the ad-load request fires, AdMob's SDK
+successfully obtains its rendering engine, the creative displays, and
+(per the existing `onAdDismissedFullScreenContent` logic) the next
+interstitial preloads once the ad is dismissed.
+
+**Conclusion: the app-side ad-loading pipeline is correct and verified
+working.** Every piece checked out independently across both
+investigation rounds:
+
+- Manifest AdMob App ID: present and correct (§10.1, §11).
+- Ad unit IDs: genuine, official Google test IDs (§10.1).
+- SDK initialization order (`initialize()` before any `load()`): correct
+  (§10.1).
+- Load-request/callback wiring, error logging, retry-with-backoff, and
+  graceful match-end no-op: all confirmed firing exactly as designed,
+  including on a real device (§11).
+- **End-to-end success**: confirmed on the emulator (this update) — the
+  one piece the physical-device run couldn't demonstrate, since it never
+  got past the load step there.
+
+**The one physical test device's persistent failure is not a blocker
+for this phase.** It's closed out as a known, environment-specific
+quirk — most plausibly the Google Play services "Dynamite" ad-rendering
+module on that specific device/account, per §11's reasoning — rather
+than anything traceable to this app's manifest, code, or dependency
+versions, all of which are now independently confirmed correct via the
+emulator's successful run. Real-world instances of this same class of
+failure (device-level Play services/WebView conditions preventing ad
+fill) are exactly what **AdMob's own Play Console reporting** is
+positioned to catch post-release: once live, watch the app's AdMob
+account under Apps → (this app) → for match-rate / fill-rate and
+request-vs-impression counts, and Play Console's Android vitals for any
+correlated crash-free-rate dips on specific device models. If a
+meaningful slice of real users on specific device models show
+persistently zero ad impressions despite requests firing (visible in
+AdMob's own request/match/show funnel, not just this app's local logs),
+that's the signal to revisit this — not something to pre-emptively
+chase further without that data, since the emulator result already
+demonstrates the pipeline itself has nothing wrong with it.
+
+**Phase 5 (Monetization) is complete**, pending only the pre-release
+checklist already documented in the README (real AdMob App ID + ad unit
+IDs, real Play Console product ID, pricing, license testers, and a Play
+Store–track install for purchase testing — see README's "Phase 5 —
+Monetization" section and §10.4 above).
