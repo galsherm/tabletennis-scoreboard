@@ -9,6 +9,7 @@ import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
 import '../widgets/editable_name_label.dart';
+import '../widgets/match_complete_dialog.dart';
 
 class ScoreboardScreen extends StatefulWidget {
   final int bestOf;
@@ -173,20 +174,15 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => MatchCompleteDialog(
         key: const Key('matchCompleteDialog'),
-        title: Text(l10n.matchCompleteDialogTitle),
-        content: Text(l10n.matchCompleteMessage(_playerLabel(winner))),
-        actions: [
-          TextButton(
-            key: const Key('newMatchButton'),
-            onPressed: () {
-              Navigator.of(context).pop();
-              _resetMatch();
-            },
-            child: Text(l10n.newMatchButton),
-          ),
-        ],
+        titleText: l10n.matchCompleteDialogTitle,
+        messageText: l10n.matchCompleteMessage(_playerLabel(winner)),
+        buttonText: l10n.newMatchButton,
+        onNewMatch: () {
+          Navigator.of(context).pop();
+          _resetMatch();
+        },
       ),
     );
   }

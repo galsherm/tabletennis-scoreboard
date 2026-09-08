@@ -11,6 +11,7 @@ import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
 import '../widgets/editable_name_label.dart';
+import '../widgets/match_complete_dialog.dart';
 
 /// Doubles scoreboard: reuses [TableTennisScoringEngine] exactly as
 /// singles does (it only ever knows about two *sides* scoring points —
@@ -101,14 +102,20 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
     final server = _engine.currentServer; // who serves next, not who just served
     setState(() {});
 
-    // isDoubles: true — voice must say "Team 1"/"Team 2" for a doubles
-    // game/match win, matching the on-screen banner (_teamLabel below).
-    // Previously this fell through to the singles "Player 1"/"Player 2"
-    // wording even in doubles — see PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
-    // No nameFor override here: custom individual names never change the
-    // team-level wording — see the class doc comment.
+    // isDoubles: true — voice must say "Team 1"/"Team 2" (or a custom
+    // team name) for a doubles game/match win, matching the on-screen
+    // banner (_teamLabel below). Previously this fell through to the
+    // singles "Player 1"/"Player 2" wording even in doubles — see
+    // PHASE4D_TEAM_CLARITY_AND_TRANSITION.md. nameFor resolves a custom
+    // *team* name if one was set (Phase 4G) — never an individual
+    // player's name, which doesn't answer "what do we call the pair."
     _voice.announcePoint(
-        engine: _engine, event: event, server: server, isDoubles: true);
+      engine: _engine,
+      event: event,
+      server: server,
+      isDoubles: true,
+      nameFor: _voiceTeamNameFor,
+    );
 
     if (event.matchCompleted) {
       _showMatchCompleteDialog(event.matchWinner!);
@@ -130,14 +137,42 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
         _names.clear();
       });
 
-  /// The side's team-level display name for banners/dialogs — "Team
-  /// 1"/"Team 2", not "Player 1"/"Player 2": with 4 individually-numbered
-  /// players on screen, "Player 1" winning would be ambiguous about
-  /// whether that means one specific person or their whole side. See
-  /// PHASE4C_TOSS_AND_TEAM_LABELS.md.
+  /// The side's team-level display name for banners/dialogs/headings —
+  /// "Team 1"/"Team 2" by default, not "Player 1"/"Player 2" (with 4
+  /// individually-numbered players on screen, "Player 1" winning would be
+  /// ambiguous about whether that means one specific person or their
+  /// whole side — see PHASE4C_TOSS_AND_TEAM_LABELS.md), or a custom team
+  /// name once one is set (Phase 4G) — used consistently everywhere this
+  /// side is named: the heading above its two players, the game/match
+  /// banners, and (via [_voiceTeamNameFor]) voice.
   String _teamLabel(Player team) {
     final l10n = AppLocalizations.of(context);
+    final teamNumber = team == Player.one ? 1 : 2;
+    final defaultLabel =
+        team == Player.one ? l10n.team1Label : l10n.team2Label;
+    return _names.resolveTeam(teamNumber, defaultLabel);
+  }
+
+  String _defaultTeamLabel(Player team) {
+    final l10n = AppLocalizations.of(context);
     return team == Player.one ? l10n.team1Label : l10n.team2Label;
+  }
+
+  /// Like [_teamLabel], but falls back to the voice layer's own language
+  /// default ([VoiceAnnouncer.strings.teamLabel]) instead of the UI's
+  /// [AppLocalizations] when no custom team name is set — mirrors
+  /// [ScoreboardScreen._voiceNameFor]'s reasoning: those two label
+  /// sources can legitimately differ (several tests inject a
+  /// VoiceAnnouncer in one language into a UI showing another), so voice
+  /// must stay internally consistent with itself absent a custom name.
+  String _voiceTeamNameFor(Player team) {
+    final teamNumber = team == Player.one ? 1 : 2;
+    return _names.resolveTeam(teamNumber, _voice.strings.teamLabel(team));
+  }
+
+  void _setTeamName(Player team, String? name) {
+    final teamNumber = team == Player.one ? 1 : 2;
+    setState(() => _names.setTeam(teamNumber, name));
   }
 
   String _defaultSlotLabel(int slot) {
@@ -180,20 +215,15 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => MatchCompleteDialog(
         key: const Key('matchCompleteDialog'),
-        title: Text(l10n.matchCompleteDialogTitle),
-        content: Text(l10n.matchCompleteMessage(_teamLabel(winner))),
-        actions: [
-          TextButton(
-            key: const Key('newMatchButton'),
-            onPressed: () {
-              Navigator.of(context).pop();
-              _resetMatch();
-            },
-            child: Text(l10n.newMatchButton),
-          ),
-        ],
+        titleText: l10n.matchCompleteDialogTitle,
+        messageText: l10n.matchCompleteMessage(_teamLabel(winner)),
+        buttonText: l10n.newMatchButton,
+        onNewMatch: () {
+          Navigator.of(context).pop();
+          _resetMatch();
+        },
       ),
     );
   }
@@ -239,8 +269,11 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
           Expanded(
             child: _DoublesTeamZone(
               key: const Key('team1Zone'),
-              teamHeading: l10n.team1Label,
+              teamHeading: _teamLabel(Player.one),
+              teamHeadingDefault: _defaultTeamLabel(Player.one),
               teamHeadingKey: const Key('team1Heading'),
+              teamHeadingFieldKey: const Key('team1HeadingField'),
+              onTeamNameChanged: (name) => _setTeamName(Player.one, name),
               slot0Label: _slotLabel(1),
               slot0DefaultLabel: _defaultSlotLabel(1),
               slot1Label: _slotLabel(2),
@@ -272,8 +305,11 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
           Expanded(
             child: _DoublesTeamZone(
               key: const Key('team2Zone'),
-              teamHeading: l10n.team2Label,
+              teamHeading: _teamLabel(Player.two),
+              teamHeadingDefault: _defaultTeamLabel(Player.two),
               teamHeadingKey: const Key('team2Heading'),
+              teamHeadingFieldKey: const Key('team2HeadingField'),
+              onTeamNameChanged: (name) => _setTeamName(Player.two, name),
               slot0Label: _slotLabel(3),
               slot0DefaultLabel: _defaultSlotLabel(3),
               slot1Label: _slotLabel(4),
@@ -313,7 +349,10 @@ class _DoublesTeamZone extends StatelessWidget {
   /// pair of names forms one team, rather than having to infer it from
   /// two unlabeled stacked rows. See PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
   final String teamHeading;
+  final String teamHeadingDefault;
   final Key teamHeadingKey;
+  final Key teamHeadingFieldKey;
+  final ValueChanged<String?> onTeamNameChanged;
   final String slot0Label;
   final String slot0DefaultLabel;
   final String slot1Label;
@@ -343,7 +382,10 @@ class _DoublesTeamZone extends StatelessWidget {
   const _DoublesTeamZone({
     super.key,
     required this.teamHeading,
+    required this.teamHeadingDefault,
     required this.teamHeadingKey,
+    required this.teamHeadingFieldKey,
+    required this.onTeamNameChanged,
     required this.slot0Label,
     required this.slot0DefaultLabel,
     required this.slot1Label,
@@ -391,10 +433,17 @@ class _DoublesTeamZone extends StatelessWidget {
                   color: context.palette.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
-                  teamHeading,
-                  key: teamHeadingKey,
+                // An optional custom team name (Phase 4G) — tap to set a
+                // club or nickname; left alone, it just keeps showing the
+                // generic "Team 1"/"Team 2" default.
+                child: EditableNameLabel(
+                  displayName: teamHeading,
+                  defaultLabel: teamHeadingDefault,
                   style: AppTypography.eyebrow(context),
+                  editHint: editHint,
+                  textKey: teamHeadingKey,
+                  fieldKey: teamHeadingFieldKey,
+                  onChanged: onTeamNameChanged,
                 ),
               ),
               const SizedBox(height: 8),

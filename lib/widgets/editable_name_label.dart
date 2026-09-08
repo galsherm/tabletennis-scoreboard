@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/player_names.dart';
+import '../theme/app_theme.dart';
 
 /// A player/team name that becomes an inline text field when tapped —
 /// see PHASE4F_THEME_AND_NAMES.md. Not a separate settings screen or
@@ -8,6 +9,14 @@ import '../models/player_names.dart';
 /// pre-filled with the current text; submitting (or tapping away)
 /// commits the trimmed result, or reverts to [defaultLabel] if left
 /// blank.
+///
+/// A small pencil icon sits right after the text in read mode — added in
+/// PHASE4G_NAMES_SYNC_AND_DIALOG.md after user testing found the name
+/// was tappable but gave no visible sign of it: a `Tooltip` alone only
+/// appears on long-press/hover, which isn't a visible affordance at all,
+/// so nothing on screen suggested a name could be renamed. The icon is
+/// deliberately small and muted (`faintText`) so it reads as a quiet
+/// hint, not competing with the name itself for attention.
 class EditableNameLabel extends StatefulWidget {
   /// The name currently shown — either a previously-set custom name or
   /// [defaultLabel].
@@ -111,17 +120,38 @@ class _EditableNameLabelState extends State<EditableNameLabel> {
         ),
       );
     }
+    // A small edit-pencil sized relative to the name's own font, so it
+    // stays proportionate whether it's sitting next to a 19pt singles
+    // name or a 15pt compact doubles one.
+    final iconSize = (widget.style.fontSize ?? 16) * 0.68;
     return InkWell(
       key: widget.textKey == null ? null : Key('${widget.textKey}_tap'),
       onTap: _startEditing,
       child: Tooltip(
         message: widget.editHint,
-        child: Text(
-          widget.displayName,
-          key: widget.textKey,
-          style: widget.style,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                widget.displayName,
+                key: widget.textKey,
+                style: widget.style,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+            const SizedBox(width: 3),
+            Icon(
+              Icons.edit,
+              key: widget.textKey == null
+                  ? null
+                  : Key('${widget.textKey}_editIcon'),
+              size: iconSize,
+              color: context.palette.faintText,
+            ),
+          ],
         ),
       ),
     );

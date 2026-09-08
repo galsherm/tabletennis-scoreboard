@@ -243,7 +243,8 @@ class _SetupScreenState extends State<SetupScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             _TeamSlotPreview(
-                              teamLabel: l10n.team1Label,
+                              teamNumber: 1,
+                              defaultTeamLabel: l10n.team1Label,
                               teamLabelKey: const Key('team1PreviewHeading'),
                               slots: const [1, 2],
                               defaultLabels: [
@@ -254,9 +255,12 @@ class _SetupScreenState extends State<SetupScreen> {
                               editHint: l10n.editNameHint,
                               onNameChanged: (slot, name) =>
                                   setState(() => _doublesNames.set(slot, name)),
+                              onTeamNameChanged: (name) => setState(
+                                  () => _doublesNames.setTeam(1, name)),
                             ),
                             _TeamSlotPreview(
-                              teamLabel: l10n.team2Label,
+                              teamNumber: 2,
+                              defaultTeamLabel: l10n.team2Label,
                               teamLabelKey: const Key('team2PreviewHeading'),
                               slots: const [3, 4],
                               defaultLabels: [
@@ -267,6 +271,8 @@ class _SetupScreenState extends State<SetupScreen> {
                               editHint: l10n.editNameHint,
                               onNameChanged: (slot, name) =>
                                   setState(() => _doublesNames.set(slot, name)),
+                              onTeamNameChanged: (name) => setState(
+                                  () => _doublesNames.setTeam(2, name)),
                             ),
                           ],
                         ),
@@ -349,27 +355,35 @@ class _SetupScreenState extends State<SetupScreen> {
 /// unlabeled name columns read as "four separate players," not
 /// obviously two pairs. See PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
 ///
-/// Each name is tap-to-rename (Phase 4F, [EditableNameLabel]) — [slots]
-/// and [defaultLabels] are parallel lists (length 2: one per player in
-/// this team), [names] is shared with the sibling team's preview so both
-/// read from (and write to) the same [PlayerNames] instance.
+/// Every name here is tap-to-rename (Phase 4F, [EditableNameLabel]),
+/// including the team heading itself since Phase 4G: an optional custom
+/// team name (a club or nickname), entirely separate from the two player
+/// names — leaving it unset keeps showing the generic "Team 1"/"Team 2"
+/// exactly as before. [slots] and [defaultLabels] are parallel lists
+/// (length 2: one per player in this team); [names] is shared with the
+/// sibling team's preview so both read from (and write to) the same
+/// [PlayerNames] instance.
 class _TeamSlotPreview extends StatelessWidget {
-  final String teamLabel;
+  final int teamNumber;
+  final String defaultTeamLabel;
   final Key teamLabelKey;
   final List<int> slots;
   final List<String> defaultLabels;
   final PlayerNames names;
   final String editHint;
   final void Function(int slot, String? name) onNameChanged;
+  final ValueChanged<String?> onTeamNameChanged;
 
   const _TeamSlotPreview({
-    required this.teamLabel,
+    required this.teamNumber,
+    required this.defaultTeamLabel,
     required this.teamLabelKey,
     required this.slots,
     required this.defaultLabels,
     required this.names,
     required this.editHint,
     required this.onNameChanged,
+    required this.onTeamNameChanged,
   });
 
   @override
@@ -383,8 +397,15 @@ class _TeamSlotPreview extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(teamLabel,
-              key: teamLabelKey, style: AppTypography.eyebrow(context)),
+          EditableNameLabel(
+            displayName: names.resolveTeam(teamNumber, defaultTeamLabel),
+            defaultLabel: defaultTeamLabel,
+            style: AppTypography.eyebrow(context),
+            editHint: editHint,
+            textKey: teamLabelKey,
+            fieldKey: Key('team${teamNumber}PreviewHeadingField'),
+            onChanged: onTeamNameChanged,
+          ),
           const SizedBox(height: 6),
           for (var i = 0; i < slots.length; i++)
             Padding(

@@ -85,4 +85,66 @@ void main() {
       expect(names.resolve(4, 'Player 4'), 'Jordan');
     });
   });
+
+  group('PlayerNames: team names (Phase 4G)', () {
+    test('resolveTeam returns the default label when no custom team name '
+        'is set', () {
+      final names = PlayerNames();
+      expect(names.resolveTeam(1, 'Team 1'), 'Team 1');
+      expect(names.isTeamCustom(1), isFalse);
+    });
+
+    test('setTeam stores a trimmed custom team name', () {
+      final names = PlayerNames();
+      names.setTeam(1, '  The Smashers  ');
+      expect(names.resolveTeam(1, 'Team 1'), 'The Smashers');
+      expect(names.isTeamCustom(1), isTrue);
+    });
+
+    test('team names and player names are completely independent stores '
+        '— setting one never touches the other', () {
+      final names = PlayerNames();
+      names.set(1, 'Alex');
+      names.setTeam(1, 'The Smashers');
+
+      expect(names.resolve(1, 'Player 1'), 'Alex');
+      expect(names.resolveTeam(1, 'Team 1'), 'The Smashers');
+
+      names.setTeam(1, null);
+      expect(names.resolve(1, 'Player 1'), 'Alex',
+          reason: 'clearing the team name must not clear the player name');
+
+      names.set(1, null);
+      names.setTeam(1, 'The Smashers');
+      expect(names.resolve(1, 'Player 1'), 'Player 1',
+          reason: 'setting a team name must not set the player name');
+    });
+
+    test('team 1 and team 2 are independent', () {
+      final names = PlayerNames();
+      names.setTeam(1, 'The Smashers');
+      expect(names.resolveTeam(2, 'Team 2'), 'Team 2');
+      expect(names.isTeamCustom(2), isFalse);
+    });
+
+    test('an empty/whitespace/too-long team name reverts to the default, '
+        'same validation as player names', () {
+      final names = PlayerNames();
+      names.setTeam(1, 'The Smashers');
+      names.setTeam(1, '   ');
+      expect(names.resolveTeam(1, 'Team 1'), 'Team 1');
+
+      names.setTeam(1, 'A' * (PlayerNames.maxLength + 1));
+      expect(names.isTeamCustom(1), isFalse);
+    });
+
+    test('clear() also reverts custom team names', () {
+      final names = PlayerNames();
+      names.setTeam(1, 'The Smashers');
+      names.setTeam(2, 'The Spinners');
+      names.clear();
+      expect(names.resolveTeam(1, 'Team 1'), 'Team 1');
+      expect(names.resolveTeam(2, 'Team 2'), 'Team 2');
+    });
+  });
 }
