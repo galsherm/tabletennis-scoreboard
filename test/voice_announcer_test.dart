@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabletennis_scoreboard/services/clip_player.dart';
+import 'package:tabletennis_scoreboard/services/commentary_strings.dart';
 import 'package:tabletennis_scoreboard/services/match_commentary.dart';
 import 'package:tabletennis_scoreboard/services/tts_engine.dart';
 import 'package:tabletennis_scoreboard/services/voice_announcer.dart';
@@ -54,6 +55,18 @@ class _FakeClipPlayer implements ClipPlayer {
   @override
   Future<void> playClip(String assetPath) async {
     played.add(assetPath);
+  }
+
+  @override
+  Future<void> stop() async {}
+}
+
+class _AlwaysMissingClipPlayer implements ClipPlayer {
+  final List<String> played = [];
+
+  @override
+  Future<void> playClip(String assetPath) async {
+    throw Exception('Unable to load asset: $assetPath');
   }
 
   @override
@@ -142,6 +155,93 @@ void main() {
       await voice
           .announce(const Announcement('25, 23', ['number_25', 'number_23']));
 
+      expect(clips.played, isEmpty);
+    });
+  });
+
+  group('language selection (Phase 3)', () {
+    test('German commentary strings request de-DE from the device TTS',
+        () async {
+      final tts = _FakeTtsEngine(available: true);
+      final voice = VoiceAnnouncer(
+        ttsEngine: tts,
+        clipPlayer: _FakeClipPlayer(),
+        strings: CommentaryStrings.de,
+      );
+
+      await voice.announce(const Announcement('Einstand', ['deuce']));
+
+      expect(voice.backend, VoiceBackend.deviceTts);
+      expect(tts.languageSet, 'de-DE');
+      expect(tts.spoken, ['Einstand']);
+    });
+
+    test('French commentary strings request fr-FR from the device TTS',
+        () async {
+      final tts = _FakeTtsEngine(available: true);
+      final voice = VoiceAnnouncer(
+        ttsEngine: tts,
+        clipPlayer: _FakeClipPlayer(),
+        strings: CommentaryStrings.fr,
+      );
+
+      await voice.announce(const Announcement('Égalité', ['deuce']));
+
+      expect(voice.backend, VoiceBackend.deviceTts);
+      expect(tts.languageSet, 'fr-FR');
+      expect(tts.spoken, ['Égalité']);
+    });
+
+    test('German commentary strings fall back to the German clip subfolder',
+        () async {
+      final clips = _FakeClipPlayer();
+      final voice = VoiceAnnouncer(
+        ttsEngine: _FakeTtsEngine(available: false),
+        clipPlayer: clips,
+        strings: CommentaryStrings.de,
+      );
+
+      await voice
+          .announce(const Announcement('5, 3', ['number_5', 'number_3']));
+
+      expect(voice.backend, VoiceBackend.bundledClips);
+      expect(clips.played, ['audio/de/number_5.wav', 'audio/de/number_3.wav']);
+    });
+
+    test('French commentary strings fall back to the French clip subfolder',
+        () async {
+      final clips = _FakeClipPlayer();
+      final voice = VoiceAnnouncer(
+        ttsEngine: _FakeTtsEngine(available: false),
+        clipPlayer: clips,
+        strings: CommentaryStrings.fr,
+      );
+
+      await voice
+          .announce(const Announcement('5, 3', ['number_5', 'number_3']));
+
+      expect(voice.backend, VoiceBackend.bundledClips);
+      expect(clips.played, ['audio/fr/number_5.wav', 'audio/fr/number_3.wav']);
+    });
+
+    test(
+        'a language with no bundled clips yet degrades to silence, not a '
+        'crash (Phase 3 ships DE/FR TTS but no recorded clips)', () async {
+      // No real assets exist under assets/audio/de/ or assets/audio/fr/
+      // yet (see PHASE3_VERIFICATION.md) — simulate that here with a clip
+      // player that always fails to find the asset, like the real one
+      // would for a missing file.
+      final clips = _AlwaysMissingClipPlayer();
+      final voice = VoiceAnnouncer(
+        ttsEngine: _FakeTtsEngine(available: false), // forces clip fallback
+        clipPlayer: clips,
+        strings: CommentaryStrings.de,
+      );
+
+      await expectLater(
+        voice.announce(const Announcement('5, 3', ['number_5', 'number_3'])),
+        completes,
+      );
       expect(clips.played, isEmpty);
     });
   });

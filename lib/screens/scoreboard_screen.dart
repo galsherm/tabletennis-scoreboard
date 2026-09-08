@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
 import '../models/scoring_engine.dart';
-import '../services/match_commentary.dart';
+import '../services/commentary_strings.dart';
 import '../services/voice_announcer.dart';
 
 class ScoreboardScreen extends StatefulWidget {
@@ -10,7 +11,8 @@ class ScoreboardScreen extends StatefulWidget {
   final Player firstServer;
 
   /// Overridable for tests; defaults to a real [VoiceAnnouncer] backed by
-  /// the device's TTS engine and the bundled clip set.
+  /// the device's TTS engine and the bundled clip set, in whichever
+  /// language the widget tree is currently displaying.
   final VoiceAnnouncer? voiceAnnouncer;
 
   const ScoreboardScreen({
@@ -27,6 +29,7 @@ class ScoreboardScreen extends StatefulWidget {
 class _ScoreboardScreenState extends State<ScoreboardScreen> {
   late TableTennisScoringEngine _engine;
   late VoiceAnnouncer _voice;
+  bool _voiceInitialized = false;
 
   @override
   void initState() {
@@ -35,7 +38,27 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       bestOf: widget.bestOf,
       firstServer: widget.firstServer,
     );
-    _voice = widget.voiceAnnouncer ?? VoiceAnnouncer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reading the effective locale requires an inherited widget lookup,
+    // which isn't safe in initState — this runs once, right before the
+    // first build, which is early enough since the match's language is
+    // fixed for the lifetime of this screen (changing the override sends
+    // the user back through setup for their next match).
+    if (!_voiceInitialized) {
+      _voiceInitialized = true;
+      _voice = widget.voiceAnnouncer ??
+          VoiceAnnouncer(
+            strings: CommentaryStrings.forLanguage(
+              CommentaryLanguage.fromLanguageCode(
+                Localizations.localeOf(context).languageCode,
+              ),
+            ),
+          );
+    }
   }
 
   void _scorePoint(Player scorer) {
@@ -44,11 +67,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     final server = _engine.currentServer; // who serves next, not who just served
     setState(() {});
 
-    _voice.announce(announcementForPoint(
-      engine: _engine,
-      event: event,
-      server: server,
-    ));
+    _voice.announcePoint(engine: _engine, event: event, server: server);
 
     // Exactly one of these three branches applies per point — a
     // completed game always implies a change of ends, so we don't
@@ -68,35 +87,40 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   void _resetMatch() => setState(() => _engine.resetMatch());
 
+  String _playerLabel(Player player) {
+    final l10n = AppLocalizations.of(context);
+    return player == Player.one ? l10n.player1Label : l10n.player2Label;
+  }
+
   void _showChangeEndsBanner() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        key: Key('changeEndsSnackBar'),
-        content: Text('Change ends'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        key: const Key('changeEndsSnackBar'),
+        content: Text(AppLocalizations.of(context).changeEndsSnackBar),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   void _showGameCompleteBanner(Player winner) {
-    final label = winner == Player.one ? 'Player 1' : 'Player 2';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         key: const Key('gameCompleteSnackBar'),
-        content: Text('$label wins the game — change ends'),
+        content: Text(AppLocalizations.of(context)
+            .gameCompleteMessage(_playerLabel(winner))),
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
   void _showMatchCompleteDialog(Player winner) {
-    final label = winner == Player.one ? 'Player 1' : 'Player 2';
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         key: const Key('matchCompleteDialog'),
-        title: const Text('Match complete'),
-        content: Text('$label wins the match!'),
+        title: Text(l10n.matchCompleteDialogTitle),
+        content: Text(l10n.matchCompleteMessage(_playerLabel(winner))),
         actions: [
           TextButton(
             key: const Key('newMatchButton'),
@@ -104,7 +128,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               Navigator.of(context).pop();
               _resetMatch();
             },
-            child: const Text('New match'),
+            child: Text(l10n.newMatchButton),
           ),
         ],
       ),
@@ -113,27 +137,28 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final server = _engine.currentServer;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Table Tennis'),
+        title: Text(l10n.scoreboardTitle),
         actions: [
           IconButton(
             key: const Key('muteButton'),
             icon: Icon(_voice.isMuted ? Icons.volume_off : Icons.volume_up),
-            tooltip: _voice.isMuted ? 'Unmute voice' : 'Mute voice',
+            tooltip: _voice.isMuted ? l10n.unmuteTooltip : l10n.muteTooltip,
             onPressed: _toggleMute,
           ),
           IconButton(
             key: const Key('undoButton'),
             icon: const Icon(Icons.undo),
-            tooltip: 'Undo',
+            tooltip: l10n.undoTooltip,
             onPressed: _engine.canUndo ? _undo : null,
           ),
           IconButton(
             key: const Key('resetButton'),
             icon: const Icon(Icons.refresh),
-            tooltip: 'Reset match',
+            tooltip: l10n.resetTooltip,
             onPressed: _resetMatch,
           ),
         ],
@@ -143,10 +168,12 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           Expanded(
             child: _PlayerZone(
               key: const Key('player1Zone'),
-              label: 'Player 1',
+              label: l10n.player1Label,
               points: _engine.player1Points,
               games: _engine.player1Games,
+              gamesLabel: l10n.gamesCountLabel(_engine.player1Games),
               isServer: server == Player.one,
+              servingTooltip: l10n.servingTooltip,
               pointsKey: const Key('player1PointsText'),
               serverIconKey: const Key('player1ServerIcon'),
               onTap: () => _scorePoint(Player.one),
@@ -156,10 +183,12 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           Expanded(
             child: _PlayerZone(
               key: const Key('player2Zone'),
-              label: 'Player 2',
+              label: l10n.player2Label,
               points: _engine.player2Points,
               games: _engine.player2Games,
+              gamesLabel: l10n.gamesCountLabel(_engine.player2Games),
               isServer: server == Player.two,
+              servingTooltip: l10n.servingTooltip,
               pointsKey: const Key('player2PointsText'),
               serverIconKey: const Key('player2ServerIcon'),
               onTap: () => _scorePoint(Player.two),
@@ -175,7 +204,9 @@ class _PlayerZone extends StatelessWidget {
   final String label;
   final int points;
   final int games;
+  final String gamesLabel;
   final bool isServer;
+  final String servingTooltip;
   final Key pointsKey;
   final Key serverIconKey;
   final VoidCallback onTap;
@@ -185,7 +216,9 @@ class _PlayerZone extends StatelessWidget {
     required this.label,
     required this.points,
     required this.games,
+    required this.gamesLabel,
     required this.isServer,
+    required this.servingTooltip,
     required this.pointsKey,
     required this.serverIconKey,
     required this.onTap,
@@ -205,7 +238,10 @@ class _PlayerZone extends StatelessWidget {
             SizedBox(
               height: 32,
               child: isServer
-                  ? Icon(Icons.sports_tennis, key: serverIconKey)
+                  ? Tooltip(
+                      message: servingTooltip,
+                      child: Icon(Icons.sports_tennis, key: serverIconKey),
+                    )
                   : null,
             ),
             Text(label, style: Theme.of(context).textTheme.titleMedium),
@@ -219,7 +255,7 @@ class _PlayerZone extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text('Games: $games'),
+            Text(gamesLabel),
           ],
         ),
       ),

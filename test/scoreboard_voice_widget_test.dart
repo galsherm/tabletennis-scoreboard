@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tabletennis_scoreboard/l10n/gen/app_localizations.dart';
 import 'package:tabletennis_scoreboard/models/player.dart';
 import 'package:tabletennis_scoreboard/screens/scoreboard_screen.dart';
 import 'package:tabletennis_scoreboard/services/clip_player.dart';
@@ -38,6 +39,8 @@ Future<void> _pumpScoreboard(
   int bestOf = 5,
 }) {
   return tester.pumpWidget(MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: ScoreboardScreen(
       bestOf: bestOf,
       firstServer: Player.one,

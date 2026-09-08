@@ -1,0 +1,118 @@
+{
+  "@@locale": "en",
+  "appTitle": "Table Tennis Scoreboard",
+  "@appTitle": {
+    "description": "The application's title, shown in the OS task switcher."
+  },
+  "newMatchScreenTitle": "New match",
+  "@newMatchScreenTitle": {
+    "description": "App bar title on the match-setup screen."
+  },
+  "languageMenuTooltip": "Language",
+  "@languageMenuTooltip": {
+    "description": "Tooltip on the language-picker icon button."
+  },
+  "languageSystemOption": "System default",
+  "@languageSystemOption": {
+    "description": "Language-picker option that follows the device's own language setting rather than overriding it."
+  },
+  "bestOfLabel": "Best of",
+  "@bestOfLabel": {
+    "description": "Label above the 3/5/7 best-of-N game-count selector."
+  },
+  "tossPrompt": "Toss to decide who serves first",
+  "@tossPrompt": {
+    "description": "Shown before the coin toss has been used to pick the first server."
+  },
+  "firstServerLabel": "First server: {player}",
+  "@firstServerLabel": {
+    "description": "Shown after the coin toss, naming who serves first.",
+    "placeholders": {
+      "player": {
+        "type": "String",
+        "example": "Player 1"
+      }
+    }
+  },
+  "tossButton": "Toss coin",
+  "@tossButton": {
+    "description": "Button that randomly picks the first server."
+  },
+  "startMatchButton": "Start match",
+  "@startMatchButton": {
+    "description": "Button that begins the match with the chosen settings."
+  },
+  "scoreboardTitle": "Table Tennis",
+  "@scoreboardTitle": {
+    "description": "App bar title on the live scoreboard screen."
+  },
+  "muteTooltip": "Mute voice",
+  "@muteTooltip": {
+    "description": "Tooltip on the mute button when voice announcements are currently on."
+  },
+  "unmuteTooltip": "Unmute voice",
+  "@unmuteTooltip": {
+    "description": "Tooltip on the mute button when voice announcements are currently muted."
+  },
+  "undoTooltip": "Undo",
+  "@undoTooltip": {
+    "description": "Tooltip on the undo-last-point button."
+  },
+  "resetTooltip": "Reset match",
+  "@resetTooltip": {
+    "description": "Tooltip on the reset-match button."
+  },
+  "servingTooltip": "Serving",
+  "@servingTooltip": {
+    "description": "Accessibility label on the icon that marks which player is currently serving."
+  },
+  "player1Label": "Player 1",
+  "@player1Label": {
+    "description": "Display name for the first player."
+  },
+  "player2Label": "Player 2",
+  "@player2Label": {
+    "description": "Display name for the second player."
+  },
+  "gamesCountLabel": "Games: {count}",
+  "@gamesCountLabel": {
+    "description": "Shows how many games a player has won so far in the match.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeEndsSnackBar": "Change ends",
+  "@changeEndsSnackBar": {
+    "description": "Snackbar shown mid-game, in the deciding game, when a player reaches 5 points (ITTF Law 2.14.2)."
+  },
+  "gameCompleteMessage": "{player} wins the game — change ends",
+  "@gameCompleteMessage": {
+    "description": "Snackbar shown when a game is won.",
+    "placeholders": {
+      "player": {
+        "type": "String",
+        "example": "Player 1"
+      }
+    }
+  },
+  "matchCompleteDialogTitle": "Match complete",
+  "@matchCompleteDialogTitle": {
+    "description": "Title of the dialog shown when the match ends."
+  },
+  "matchCompleteMessage": "{player} wins the match!",
+  "@matchCompleteMessage": {
+    "description": "Body text of the dialog shown when the match ends.",
+    "placeholders": {
+      "player": {
+        "type": "String",
+        "example": "Player 1"
+      }
+    }
+  },
+  "newMatchButton": "New match",
+  "@newMatchButton": {
+    "description": "Button on the match-complete dialog that starts a fresh match."
+  }
+}

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabletennis_scoreboard/models/player.dart';
 import 'package:tabletennis_scoreboard/models/scoring_engine.dart';
+import 'package:tabletennis_scoreboard/services/commentary_strings.dart';
 import 'package:tabletennis_scoreboard/services/match_commentary.dart';
 
 void main() {
@@ -10,8 +11,12 @@ void main() {
           TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
       final server = engine.currentServer; // Player.one, 0-0
       final event = engine.addPoint(Player.one); // 1-0
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: server,
+        strings: CommentaryStrings.en,
+      );
 
       expect(announcement.speech, '1, 0');
       expect(announcement.clipKeys, ['number_1', 'number_0']);
@@ -44,6 +49,7 @@ void main() {
         engine: engine,
         event: event,
         server: serverWhoServesNext,
+        strings: CommentaryStrings.en,
       );
 
       final expectedServer = serverWhoServesNext == Player.one
@@ -67,8 +73,12 @@ void main() {
       engine.addPoint(Player.one); // 10-9
       final server = engine.currentServer;
       final event = engine.addPoint(Player.two); // 10-10
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: server,
+        strings: CommentaryStrings.en,
+      );
 
       expect(announcement.speech, 'Deuce');
       expect(announcement.clipKeys, ['deuce']);
@@ -80,8 +90,12 @@ void main() {
       engine.addPoint(Player.one); // 1-0
       final server = engine.currentServer;
       final event = engine.addPoint(Player.two); // 1-1, tied but < 10
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: server,
+        strings: CommentaryStrings.en,
+      );
 
       expect(announcement.speech, isNot('Deuce'));
     });
@@ -96,8 +110,12 @@ void main() {
       }
       final server = engine.currentServer;
       final event = engine.addPoint(Player.one); // 11-0, wins game 1
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: server,
+        strings: CommentaryStrings.en,
+      );
 
       expect(announcement.speech, 'Game, Player 1. Change ends.');
       expect(announcement.clipKeys, ['game', 'change_ends']);
@@ -116,8 +134,12 @@ void main() {
       }
       final server = engine.currentServer;
       final event = engine.addPoint(Player.one); // 11-0, wins game 2 + match
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: server,
+        strings: CommentaryStrings.en,
+      );
 
       expect(announcement.speech, 'Match. Player 1 wins the match.');
       expect(announcement.clipKeys, isEmpty);
@@ -140,8 +162,12 @@ void main() {
       final server = engine.currentServer;
       final event = engine.addPoint(Player.one); // 5-0 -> mid-game change
 
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: server,
+        strings: CommentaryStrings.en,
+      );
       final expectedServer =
           server == Player.one ? engine.player1Points : engine.player2Points;
       final expectedReceiver =
@@ -172,8 +198,12 @@ void main() {
       final server = engine.currentServer;
       final event = engine.addPoint(Player.one); // 10-0: one point from match
 
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: server,
+        strings: CommentaryStrings.en,
+      );
       final expectedServer =
           server == Player.one ? engine.player1Points : engine.player2Points;
       final expectedReceiver =
@@ -200,10 +230,143 @@ void main() {
       final server = engine.currentServer;
       // 10-0 in game 1 of a best-of-5 with no games banked yet.
       final event = engine.addPoint(Player.one);
-      final announcement =
-          announcementForPoint(engine: engine, event: event, server: server);
+      final announcement = announcementForPoint(
+        engine: engine,
+        event: event,
+        server: server,
+        strings: CommentaryStrings.en,
+      );
 
       expect(announcement.speech, isNot(contains('Match point')));
     });
+  });
+
+  group('localization (Phase 3)', () {
+    test('CommentaryLanguage.fromLanguageCode maps known codes and falls '
+        'back to English for anything else', () {
+      expect(CommentaryLanguage.fromLanguageCode('de'), CommentaryLanguage.de);
+      expect(CommentaryLanguage.fromLanguageCode('fr'), CommentaryLanguage.fr);
+      expect(CommentaryLanguage.fromLanguageCode('en'), CommentaryLanguage.en);
+      expect(
+          CommentaryLanguage.fromLanguageCode('es'), CommentaryLanguage.en);
+      expect(CommentaryLanguage.fromLanguageCode(''), CommentaryLanguage.en);
+    });
+
+    test('CommentaryStrings.forLanguage returns the matching language pack',
+        () {
+      expect(CommentaryStrings.forLanguage(CommentaryLanguage.en),
+          same(CommentaryStrings.en));
+      expect(CommentaryStrings.forLanguage(CommentaryLanguage.de),
+          same(CommentaryStrings.de));
+      expect(CommentaryStrings.forLanguage(CommentaryLanguage.fr),
+          same(CommentaryStrings.fr));
+    });
+
+    for (final entry in {
+      CommentaryStrings.de: ('de-DE', 'de'),
+      CommentaryStrings.fr: ('fr-FR', 'fr'),
+    }.entries) {
+      final strings = entry.key;
+      final (ttsLocale, clipFolder) = entry.value;
+
+      group(strings.ttsLocale, () {
+        test('exposes the right TTS locale and clip folder', () {
+          expect(strings.ttsLocale, ttsLocale);
+          expect(strings.clipFolder, clipFolder);
+        });
+
+        test('produces a fully localized announcement for every event type',
+            () {
+          // Ordinary score.
+          var engine =
+              TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+          var server = engine.currentServer;
+          var event = engine.addPoint(Player.one); // 1-0
+          var announcement = announcementForPoint(
+            engine: engine,
+            event: event,
+            server: server,
+            strings: strings,
+          );
+          expect(announcement.speech, contains(','));
+          expect(announcement.clipKeys, ['number_1', 'number_0']);
+
+          // Deuce.
+          engine = TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+          for (var i = 0; i < 9; i++) {
+            engine.addPoint(Player.one);
+            engine.addPoint(Player.two);
+          }
+          engine.addPoint(Player.one); // 10-9
+          server = engine.currentServer;
+          event = engine.addPoint(Player.two); // 10-10
+          announcement = announcementForPoint(
+            engine: engine,
+            event: event,
+            server: server,
+            strings: strings,
+          );
+          expect(announcement.speech, strings.deuce);
+          expect(announcement.speech, isNot('Deuce'));
+          expect(announcement.clipKeys, ['deuce']);
+
+          // Game completed: uses the localized player label and is
+          // distinct from the English phrase.
+          engine = TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+          for (var i = 0; i < 10; i++) {
+            engine.addPoint(Player.one);
+          }
+          server = engine.currentServer;
+          event = engine.addPoint(Player.one); // wins game 1
+          announcement = announcementForPoint(
+            engine: engine,
+            event: event,
+            server: server,
+            strings: strings,
+          );
+          expect(announcement.speech, strings.gameWon(strings.playerLabel(Player.one)));
+          expect(announcement.speech, isNot(contains('Player 1')));
+          expect(announcement.clipKeys, ['game', 'change_ends']);
+
+          // Match completed.
+          engine = TableTennisScoringEngine(bestOf: 3, firstServer: Player.one);
+          for (var i = 0; i < 21; i++) {
+            engine.addPoint(Player.one);
+          }
+          server = engine.currentServer;
+          event = engine.addPoint(Player.one); // wins game 2 + match
+          announcement = announcementForPoint(
+            engine: engine,
+            event: event,
+            server: server,
+            strings: strings,
+          );
+          expect(announcement.speech,
+              strings.matchWon(strings.playerLabel(Player.one)));
+          expect(announcement.speech, isNot(contains('wins the match')));
+          expect(announcement.clipKeys, isEmpty);
+
+          // Match point.
+          engine = TableTennisScoringEngine(bestOf: 3, firstServer: Player.one);
+          for (var i = 0; i < 11; i++) {
+            engine.addPoint(Player.one);
+          }
+          for (var i = 0; i < 9; i++) {
+            engine.addPoint(Player.one);
+          }
+          server = engine.currentServer;
+          event = engine.addPoint(Player.one); // 10-0: one point from match
+          announcement = announcementForPoint(
+            engine: engine,
+            event: event,
+            server: server,
+            strings: strings,
+          );
+          expect(announcement.speech, endsWith(strings.matchPointSuffix));
+          expect(announcement.speech, isNot(contains('Match point')));
+          expect(announcement.clipKeys, contains('match_point'));
+        });
+      });
+    }
   });
 }

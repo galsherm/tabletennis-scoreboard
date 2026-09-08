@@ -2,11 +2,33 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
 import 'scoreboard_screen.dart';
 
+/// Menu-item identity for the language picker. A plain `PopupMenuButton
+/// <Locale?>` can't represent "System default" as `value: null`: Flutter's
+/// own [PopupMenuButton] treats a `null` selection the same as the menu
+/// being dismissed with no choice made, so `onSelected` is never called
+/// for it (see `popup_menu.dart`'s `_PopupMenuButtonState._handleMenu`) —
+/// this enum sidesteps that by giving "system" its own non-null value.
+enum _LanguageMenuOption { system, en, de, fr }
+
 class SetupScreen extends StatefulWidget {
-  const SetupScreen({super.key});
+  /// Current manual language override, or null to follow the device
+  /// locale. Used only to show a checkmark against the active choice in
+  /// the language menu.
+  final Locale? currentLocaleOverride;
+
+  /// Called with the newly chosen override, or null to go back to
+  /// following the device locale.
+  final ValueChanged<Locale?> onLocaleChanged;
+
+  const SetupScreen({
+    super.key,
+    required this.currentLocaleOverride,
+    required this.onLocaleChanged,
+  });
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -35,16 +57,69 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
+  void _onLanguageOptionSelected(_LanguageMenuOption option) {
+    switch (option) {
+      case _LanguageMenuOption.system:
+        widget.onLocaleChanged(null);
+      case _LanguageMenuOption.en:
+        widget.onLocaleChanged(const Locale('en'));
+      case _LanguageMenuOption.de:
+        widget.onLocaleChanged(const Locale('de'));
+      case _LanguageMenuOption.fr:
+        widget.onLocaleChanged(const Locale('fr'));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('New match')),
+      appBar: AppBar(
+        title: Text(l10n.newMatchScreenTitle),
+        actions: [
+          PopupMenuButton<_LanguageMenuOption>(
+            key: const Key('languageMenuButton'),
+            icon: const Icon(Icons.language),
+            tooltip: l10n.languageMenuTooltip,
+            onSelected: _onLanguageOptionSelected,
+            itemBuilder: (context) => [
+              CheckedPopupMenuItem<_LanguageMenuOption>(
+                key: const Key('languageOptionSystem'),
+                value: _LanguageMenuOption.system,
+                checked: widget.currentLocaleOverride == null,
+                child: Text(l10n.languageSystemOption),
+              ),
+              CheckedPopupMenuItem<_LanguageMenuOption>(
+                key: const Key('languageOptionEn'),
+                value: _LanguageMenuOption.en,
+                checked: widget.currentLocaleOverride == const Locale('en'),
+                // Language names are always shown in their own language,
+                // not translated, so a reader can find their language
+                // regardless of what the UI currently displays.
+                child: const Text('English'),
+              ),
+              CheckedPopupMenuItem<_LanguageMenuOption>(
+                key: const Key('languageOptionDe'),
+                value: _LanguageMenuOption.de,
+                checked: widget.currentLocaleOverride == const Locale('de'),
+                child: const Text('Deutsch'),
+              ),
+              CheckedPopupMenuItem<_LanguageMenuOption>(
+                key: const Key('languageOptionFr'),
+                value: _LanguageMenuOption.fr,
+                checked: widget.currentLocaleOverride == const Locale('fr'),
+                child: const Text('Français'),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Best of'),
+            Text(l10n.bestOfLabel),
             const SizedBox(height: 8),
             SegmentedButton<int>(
               key: const Key('bestOfSelector'),
@@ -61,9 +136,10 @@ class _SetupScreenState extends State<SetupScreen> {
             const SizedBox(height: 32),
             Text(
               _firstServer == null
-                  ? 'Toss to decide who serves first'
-                  : 'First server: '
-                      '${_firstServer == Player.one ? 'Player 1' : 'Player 2'}',
+                  ? l10n.tossPrompt
+                  : l10n.firstServerLabel(_firstServer == Player.one
+                      ? l10n.player1Label
+                      : l10n.player2Label),
               key: const Key('firstServerLabel'),
               textAlign: TextAlign.center,
             ),
@@ -71,13 +147,13 @@ class _SetupScreenState extends State<SetupScreen> {
             OutlinedButton(
               key: const Key('tossButton'),
               onPressed: _tossCoin,
-              child: const Text('Toss coin'),
+              child: Text(l10n.tossButton),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
               key: const Key('startMatchButton'),
               onPressed: _firstServer == null ? null : _start,
-              child: const Text('Start match'),
+              child: Text(l10n.startMatchButton),
             ),
           ],
         ),

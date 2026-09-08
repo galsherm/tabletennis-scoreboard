@@ -1,20 +1,25 @@
 import '../models/player.dart';
 import '../models/point_event.dart';
 import '../models/scoring_engine.dart';
+import 'commentary_strings.dart';
 
 /// What the voice layer should say for a single point.
 ///
 /// Deciding *what* to announce is pure domain logic — it only reads
-/// [TableTennisScoringEngine] state, so it's unit-testable without any
-/// TTS or audio mocking. [VoiceAnnouncer] is the layer that turns this
-/// into actual sound.
+/// [TableTennisScoringEngine] state and [CommentaryStrings] (itself a plain
+/// Dart object, no `BuildContext`), so it's unit-testable without any TTS
+/// or audio mocking. [VoiceAnnouncer] is the layer that turns this into
+/// actual sound.
 class Announcement {
   /// Sentence for live device TTS, e.g. `"5, 3"`, `"Deuce"`,
-  /// `"Game, Player 1. Change ends."`.
+  /// `"Game, Player 1. Change ends."` (or the equivalent in whichever
+  /// [CommentaryStrings] was passed to [announcementForPoint]).
   final String speech;
 
   /// Bundled clip keys to play in order as a fallback for [speech], e.g.
-  /// `['number_5', 'number_3']`. A key not present in
+  /// `['number_5', 'number_3']`. These names are language-agnostic —
+  /// [VoiceAnnouncer] resolves them against the clip folder for whichever
+  /// language it's configured for. A key not present in
   /// [VoiceAnnouncer.bundledClipKeys] (a score above the bundled 0–21
   /// range, or an event with no matching clip) is simply skipped by the
   /// player rather than announced — see PHASES.md Phase 2 on graceful
@@ -23,8 +28,6 @@ class Announcement {
 
   const Announcement(this.speech, this.clipKeys);
 }
-
-String _playerLabel(Player p) => p == Player.one ? 'Player 1' : 'Player 2';
 
 String numberClipKey(int n) => 'number_$n';
 
@@ -46,22 +49,25 @@ bool _isMatchPointFor(TableTennisScoringEngine engine, Player player) {
 /// Decides what to announce for the point just scored, where [server] is
 /// whoever serves *next* (read *after* [TableTennisScoringEngine.addPoint]
 /// was called, so it reflects any service-rotation change caused by the
-/// point just played) and [event] is what that call returned. Reads
-/// [engine] state *after* the point has been applied.
+/// point just played), [event] is what that call returned, and [strings]
+/// supplies the phrase templates for whichever language voice output is
+/// currently using. Reads [engine] state *after* the point has been
+/// applied.
 Announcement announcementForPoint({
   required TableTennisScoringEngine engine,
   required PointEvent event,
   required Player server,
+  required CommentaryStrings strings,
 }) {
   if (event.matchCompleted) {
-    final winner = _playerLabel(event.matchWinner!);
-    return Announcement('Match. $winner wins the match.', const []);
+    final winner = strings.playerLabel(event.matchWinner!);
+    return Announcement(strings.matchWon(winner), const []);
   }
 
   if (event.gameCompleted) {
-    final winner = _playerLabel(event.gameWinner!);
+    final winner = strings.playerLabel(event.gameWinner!);
     return Announcement(
-      'Game, $winner. Change ends.',
+      strings.gameWon(winner),
       const ['game', 'change_ends'],
     );
   }
@@ -74,15 +80,15 @@ Announcement announcementForPoint({
   final isDeuce = serverPoints >= 10 && serverPoints == receiverPoints;
 
   final Announcement score = isDeuce
-      ? const Announcement('Deuce', ['deuce'])
+      ? Announcement(strings.deuce, const ['deuce'])
       : Announcement(
-          '$serverPoints, $receiverPoints',
+          strings.score(serverPoints, receiverPoints),
           [numberClipKey(serverPoints), numberClipKey(receiverPoints)],
         );
 
   if (event.changeEndsNow) {
     return Announcement(
-      '${score.speech}. Change ends.',
+      '${score.speech}${strings.changeEndsSuffix}',
       [...score.clipKeys, 'change_ends'],
     );
   }
@@ -97,7 +103,7 @@ Announcement announcementForPoint({
 
   if (matchPointPlayer != null) {
     return Announcement(
-      '${score.speech}. Match point.',
+      '${score.speech}${strings.matchPointSuffix}',
       [...score.clipKeys, 'match_point'],
     );
   }
