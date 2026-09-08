@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
+import 'doubles_scoreboard_screen.dart';
 import 'scoreboard_screen.dart';
 
 /// Menu-item identity for the language picker. A plain `PopupMenuButton
@@ -36,6 +37,7 @@ class SetupScreen extends StatefulWidget {
 
 class _SetupScreenState extends State<SetupScreen> {
   int _bestOf = 5;
+  bool _isDoubles = false;
   Player? _firstServer;
 
   void _tossCoin() {
@@ -49,10 +51,15 @@ class _SetupScreenState extends State<SetupScreen> {
     if (firstServer == null) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ScoreboardScreen(
-          bestOf: _bestOf,
-          firstServer: firstServer,
-        ),
+        builder: (_) => _isDoubles
+            ? DoublesScoreboardScreen(
+                bestOf: _bestOf,
+                firstServingTeam: firstServer,
+              )
+            : ScoreboardScreen(
+                bestOf: _bestOf,
+                firstServer: firstServer,
+              ),
       ),
     );
   }
@@ -119,6 +126,35 @@ class _SetupScreenState extends State<SetupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            SegmentedButton<bool>(
+              key: const Key('modeSelector'),
+              segments: [
+                ButtonSegment(value: false, label: Text(l10n.modeSinglesOption)),
+                ButtonSegment(value: true, label: Text(l10n.modeDoublesOption)),
+              ],
+              selected: {_isDoubles},
+              onSelectionChanged: (selection) {
+                setState(() => _isDoubles = selection.first);
+              },
+            ),
+            if (_isDoubles) ...[
+              const SizedBox(height: 16),
+              Row(
+                key: const Key('doublesPlayerSlots'),
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Column(children: [
+                    Text(l10n.player1Label),
+                    Text(l10n.player2Label),
+                  ]),
+                  Column(children: [
+                    Text(l10n.player3Label),
+                    Text(l10n.player4Label),
+                  ]),
+                ],
+              ),
+            ],
+            const SizedBox(height: 24),
             Text(l10n.bestOfLabel),
             const SizedBox(height: 8),
             SegmentedButton<int>(

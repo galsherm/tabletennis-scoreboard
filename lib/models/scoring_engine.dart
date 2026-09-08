@@ -107,6 +107,12 @@ class TableTennisScoringEngine {
 
   bool get canUndo => _undoStack.isNotEmpty;
 
+  /// The side that served first in the current game. [currentServer]
+  /// already answers "who serves next" for singles; doubles rotation
+  /// (`lib/services/doubles_rotation.dart`) additionally needs this to
+  /// know which specific individual on that side is serving.
+  Player get firstServerThisGame => _firstServerThisGame;
+
   // ---------------------------------------------------------------------
   // Mutating operations
   // ---------------------------------------------------------------------

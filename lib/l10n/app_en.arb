@@ -88,6 +88,26 @@
   "@player2Label": {
     "description": "Display name for the second player."
   },
+  "player3Label": "Player 3",
+  "@player3Label": {
+    "description": "Display name for the third player (doubles only)."
+  },
+  "player4Label": "Player 4",
+  "@player4Label": {
+    "description": "Display name for the fourth player (doubles only)."
+  },
+  "receivingTooltip": "Receiving",
+  "@receivingTooltip": {
+    "description": "Accessibility label on the icon that marks which player is currently receiving serve (doubles only)."
+  },
+  "modeSinglesOption": "Singles",
+  "@modeSinglesOption": {
+    "description": "Singles/doubles mode selector option for a 2-player match."
+  },
+  "modeDoublesOption": "Doubles",
+  "@modeDoublesOption": {
+    "description": "Singles/doubles mode selector option for a 4-player match."
+  },
   "gamesCountLabel": "Games: {count}",
   "@gamesCountLabel": {
     "description": "Shows how many games a player has won so far in the match.",

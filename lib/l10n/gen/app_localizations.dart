@@ -208,6 +208,36 @@ abstract class AppLocalizations {
   /// **'Player 2'**
   String get player2Label;
 
+  /// Display name for the third player (doubles only).
+  ///
+  /// In en, this message translates to:
+  /// **'Player 3'**
+  String get player3Label;
+
+  /// Display name for the fourth player (doubles only).
+  ///
+  /// In en, this message translates to:
+  /// **'Player 4'**
+  String get player4Label;
+
+  /// Accessibility label on the icon that marks which player is currently receiving serve (doubles only).
+  ///
+  /// In en, this message translates to:
+  /// **'Receiving'**
+  String get receivingTooltip;
+
+  /// Singles/doubles mode selector option for a 2-player match.
+  ///
+  /// In en, this message translates to:
+  /// **'Singles'**
+  String get modeSinglesOption;
+
+  /// Singles/doubles mode selector option for a 4-player match.
+  ///
+  /// In en, this message translates to:
+  /// **'Doubles'**
+  String get modeDoublesOption;
+
   /// Shows how many games a player has won so far in the match.
   ///
   /// In en, this message translates to:

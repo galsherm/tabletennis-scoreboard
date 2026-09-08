@@ -5,10 +5,14 @@ explicitly defer, and why — so whoever/whatever implements it (including a
 future Claude session working directly in this codebase) has the context
 without needing the original research reports.
 
-**Status:** Phases 1–3 complete and verified (79/79 tests passing). See
+**Status:** Phases 1–4 complete and verified (108/108 tests passing). See
 PHASE3_VERIFICATION.md for the full German/French string list, confidence
 flags for a native-speaker review, and one open item (no real German/French
 bundled voice clips ship yet — architecture only, see that doc §4).
+PHASE4_VERIFICATION.md documents doubles' rotation derivation and several
+scope decisions flagged for review (fixed partner order for the match,
+generic "Player 1"/"Player 2" wording in doubles game/match-won
+announcements).
 
 ---
 
@@ -128,9 +132,32 @@ undersells the whole thesis.
 
 ---
 
-## Phase 4 — Doubles support
+## Phase 4 — Doubles support ✅ DONE
 
-**Build:**
+**Built:** `TableTennisScoringEngine` reused completely unchanged for
+doubles scoring (it only ever knows about two *sides*; one new getter,
+`firstServerThisGame`, was added — purely additive, exposes state already
+tracked). Doubles rotation (`lib/models/doubles_seat.dart`,
+`lib/services/doubles_rotation.dart`) is a pure function of the engine's
+current score: a fixed 4-step server/receiver cycle (A→C, C→B, B→D, D→A)
+derived from and verified against the "previous receiver becomes server,
+previous server's partner becomes receiver" rule — see
+PHASE4_VERIFICATION.md §1a for the full derivation. New
+`DoublesScoreboardScreen` (parallel to `ScoreboardScreen`, reusing the
+same engine/voice/locale wiring) shows all 4 players with server
+("Aufschlag"/"Serving"/"Service") and receiver
+("Annahme"/"Receiving"/"Réception", new) icons. `SetupScreen` gained a
+Singles/Doubles mode toggle and a 4-player preview. Voice announcements
+untouched — same score/deuce/change-ends/match-point system as singles,
+in all three languages. Tests in `test/doubles_rotation_test.dart` (11,
+the rotation logic) and `test/doubles_widget_test.dart` (14, setup +
+scoreboard UI). See PHASE4_VERIFICATION.md for design decisions flagged
+for review (fixed partner order per side for the whole match rather than
+re-chosen each game; game/match-won banners say generic "Player
+1"/"Player 2" rather than the specific pair's names, to stay consistent
+with voice, which wasn't redesigned).
+
+**Original build scope:**
 - Extend the scoring engine (or add a parallel doubles engine reusing the
   same core rules) for 4 players: service rotates through all 4 players
   every 2 points (every 1 at deuce), with the server always serving
@@ -198,17 +225,17 @@ Paste this (edit the phase number/description) as your prompt, from
 inside the project root:
 
 > I'm building on top of an existing Flutter table tennis scoreboard app.
-> Phases 1–3 (core scoring engine + UI, voice announcements, German/French
-> localization) are done and all tests pass — see `PHASES.md` in this repo
-> for the full phase plan and `lib/models/scoring_engine.dart` for the
-> existing scoring engine's API (don't break its existing public interface
-> or tests unless the phase requires it). Please implement **Phase 4 —
-> Doubles support** exactly as scoped in `PHASES.md`: extend the scoring
-> engine for 4-player doubles rotation (ITTF Law 2.06.3 / 2.13.6), and
-> update the UI for 4 name/color slots with clear server/receiver-pairing
-> indication. Add unit/widget tests for the new behavior alongside the
-> existing tests in `test/`. Keep changes scoped to this phase — don't
-> start monetization (Phase 5) or team-match orchestration.
+> Phases 1–4 (core scoring engine + UI, voice announcements, German/French
+> localization, doubles support) are done and all tests pass — see
+> `PHASES.md` in this repo for the full phase plan and
+> `lib/models/scoring_engine.dart` for the existing scoring engine's API
+> (don't break its existing public interface or tests unless the phase
+> requires it). Please implement **Phase 5 — Monetization** exactly as
+> scoped in `PHASES.md`: AdMob integration (one discreet banner or a
+> single match-end interstitial, never mid-match), and a one-time "Remove
+> Ads / Pro" in-app purchase. Add unit/widget tests for the new behavior
+> alongside the existing tests in `test/`. Keep changes scoped to this
+> phase — don't start subscriptions or Phase 6's distribution work.
 
-Swap "Phase 4 — Doubles support" and its description for whichever phase
+Swap "Phase 5 — Monetization" and its description for whichever phase
 you're starting next.

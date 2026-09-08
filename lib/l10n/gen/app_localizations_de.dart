@@ -67,6 +67,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get player2Label => 'Spieler 2';
 
   @override
+  String get player3Label => 'Spieler 3';
+
+  @override
+  String get player4Label => 'Spieler 4';
+
+  @override
+  String get receivingTooltip => 'Annahme';
+
+  @override
+  String get modeSinglesOption => 'Einzel';
+
+  @override
+  String get modeDoublesOption => 'Doppel';
+
+  @override
   String gamesCountLabel(int count) {
     return 'Sätze: $count';
   }
