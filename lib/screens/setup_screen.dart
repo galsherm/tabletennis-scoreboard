@@ -42,11 +42,10 @@ class _SetupScreenState extends State<SetupScreen> {
   bool _isDoubles = false;
   Player? _firstServer;
 
-  /// Whether the coin-flip flourish is currently playing. While true, the
-  /// actual result ([_pendingResult]) is already decided but withheld
-  /// from [_firstServer] (and therefore from the UI) until the animation
-  /// finishes — see [_onCoinFlipComplete].
-  bool _isFlipping = false;
+  /// The toss outcome, decided the instant the coin is tossed — not
+  /// withheld for suspense, since the flip's job is purely to show it
+  /// (see [CoinFlipIndicator]'s `winner` param, which uses this to decide
+  /// which face the coin comes to rest on). `null` means no toss yet.
   Player? _pendingResult;
 
   /// Bumped on every toss so [CoinFlipIndicator] gets a fresh `key` each
@@ -59,16 +58,14 @@ class _SetupScreenState extends State<SetupScreen> {
     setState(() {
       _pendingResult = Random().nextBool() ? Player.one : Player.two;
       _firstServer = null;
-      _isFlipping = true;
       _tossSequence++;
     });
   }
 
+  /// [CoinFlipIndicator.onComplete] — the flip has finished, so
+  /// [_firstServer] (and therefore "Start match") can now be enabled.
   void _onCoinFlipComplete() {
-    setState(() {
-      _firstServer = _pendingResult;
-      _isFlipping = false;
-    });
+    setState(() => _firstServer = _pendingResult);
   }
 
   /// "Player 1"/"Player 2" for singles; "Team 1"/"Team 2" for doubles —
@@ -236,24 +233,27 @@ class _SetupScreenState extends State<SetupScreen> {
               // Not height-constrained: the toss prompt wraps to two
               // lines in German/French (it's noticeably longer than
               // English), so a fixed-height box here would clip it.
-              _isFlipping
-                  ? Padding(
+              _pendingResult == null
+                  ? Text(
+                      l10n.tossPrompt,
+                      key: const Key('tossPromptText'),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.playerLabel,
+                    )
+                  : Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Center(
+                        // The result is read directly off the coin's face
+                        // once it lands — no separate result text. See
+                        // PHASE4C_TOSS_AND_TEAM_LABELS.md.
                         child: CoinFlipIndicator(
                           key: ValueKey(_tossSequence),
+                          player1Label: _sideLabel(l10n, Player.one),
+                          player2Label: _sideLabel(l10n, Player.two),
+                          winner: _pendingResult!,
                           onComplete: _onCoinFlipComplete,
                         ),
                       ),
-                    )
-                  : Text(
-                      _firstServer == null
-                          ? l10n.tossPrompt
-                          : l10n.firstServerLabel(
-                              _sideLabel(l10n, _firstServer!)),
-                      key: const Key('firstServerLabel'),
-                      textAlign: TextAlign.center,
-                      style: AppTypography.playerLabel,
                     ),
               const SizedBox(height: 12),
               OutlinedButton(

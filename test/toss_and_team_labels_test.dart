@@ -7,6 +7,7 @@ import 'package:tabletennis_scoreboard/screens/doubles_scoreboard_screen.dart';
 import 'package:tabletennis_scoreboard/services/clip_player.dart';
 import 'package:tabletennis_scoreboard/services/tts_engine.dart';
 import 'package:tabletennis_scoreboard/services/voice_announcer.dart';
+import 'package:tabletennis_scoreboard/widgets/coin_flip_indicator.dart';
 
 class _NoopTts implements TtsEngine {
   @override
@@ -38,26 +39,30 @@ void _setDeviceLocale(WidgetTester tester, Locale locale) {
   });
 }
 
+/// Reads whatever's currently on the (single, hard-cut) visible coin face.
+String _coinFaceText(WidgetTester tester) =>
+    tester.widget<Text>(find.byKey(const Key('coinFaceLabel'))).data!;
+
 void main() {
   group('coin flip animation', () {
     testWidgets(
-        'the result is withheld until the flip settles — a single frame '
-        "after tapping toss isn't enough", (tester) async {
+        'the coin (with the result on its face) is withheld until the '
+        "flip settles — a single frame after tapping toss isn't enough",
+        (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pump(); // one frame only — flip still in progress
 
-      expect(find.byKey(const Key('firstServerLabel')), findsNothing);
       final startButton = tester
           .widget<ElevatedButton>(find.byKey(const Key('startMatchButton')));
       expect(startButton.onPressed, isNull,
-          reason: 'the result should not be revealed mid-flip');
+          reason: 'the result should not be usable mid-flip');
 
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('firstServerLabel')), findsOneWidget);
+      expect(find.byKey(const Key('coinFaceLabel')), findsOneWidget);
       final startButtonAfter = tester
           .widget<ElevatedButton>(find.byKey(const Key('startMatchButton')));
       expect(startButtonAfter.onPressed, isNotNull);
@@ -77,7 +82,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 950));
       await tester.pump();
 
-      expect(find.byKey(const Key('firstServerLabel')), findsOneWidget);
+      final startButton = tester
+          .widget<ElevatedButton>(find.byKey(const Key('startMatchButton')));
+      expect(startButton.onPressed, isNotNull);
     });
 
     testWidgets(
@@ -91,11 +98,14 @@ void main() {
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 80));
         expect(tester.takeException(), isNull);
+        // At every point in the flip, exactly one coin face is mounted —
+        // never both heads and tails at once.
+        expect(find.byKey(const Key('coinFaceLabel')), findsOneWidget);
       }
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.byKey(const Key('firstServerLabel')), findsOneWidget);
+      expect(find.byKey(const Key('coinFaceLabel')), findsOneWidget);
     });
 
     testWidgets('tossing again after a result restarts the flip cleanly',
@@ -105,21 +115,74 @@ void main() {
 
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('firstServerLabel')), findsOneWidget);
+      expect(find.byKey(const Key('coinFaceLabel')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pump(); // mid second flip
-      expect(find.byKey(const Key('firstServerLabel')), findsNothing);
+      expect(tester.takeException(), isNull);
 
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.byKey(const Key('firstServerLabel')), findsOneWidget);
+      expect(find.byKey(const Key('coinFaceLabel')), findsOneWidget);
     });
   });
 
-  group('doubles team-label wording', () {
+  group('coin face content', () {
+    testWidgets('lands heads-up showing player1Label when player one wins',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: CoinFlipIndicator(
+            player1Label: 'Player 1',
+            player2Label: 'Player 2',
+            winner: Player.one,
+            onComplete: () {},
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(_coinFaceText(tester), 'Player 1');
+    });
+
+    testWidgets('lands tails-up showing player2Label when player two wins',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: CoinFlipIndicator(
+            player1Label: 'Player 1',
+            player2Label: 'Player 2',
+            winner: Player.two,
+            onComplete: () {},
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(_coinFaceText(tester), 'Player 2');
+    });
+
+    testWidgets('shows doubles team labels instead of player labels',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: CoinFlipIndicator(
+            player1Label: 'Team 1',
+            player2Label: 'Team 2',
+            winner: Player.two,
+            onComplete: () {},
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(_coinFaceText(tester), 'Team 2');
+    });
+  });
+
+  group('toss result on the coin (via SetupScreen)', () {
     testWidgets(
-        'the toss result says "Team 1"/"Team 2" in doubles mode, not '
+        'the toss shows "Team 1"/"Team 2" on the coin in doubles mode, not '
         '"Player 1"/"Player 2"', (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
@@ -129,58 +192,42 @@ void main() {
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
 
-      final label = tester
-          .widget<Text>(find.byKey(const Key('firstServerLabel')))
-          .data!;
-      expect(label, anyOf(contains('Team 1'), contains('Team 2')));
-      expect(label, isNot(contains('Player 1')));
-      expect(label, isNot(contains('Player 2')));
+      final label = _coinFaceText(tester);
+      expect(label, anyOf('Team 1', 'Team 2'));
     });
 
     testWidgets(
-        'the toss result still says "Player 1"/"Player 2" in singles mode '
-        '(unchanged)', (tester) async {
+        'the toss still shows "Player 1"/"Player 2" on the coin in singles '
+        'mode (unchanged)', (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle(); // singles is the default mode
 
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
 
-      final label = tester
-          .widget<Text>(find.byKey(const Key('firstServerLabel')))
-          .data!;
-      expect(label, anyOf(contains('Player 1'), contains('Player 2')));
-      expect(label, isNot(contains('Team 1')));
-      expect(label, isNot(contains('Team 2')));
+      final label = _coinFaceText(tester);
+      expect(label, anyOf('Player 1', 'Player 2'));
     });
 
     testWidgets(
-        'switching from singles to doubles after tossing updates the same '
-        'result to team wording', (tester) async {
+        'switching from singles to doubles after tossing relabels the same '
+        'already-decided side on the coin', (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
-      final singlesLabel = tester
-          .widget<Text>(find.byKey(const Key('firstServerLabel')))
-          .data!;
-      expect(singlesLabel, contains('Player'));
+      final singlesLabel = _coinFaceText(tester);
+      final side = singlesLabel == 'Player 1' ? '1' : '2';
 
       await tester.tap(find.text('Doubles'));
       await tester.pumpAndSettle();
 
-      final doublesLabel = tester
-          .widget<Text>(find.byKey(const Key('firstServerLabel')))
-          .data!;
-      expect(doublesLabel, contains('Team'));
-      // Same side that was picked, just relabeled.
-      final expectedSide = singlesLabel.contains('Player 1') ? '1' : '2';
-      expect(doublesLabel, contains('Team $expectedSide'));
+      expect(_coinFaceText(tester), 'Team $side');
     });
 
-    testWidgets('the doubles game-complete banner says "Team 1"/"Team 2"',
-        (tester) async {
+    testWidgets('the doubles game-complete banner still says "Team 1"/'
+        '"Team 2" (unaffected by the coin-face change)', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -202,7 +249,7 @@ void main() {
 
     testWidgets(
         'individual on-court labels stay Player 1-4 in doubles, unaffected '
-        'by the team wording used for the toss/banners', (tester) async {
+        'by the coin/toss wording', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -221,7 +268,7 @@ void main() {
       expect(find.text('Team 2'), findsNothing);
     });
 
-    testWidgets('German doubles toss result says "Team 1"/"Team 2"',
+    testWidgets('German doubles toss shows "Team 1"/"Team 2" on the coin',
         (tester) async {
       _setDeviceLocale(tester, const Locale('de'));
       await tester.pumpWidget(const TableTennisScoreboardApp());
@@ -232,13 +279,10 @@ void main() {
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
 
-      final label = tester
-          .widget<Text>(find.byKey(const Key('firstServerLabel')))
-          .data!;
-      expect(label, anyOf(contains('Team 1'), contains('Team 2')));
+      expect(_coinFaceText(tester), anyOf('Team 1', 'Team 2'));
     });
 
-    testWidgets('French doubles toss result says "Paire 1"/"Paire 2"',
+    testWidgets('French doubles toss shows "Paire 1"/"Paire 2" on the coin',
         (tester) async {
       _setDeviceLocale(tester, const Locale('fr'));
       await tester.pumpWidget(const TableTennisScoreboardApp());
@@ -249,10 +293,7 @@ void main() {
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
 
-      final label = tester
-          .widget<Text>(find.byKey(const Key('firstServerLabel')))
-          .data!;
-      expect(label, anyOf(contains('Paire 1'), contains('Paire 2')));
+      expect(_coinFaceText(tester), anyOf('Paire 1', 'Paire 2'));
     });
   });
 }
