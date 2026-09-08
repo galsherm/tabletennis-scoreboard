@@ -73,10 +73,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get player4Label => 'Joueur 4';
 
   @override
-  String get team1Label => 'Équipe 1';
+  String get team1Label => 'Paire 1';
 
   @override
-  String get team2Label => 'Équipe 2';
+  String get team2Label => 'Paire 2';
 
   @override
   String get receivingTooltip => 'Relanceur';

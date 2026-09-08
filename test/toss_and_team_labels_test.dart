@@ -238,7 +238,7 @@ void main() {
       expect(label, anyOf(contains('Team 1'), contains('Team 2')));
     });
 
-    testWidgets('French doubles toss result says "Équipe 1"/"Équipe 2"',
+    testWidgets('French doubles toss result says "Paire 1"/"Paire 2"',
         (tester) async {
       _setDeviceLocale(tester, const Locale('fr'));
       await tester.pumpWidget(const TableTennisScoreboardApp());
@@ -252,7 +252,7 @@ void main() {
       final label = tester
           .widget<Text>(find.byKey(const Key('firstServerLabel')))
           .data!;
-      expect(label, anyOf(contains('Équipe 1'), contains('Équipe 2')));
+      expect(label, anyOf(contains('Paire 1'), contains('Paire 2')));
     });
   });
 }

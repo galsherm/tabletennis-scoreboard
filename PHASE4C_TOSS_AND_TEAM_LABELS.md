@@ -8,7 +8,8 @@ when 4 players are on screen). No player-name customization in this pass
 — deliberately deferred to a later phase.
 
 **Status:** built and passing (119/119 tests — 108 pre-existing +
-11 new covering these two features specifically).
+11 new covering these two features specifically). Updated after a
+post-ship terminology correction — see §7.
 
 ---
 
@@ -59,8 +60,9 @@ sits in a `Padding` on its own instead.
 
 **New ARB strings** (`team1Label`/`team2Label`) in `app_en.arb`
 ("Team 1"/"Team 2"), `app_de.arb` ("Team 1"/"Team 2" — see §4), and
-`app_fr.arb` ("Équipe 1"/"Équipe 2"), added after `player4Label` and
-matching its naming pattern. Regenerated via `flutter gen-l10n`.
+`app_fr.arb` ("Paire 1"/"Paire 2" — corrected from an initial "Équipe
+1"/"Équipe 2," see §7), added after `player4Label` and matching its
+naming pattern. Regenerated via `flutter gen-l10n`.
 
 **`lib/screens/setup_screen.dart`**: `_sideLabel(l10n, player)` picks
 `team1Label`/`team2Label` when `_isDoubles` is true, otherwise
@@ -106,7 +108,8 @@ New file `test/toss_and_team_labels_test.dart`, 11 tests:
   `doubles_widget_test.dart` — see below); the 4 individual on-court
   labels stay "Player 1"–"Player 4" in doubles and never show "Team 1"/
   "Team 2"; German and French doubles toss results show "Team 1"/"Team 2"
-  and "Équipe 1"/"Équipe 2" respectively.
+  and "Paire 1"/"Paire 2" respectively (the French assertion was updated
+  along with the string itself — see §7).
 
 **Existing tests fixed** (timing, not behavior, except one):
 `test/widget_test.dart`, `test/doubles_widget_test.dart`, and
@@ -124,21 +127,18 @@ updated to `'Team 1 wins the match!'`.
 - German `team1Label`/`team2Label` use the English loanword "Team" rather
   than a native German word, matching the same judgment call already made
   for "Best of" earlier in the project. Should be confirmed against native
-  German table-tennis usage.
-- French uses "Équipe 1"/"Équipe 2" ("team"), rather than "Paire" (the more
-  doubles-specific French word for "pair"). "Équipe" was chosen as the more
-  directly parallel translation of "Team," but "Paire" may read as more
-  natural specifically for doubles — flagging for native-speaker review,
-  same as prior French terminology decisions in this project.
+  German table-tennis usage. (Still open — no change in this pass.)
+- ~~French uses "Équipe 1"/"Équipe 2"...~~ — resolved via research; see §7.
 
 ## 5. Test results
 
 ```
 flutter analyze → No issues found!
-flutter test    → 00:17 +119: All tests passed!
+flutter test    → 00:11 +119: All tests passed!
 ```
 
-119/119 (108 pre-existing + 11 new). No regressions.
+119/119 (108 pre-existing + 11 new). No regressions. (Re-run after the
+§7 correction, still 119/119.)
 
 ## 6. Scope confirmation
 
@@ -147,3 +147,22 @@ numbered Player/Team labels only, per your instruction to defer name
 customization to a later phase. No scoring logic, doubles rotation logic,
 or existing localization wording (beyond the two new `team1Label`/
 `team2Label` strings) changed.
+
+## 7. Correction: French "Équipe" → "Paire"
+
+Found via further research after this phase shipped: "Équipe" is not the
+right French word for a doubles pairing — it specifically denotes a club
+*team* (3+ players in league team competition), a distinct concept from
+the two-player pairing that plays a doubles match. Authoritative French
+table-tennis sources (FFTT-based glossaries) consistently use "paire" for
+the doubles pairing itself, e.g. "Match : rencontre entre deux joueurs
+(simple) ou deux paires (double)."
+
+**Fix**: `app_fr.arb`'s `team1Label`/`team2Label` changed from "Équipe
+1"/"Équipe 2" to "Paire 1"/"Paire 2"; regenerated via `flutter gen-l10n`.
+Updated the corresponding assertion in
+`test/toss_and_team_labels_test.dart` ("French doubles toss result says
+'Paire 1'/'Paire 2'"). German's "Team 1"/"Team 2" is unaffected — verified
+separately as correct, since German table-tennis sources do use "Team"
+naturally for a doubles pair, unlike French. `flutter analyze` and
+`flutter test` re-run clean (119/119) after the fix.
