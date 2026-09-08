@@ -113,4 +113,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get matchStartCheer => 'Let\'s Play!';
+
+  @override
+  String get editNameHint => 'Tap to rename';
+
+  @override
+  String get themeMenuTooltip => 'Theme';
+
+  @override
+  String get themeSystemOption => 'System default';
+
+  @override
+  String get themeLightOption => 'Light';
+
+  @override
+  String get themeDarkOption => 'Dark';
 }

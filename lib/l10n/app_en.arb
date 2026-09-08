@@ -160,5 +160,25 @@
   "matchStartCheer": "Let's Play!",
   "@matchStartCheer": {
     "description": "Energetic, centered on-screen phrase shown during the brief ball-flyby transition between tapping \"Start match\" and landing on the scoreboard — see PHASE4E_MATCH_START_TRANSITION.md. Deliberately casual/energetic copy, not official rules terminology."
+  },
+  "editNameHint": "Tap to rename",
+  "@editNameHint": {
+    "description": "Tooltip/accessibility hint on a player or team name that can be tapped to rename it for the current match — see PHASE4F_THEME_AND_NAMES.md."
+  },
+  "themeMenuTooltip": "Theme",
+  "@themeMenuTooltip": {
+    "description": "Tooltip on the light/dark/system theme picker icon button."
+  },
+  "themeSystemOption": "System default",
+  "@themeSystemOption": {
+    "description": "Theme-picker option that follows the device's own light/dark setting rather than overriding it."
+  },
+  "themeLightOption": "Light",
+  "@themeLightOption": {
+    "description": "Theme-picker option that forces the light theme."
+  },
+  "themeDarkOption": "Dark",
+  "@themeDarkOption": {
+    "description": "Theme-picker option that forces the dark theme."
   }
 }

@@ -31,5 +31,10 @@
   "matchCompleteDialogTitle": "Match terminé",
   "matchCompleteMessage": "{player} remporte le match !",
   "newMatchButton": "Nouveau match",
-  "matchStartCheer": "C'est parti !"
+  "matchStartCheer": "C'est parti !",
+  "editNameHint": "Toucher pour renommer",
+  "themeMenuTooltip": "Thème",
+  "themeSystemOption": "Système",
+  "themeLightOption": "Clair",
+  "themeDarkOption": "Sombre"
 }

@@ -113,4 +113,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get matchStartCheer => 'Auf geht\'s!';
+
+  @override
+  String get editNameHint => 'Zum Umbenennen tippen';
+
+  @override
+  String get themeMenuTooltip => 'Design';
+
+  @override
+  String get themeSystemOption => 'Systemstandard';
+
+  @override
+  String get themeLightOption => 'Hell';
+
+  @override
+  String get themeDarkOption => 'Dunkel';
 }

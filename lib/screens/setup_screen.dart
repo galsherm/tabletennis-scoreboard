@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
+import '../models/player_names.dart';
 import '../theme/app_theme.dart';
 import '../widgets/coin_flip_indicator.dart';
+import '../widgets/editable_name_label.dart';
 import 'doubles_scoreboard_screen.dart';
 import 'match_transition_screen.dart';
 import 'scoreboard_screen.dart';
@@ -28,10 +30,19 @@ class SetupScreen extends StatefulWidget {
   /// following the device locale.
   final ValueChanged<Locale?> onLocaleChanged;
 
+  /// Current Light/Dark/System theme choice (Phase 4F), shown as a
+  /// checkmark in the theme menu.
+  final ThemeMode themeMode;
+
+  /// Called with the newly chosen theme mode.
+  final ValueChanged<ThemeMode> onThemeModeChanged;
+
   const SetupScreen({
     super.key,
     required this.currentLocaleOverride,
     required this.onLocaleChanged,
+    required this.themeMode,
+    required this.onThemeModeChanged,
   });
 
   @override
@@ -42,6 +53,12 @@ class _SetupScreenState extends State<SetupScreen> {
   int _bestOf = 5;
   bool _isDoubles = false;
   Player? _firstServer;
+
+  /// Custom names for the doubles preview's 4 slots (Phase 4F) — carried
+  /// into `DoublesScoreboardScreen` when the match starts. Singles has no
+  /// setup-screen name UI (there's nothing to preview before tossing), so
+  /// singles names are only ever edited on the scoreboard itself.
+  final _doublesNames = PlayerNames();
 
   /// The toss outcome, decided the instant the coin is tossed — not
   /// withheld for suspense, since the flip's job is purely to show it
@@ -89,6 +106,7 @@ class _SetupScreenState extends State<SetupScreen> {
         ? DoublesScoreboardScreen(
             bestOf: _bestOf,
             firstServingTeam: firstServer,
+            initialNames: _doublesNames,
           )
         : ScoreboardScreen(
             bestOf: _bestOf,
@@ -119,7 +137,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Widget _eyebrow(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text(text.toUpperCase(), style: AppTypography.eyebrow),
+        child: Text(text.toUpperCase(), style: AppTypography.eyebrow(context)),
       );
 
   @override
@@ -129,6 +147,32 @@ class _SetupScreenState extends State<SetupScreen> {
       appBar: AppBar(
         title: Text(l10n.newMatchScreenTitle),
         actions: [
+          PopupMenuButton<ThemeMode>(
+            key: const Key('themeMenuButton'),
+            icon: const Icon(Icons.brightness_6),
+            tooltip: l10n.themeMenuTooltip,
+            onSelected: widget.onThemeModeChanged,
+            itemBuilder: (context) => [
+              CheckedPopupMenuItem<ThemeMode>(
+                key: const Key('themeOptionSystem'),
+                value: ThemeMode.system,
+                checked: widget.themeMode == ThemeMode.system,
+                child: Text(l10n.themeSystemOption),
+              ),
+              CheckedPopupMenuItem<ThemeMode>(
+                key: const Key('themeOptionLight'),
+                value: ThemeMode.light,
+                checked: widget.themeMode == ThemeMode.light,
+                child: Text(l10n.themeLightOption),
+              ),
+              CheckedPopupMenuItem<ThemeMode>(
+                key: const Key('themeOptionDark'),
+                value: ThemeMode.dark,
+                checked: widget.themeMode == ThemeMode.dark,
+                child: Text(l10n.themeDarkOption),
+              ),
+            ],
+          ),
           PopupMenuButton<_LanguageMenuOption>(
             key: const Key('languageMenuButton'),
             icon: const Icon(Icons.language),
@@ -201,12 +245,28 @@ class _SetupScreenState extends State<SetupScreen> {
                             _TeamSlotPreview(
                               teamLabel: l10n.team1Label,
                               teamLabelKey: const Key('team1PreviewHeading'),
-                              names: [l10n.player1Label, l10n.player2Label],
+                              slots: const [1, 2],
+                              defaultLabels: [
+                                l10n.player1Label,
+                                l10n.player2Label
+                              ],
+                              names: _doublesNames,
+                              editHint: l10n.editNameHint,
+                              onNameChanged: (slot, name) =>
+                                  setState(() => _doublesNames.set(slot, name)),
                             ),
                             _TeamSlotPreview(
                               teamLabel: l10n.team2Label,
                               teamLabelKey: const Key('team2PreviewHeading'),
-                              names: [l10n.player3Label, l10n.player4Label],
+                              slots: const [3, 4],
+                              defaultLabels: [
+                                l10n.player3Label,
+                                l10n.player4Label
+                              ],
+                              names: _doublesNames,
+                              editHint: l10n.editNameHint,
+                              onNameChanged: (slot, name) =>
+                                  setState(() => _doublesNames.set(slot, name)),
                             ),
                           ],
                         ),
@@ -247,7 +307,7 @@ class _SetupScreenState extends State<SetupScreen> {
                       l10n.tossPrompt,
                       key: const Key('tossPromptText'),
                       textAlign: TextAlign.center,
-                      style: AppTypography.playerLabel,
+                      style: AppTypography.playerLabel(context),
                     )
                   : Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -288,15 +348,28 @@ class _SetupScreenState extends State<SetupScreen> {
 /// 1"/"Team 2" heading and a light bordered box — without it, two
 /// unlabeled name columns read as "four separate players," not
 /// obviously two pairs. See PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
+///
+/// Each name is tap-to-rename (Phase 4F, [EditableNameLabel]) — [slots]
+/// and [defaultLabels] are parallel lists (length 2: one per player in
+/// this team), [names] is shared with the sibling team's preview so both
+/// read from (and write to) the same [PlayerNames] instance.
 class _TeamSlotPreview extends StatelessWidget {
   final String teamLabel;
   final Key teamLabelKey;
-  final List<String> names;
+  final List<int> slots;
+  final List<String> defaultLabels;
+  final PlayerNames names;
+  final String editHint;
+  final void Function(int slot, String? name) onNameChanged;
 
   const _TeamSlotPreview({
     required this.teamLabel,
     required this.teamLabelKey,
+    required this.slots,
+    required this.defaultLabels,
     required this.names,
+    required this.editHint,
+    required this.onNameChanged,
   });
 
   @override
@@ -304,18 +377,27 @@ class _TeamSlotPreview extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: context.palette.divider),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(teamLabel, key: teamLabelKey, style: AppTypography.eyebrow),
+          Text(teamLabel,
+              key: teamLabelKey, style: AppTypography.eyebrow(context)),
           const SizedBox(height: 6),
-          for (final name in names)
+          for (var i = 0; i < slots.length; i++)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(name, style: AppTypography.compactPlayerLabel),
+              child: EditableNameLabel(
+                displayName: names.resolve(slots[i], defaultLabels[i]),
+                defaultLabel: defaultLabels[i],
+                style: AppTypography.compactPlayerLabel(context),
+                editHint: editHint,
+                textKey: Key('player${slots[i]}PreviewNameText'),
+                fieldKey: Key('player${slots[i]}PreviewNameField'),
+                onChanged: (name) => onNameChanged(slots[i], name),
+              ),
             ),
         ],
       ),

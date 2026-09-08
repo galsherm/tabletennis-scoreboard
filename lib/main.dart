@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'l10n/gen/app_localizations.dart';
 import 'screens/setup_screen.dart';
+import 'services/theme_preference.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -22,8 +23,28 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
   /// override available in the setup screen's app bar).
   Locale? _localeOverride;
 
+  /// Light/Dark/System theme choice (Phase 4F). Dark until the persisted
+  /// preference (if any) loads — matching the "dark is the default"
+  /// stance from PHASE4B_UI_POLISH.md for the brief window before
+  /// [_themePreference] resolves.
+  ThemeMode _themeMode = ThemeMode.dark;
+  final _themePreference = ThemePreference();
+
+  @override
+  void initState() {
+    super.initState();
+    _themePreference.load().then((mode) {
+      if (mounted) setState(() => _themeMode = mode);
+    });
+  }
+
   void _setLocaleOverride(Locale? locale) {
     setState(() => _localeOverride = locale);
+  }
+
+  void _setThemeMode(ThemeMode mode) {
+    setState(() => _themeMode = mode);
+    _themePreference.save(mode);
   }
 
   /// Matches the device's preferred locales against the languages this
@@ -59,17 +80,17 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       localeListResolutionCallback: _resolveDeviceLocale,
-      // Dark is the committed default, not just a supported alternative —
-      // this app is read at a glance courtside, often in bright or
-      // uneven gym lighting, where a near-black background with a
-      // high-contrast score reads far more reliably than a light theme.
-      // See PHASE4B_UI_POLISH.md.
-      themeMode: ThemeMode.dark,
-      darkTheme: buildAppTheme(),
-      theme: buildAppTheme(),
+      // Dark remains the recommended default (see PHASE4B_UI_POLISH.md's
+      // courtside-legibility reasoning), but Phase 4F adds a genuine
+      // Light/Dark/System choice, persisted via [_themePreference].
+      themeMode: _themeMode,
+      darkTheme: buildAppTheme(Brightness.dark),
+      theme: buildAppTheme(Brightness.light),
       home: SetupScreen(
         currentLocaleOverride: _localeOverride,
         onLocaleChanged: _setLocaleOverride,
+        themeMode: _themeMode,
+        onThemeModeChanged: _setThemeMode,
       ),
     );
   }

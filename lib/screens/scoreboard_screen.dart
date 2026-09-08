@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
+import '../models/player_names.dart';
 import '../models/scoring_engine.dart';
 import '../services/commentary_strings.dart';
 import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
+import '../widgets/editable_name_label.dart';
 
 class ScoreboardScreen extends StatefulWidget {
   final int bestOf;
@@ -17,11 +19,18 @@ class ScoreboardScreen extends StatefulWidget {
   /// language the widget tree is currently displaying.
   final VoiceAnnouncer? voiceAnnouncer;
 
+  /// Custom player names set before the match started (Phase 4F) —
+  /// singles has no setup-screen name UI, so this is normally only
+  /// populated by tests; a real match's names are all edited here, on
+  /// the scoreboard itself.
+  final PlayerNames? initialNames;
+
   const ScoreboardScreen({
     super.key,
     required this.bestOf,
     required this.firstServer,
     this.voiceAnnouncer,
+    this.initialNames,
   });
 
   @override
@@ -33,6 +42,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   late VoiceAnnouncer _voice;
   bool _voiceInitialized = false;
 
+  /// Custom names for this match (Phase 4F) — reset on "New match" (see
+  /// [_resetMatch]), never persisted beyond the current match.
+  late final PlayerNames _names;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +53,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       bestOf: widget.bestOf,
       firstServer: widget.firstServer,
     );
+    _names = widget.initialNames ?? PlayerNames();
   }
 
   @override
@@ -69,7 +83,21 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     final server = _engine.currentServer; // who serves next, not who just served
     setState(() {});
 
-    _voice.announcePoint(engine: _engine, event: event, server: server);
+    // nameFor: a custom name (Phase 4F), once set, is what voice should
+    // say too — a game/match win renamed "Alex" shouldn't still announce
+    // "Player 1". Falls back to _voice.strings.playerLabel (the voice
+    // layer's OWN language default), not the widget tree's UI-locale
+    // label — those can legitimately differ (e.g. a screen configured
+    // with an explicit VoiceAnnouncer in one language inside a UI
+    // showing another, as several tests do), and voice should stay
+    // internally consistent with itself when no custom name overrides
+    // it. See PHASE4F_THEME_AND_NAMES.md.
+    _voice.announcePoint(
+      engine: _engine,
+      event: event,
+      server: server,
+      nameFor: _voiceNameFor,
+    );
 
     // Exactly one of these three branches applies per point — a
     // completed game always implies a change of ends, so we don't
@@ -87,11 +115,37 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   void _undo() => setState(() => _engine.undo());
 
-  void _resetMatch() => setState(() => _engine.resetMatch());
+  /// Resets both the match itself and any custom names back to their
+  /// defaults — "New match" starts genuinely fresh, per
+  /// PHASE4F_THEME_AND_NAMES.md ("names ... reset to defaults for a new
+  /// match").
+  void _resetMatch() => setState(() {
+        _engine.resetMatch();
+        _names.clear();
+      });
 
-  String _playerLabel(Player player) {
+  String _defaultPlayerLabel(Player player) {
     final l10n = AppLocalizations.of(context);
     return player == Player.one ? l10n.player1Label : l10n.player2Label;
+  }
+
+  String _playerLabel(Player player) {
+    final slot = player == Player.one ? 1 : 2;
+    return _names.resolve(slot, _defaultPlayerLabel(player));
+  }
+
+  /// Like [_playerLabel], but falls back to the voice layer's own
+  /// language default ([VoiceAnnouncer.strings]) instead of the UI's
+  /// [AppLocalizations] when no custom name is set — see the call site
+  /// in [_scorePoint] for why those can differ.
+  String _voiceNameFor(Player player) {
+    final slot = player == Player.one ? 1 : 2;
+    return _names.resolve(slot, _voice.strings.playerLabel(player));
+  }
+
+  void _setPlayerName(Player player, String? name) {
+    final slot = player == Player.one ? 1 : 2;
+    setState(() => _names.set(slot, name));
   }
 
   void _showChangeEndsBanner() {
@@ -174,27 +228,37 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           Expanded(
             child: _PlayerZone(
               key: const Key('player1Zone'),
-              label: l10n.player1Label,
+              label: _playerLabel(Player.one),
+              defaultLabel: _defaultPlayerLabel(Player.one),
+              editHint: l10n.editNameHint,
+              onNameChanged: (name) => _setPlayerName(Player.one, name),
               points: _engine.player1Points,
               gamesLabel: l10n.gamesCountLabel(_engine.player1Games),
               isServer: server == Player.one,
               servingTooltip: l10n.servingTooltip,
               pointsKey: const Key('player1PointsText'),
               serverIconKey: const Key('player1ServerIcon'),
+              nameTextKey: const Key('player1NameText'),
+              nameFieldKey: const Key('player1NameField'),
               onTap: () => _scorePoint(Player.one),
             ),
           ),
-          const VerticalDivider(width: 1, color: AppColors.divider),
+          VerticalDivider(width: 1, color: context.palette.divider),
           Expanded(
             child: _PlayerZone(
               key: const Key('player2Zone'),
-              label: l10n.player2Label,
+              label: _playerLabel(Player.two),
+              defaultLabel: _defaultPlayerLabel(Player.two),
+              editHint: l10n.editNameHint,
+              onNameChanged: (name) => _setPlayerName(Player.two, name),
               points: _engine.player2Points,
               gamesLabel: l10n.gamesCountLabel(_engine.player2Games),
               isServer: server == Player.two,
               servingTooltip: l10n.servingTooltip,
               pointsKey: const Key('player2PointsText'),
               serverIconKey: const Key('player2ServerIcon'),
+              nameTextKey: const Key('player2NameText'),
+              nameFieldKey: const Key('player2NameField'),
               onTap: () => _scorePoint(Player.two),
             ),
           ),
@@ -210,23 +274,33 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 /// [AppTypography]) so the eye lands on the number first.
 class _PlayerZone extends StatelessWidget {
   final String label;
+  final String defaultLabel;
+  final String editHint;
+  final ValueChanged<String?> onNameChanged;
   final int points;
   final String gamesLabel;
   final bool isServer;
   final String servingTooltip;
   final Key pointsKey;
   final Key serverIconKey;
+  final Key nameTextKey;
+  final Key nameFieldKey;
   final VoidCallback onTap;
 
   const _PlayerZone({
     super.key,
     required this.label,
+    required this.defaultLabel,
+    required this.editHint,
+    required this.onNameChanged,
     required this.points,
     required this.gamesLabel,
     required this.isServer,
     required this.servingTooltip,
     required this.pointsKey,
     required this.serverIconKey,
+    required this.nameTextKey,
+    required this.nameFieldKey,
     required this.onTap,
   });
 
@@ -239,8 +313,8 @@ class _PlayerZone extends StatelessWidget {
         // A visible highlight while held, on top of the ripple — courtside
         // taps are quick and imprecise, so the press feedback needs to be
         // obvious, not subtle.
-        highlightColor: AppColors.accent.withValues(alpha: 0.12),
-        splashColor: AppColors.accent.withValues(alpha: 0.18),
+        highlightColor: context.palette.accent.withValues(alpha: 0.12),
+        splashColor: context.palette.accent.withValues(alpha: 0.18),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
           child: Column(
@@ -254,21 +328,29 @@ class _PlayerZone extends StatelessWidget {
                         child: Icon(
                           Icons.sports_tennis,
                           key: serverIconKey,
-                          color: AppColors.accent,
+                          color: context.palette.accent,
                           size: 26,
                         ),
                       )
                     : null,
               ),
               const SizedBox(height: 6),
-              Text(label, style: AppTypography.playerLabel),
+              EditableNameLabel(
+                displayName: label,
+                defaultLabel: defaultLabel,
+                style: AppTypography.playerLabel(context),
+                editHint: editHint,
+                textKey: nameTextKey,
+                fieldKey: nameFieldKey,
+                onChanged: onNameChanged,
+              ),
               Expanded(
                 child: Center(
                   child: AnimatedScoreText(points: points, scoreKey: pointsKey),
                 ),
               ),
               const SizedBox(height: 6),
-              Text(gamesLabel, style: AppTypography.gamesLabel),
+              Text(gamesLabel, style: AppTypography.gamesLabel(context)),
             ],
           ),
         ),

@@ -31,5 +31,10 @@
   "matchCompleteDialogTitle": "Spiel beendet",
   "matchCompleteMessage": "{player} gewinnt das Spiel!",
   "newMatchButton": "Neues Spiel",
-  "matchStartCheer": "Auf geht's!"
+  "matchStartCheer": "Auf geht's!",
+  "editNameHint": "Zum Umbenennen tippen",
+  "themeMenuTooltip": "Design",
+  "themeSystemOption": "Systemstandard",
+  "themeLightOption": "Hell",
+  "themeDarkOption": "Dunkel"
 }

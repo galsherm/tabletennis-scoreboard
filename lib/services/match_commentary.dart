@@ -62,14 +62,24 @@ bool _isMatchPointFor(TableTennisScoringEngine engine, Player player) {
 /// PHASE4D_TEAM_CLARITY_AND_TRANSITION.md for the bug this fixes. Nothing
 /// else about the announcement (scores, deuce, change-ends, match-point)
 /// differs between singles and doubles.
+///
+/// [nameFor], if given, overrides the winner label entirely — used for a
+/// custom player name set via Phase 4F's rename feature, so a singles
+/// match renamed "Alex" vs "Sam" announces "Game, Alex" rather than
+/// "Game, Player 1". Doubles never passes this: a custom individual
+/// player name doesn't change what a 2-person *team* is called, so
+/// doubles keeps announcing "Team 1"/"Team 2" regardless — see
+/// PHASE4F_THEME_AND_NAMES.md.
 Announcement announcementForPoint({
   required TableTennisScoringEngine engine,
   required PointEvent event,
   required Player server,
   required CommentaryStrings strings,
   bool isDoubles = false,
+  String Function(Player)? nameFor,
 }) {
-  final sideLabel = isDoubles ? strings.teamLabel : strings.playerLabel;
+  final sideLabel =
+      nameFor ?? (isDoubles ? strings.teamLabel : strings.playerLabel);
 
   if (event.matchCompleted) {
     final winner = sideLabel(event.matchWinner!);

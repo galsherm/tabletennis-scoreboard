@@ -98,14 +98,15 @@ class _CoinFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final face = Container(
       width: CoinFlipIndicator._diameter,
       height: CoinFlipIndicator._diameter,
       alignment: Alignment.center,
       padding: const EdgeInsets.all(8),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.accent,
+        color: palette.accent,
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -114,11 +115,11 @@ class _CoinFace extends StatelessWidget {
           key: const Key('coinFaceLabel'),
           textAlign: TextAlign.center,
           maxLines: 2,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Roboto',
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: Colors.black,
+            color: palette.onAccent,
           ),
         ),
       ),

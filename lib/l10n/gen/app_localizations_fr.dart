@@ -113,4 +113,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get matchStartCheer => 'C\'est parti !';
+
+  @override
+  String get editNameHint => 'Toucher pour renommer';
+
+  @override
+  String get themeMenuTooltip => 'Thème';
+
+  @override
+  String get themeSystemOption => 'Système';
+
+  @override
+  String get themeLightOption => 'Clair';
+
+  @override
+  String get themeDarkOption => 'Sombre';
 }

@@ -34,10 +34,13 @@ double matchStartBallDy(double t) {
 }
 
 /// 0..1, peaking exactly at [matchStartImpactT] and falling off within
-/// ~0.06 of it either side — drives a brief flatten/widen on the ball
-/// itself at the moment of contact, echoing the text's dent.
+/// ~0.08 of it either side — drives a brief flatten/widen on the ball
+/// itself at the moment of contact, echoing the text's dent. Widened
+/// slightly from Phase 4E's 0.06 (see the extended [_duration] below) so
+/// the impact flash lasts long enough to actually register as a beat,
+/// not just a flicker.
 double matchStartImpactProximity(double t) =>
-    (1 - ((t - matchStartImpactT).abs() / 0.06)).clamp(0.0, 1.0);
+    (1 - ((t - matchStartImpactT).abs() / 0.08)).clamp(0.0, 1.0);
 
 /// 0 before impact (text stays undeformed while the ball approaches),
 /// jumping to 1 exactly at [matchStartImpactT] and decaying smoothly
@@ -90,11 +93,14 @@ class MatchStartTransition extends StatefulWidget {
 
 class _MatchStartTransitionState extends State<MatchStartTransition>
     with SingleTickerProviderStateMixin {
-  /// Extended from Phase 4D's 450ms flyby-only duration — long enough for
-  /// the approach + impact + recovery-and-departure choreography to read
-  /// as deliberate, while still being brief enough to never feel like a
-  /// loading delay.
-  static const _duration = Duration(milliseconds: 900);
+  /// Extended twice now: Phase 4D's 450ms flyby-only duration became
+  /// Phase 4E's 900ms full choreography, and this pass extends it again
+  /// to 1100ms — the impact/squash moment at 900ms was still reading as
+  /// a touch too quick to actually register before it was gone. Still
+  /// comfortably brief; it's the impact window (see
+  /// [matchStartImpactProximity]) that gained the most relative
+  /// breathing room, not a slower overall feel.
+  static const _duration = Duration(milliseconds: 1100);
 
   static const _ballDiameter = 26.0;
 
@@ -156,7 +162,7 @@ class _MatchStartTransitionState extends State<MatchStartTransition>
                   height: _ballDiameter,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.accent,
+                    color: context.palette.accent,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.35),
@@ -193,7 +199,7 @@ class _DeformedChar extends StatelessWidget {
         ..translateByDouble(0.0, 6.0 * squash, 0.0, 1.0)
         ..scaleByDouble(
             1.0 + 0.25 * squash, 1.0 - 0.5 * squash, 1.0, 1.0),
-      child: Text(char, style: AppTypography.transitionHeadline),
+      child: Text(char, style: AppTypography.transitionHeadline(context)),
     );
   }
 }

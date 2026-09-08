@@ -291,6 +291,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Let\'s Play!'**
   String get matchStartCheer;
+
+  /// Tooltip/accessibility hint on a player or team name that can be tapped to rename it for the current match — see PHASE4F_THEME_AND_NAMES.md.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to rename'**
+  String get editNameHint;
+
+  /// Tooltip on the light/dark/system theme picker icon button.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get themeMenuTooltip;
+
+  /// Theme-picker option that follows the device's own light/dark setting rather than overriding it.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get themeSystemOption;
+
+  /// Theme-picker option that forces the light theme.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get themeLightOption;
+
+  /// Theme-picker option that forces the dark theme.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get themeDarkOption;
 }
 
 class _AppLocalizationsDelegate

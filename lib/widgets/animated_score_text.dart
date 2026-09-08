@@ -45,7 +45,7 @@ class AnimatedScoreText extends StatelessWidget {
         child: Text(
           '$points',
           key: scoreKey,
-          style: AppTypography.scoreDisplay,
+          style: AppTypography.scoreDisplay(context),
         ),
       ),
     );

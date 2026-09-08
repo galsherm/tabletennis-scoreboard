@@ -273,7 +273,7 @@ void main() {
       await tester.pump(); // mount, animation starts
       expect(completions, 0);
 
-      await tester.pump(const Duration(milliseconds: 950)); // past duration
+      await tester.pump(const Duration(milliseconds: 1150)); // past duration
       expect(completions, 1);
 
       await tester.pump(); // let the completed state settle

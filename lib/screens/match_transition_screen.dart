@@ -23,7 +23,7 @@ class MatchTransitionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.palette.background,
       body: Center(
         child: MatchStartTransition(
           text: AppLocalizations.of(context).matchStartCheer,
