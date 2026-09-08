@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
 import '../theme/app_theme.dart';
+import '../widgets/coin_flip_indicator.dart';
 import 'doubles_scoreboard_screen.dart';
 import 'scoreboard_screen.dart';
 
@@ -41,10 +42,46 @@ class _SetupScreenState extends State<SetupScreen> {
   bool _isDoubles = false;
   Player? _firstServer;
 
+  /// Whether the coin-flip flourish is currently playing. While true, the
+  /// actual result ([_pendingResult]) is already decided but withheld
+  /// from [_firstServer] (and therefore from the UI) until the animation
+  /// finishes — see [_onCoinFlipComplete].
+  bool _isFlipping = false;
+  Player? _pendingResult;
+
+  /// Bumped on every toss so [CoinFlipIndicator] gets a fresh `key` each
+  /// time — a repeated tap gets a brand-new animation mount rather than
+  /// updating an existing one in place (the same one-clean-mount pattern
+  /// `AnimatedScoreText` uses, keyed on the score instead).
+  int _tossSequence = 0;
+
   void _tossCoin() {
     setState(() {
-      _firstServer = Random().nextBool() ? Player.one : Player.two;
+      _pendingResult = Random().nextBool() ? Player.one : Player.two;
+      _firstServer = null;
+      _isFlipping = true;
+      _tossSequence++;
     });
+  }
+
+  void _onCoinFlipComplete() {
+    setState(() {
+      _firstServer = _pendingResult;
+      _isFlipping = false;
+    });
+  }
+
+  /// "Player 1"/"Player 2" for singles; "Team 1"/"Team 2" for doubles —
+  /// with 4 players on screen, "Player 1" is ambiguous about whether it
+  /// means one specific individual or an entire side, so doubles gets its
+  /// own wording for side-level text (the toss result and the game/
+  /// match-complete banners). The four individual on-court labels
+  /// (Player 1–4) and their serve/receive icons are unaffected.
+  String _sideLabel(AppLocalizations l10n, Player player) {
+    if (_isDoubles) {
+      return player == Player.one ? l10n.team1Label : l10n.team2Label;
+    }
+    return player == Player.one ? l10n.player1Label : l10n.player2Label;
   }
 
   void _start() {
@@ -196,16 +233,28 @@ class _SetupScreenState extends State<SetupScreen> {
                 },
               ),
               const SizedBox(height: 36),
-              Text(
-                _firstServer == null
-                    ? l10n.tossPrompt
-                    : l10n.firstServerLabel(_firstServer == Player.one
-                        ? l10n.player1Label
-                        : l10n.player2Label),
-                key: const Key('firstServerLabel'),
-                textAlign: TextAlign.center,
-                style: AppTypography.playerLabel,
-              ),
+              // Not height-constrained: the toss prompt wraps to two
+              // lines in German/French (it's noticeably longer than
+              // English), so a fixed-height box here would clip it.
+              _isFlipping
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Center(
+                        child: CoinFlipIndicator(
+                          key: ValueKey(_tossSequence),
+                          onComplete: _onCoinFlipComplete,
+                        ),
+                      ),
+                    )
+                  : Text(
+                      _firstServer == null
+                          ? l10n.tossPrompt
+                          : l10n.firstServerLabel(
+                              _sideLabel(l10n, _firstServer!)),
+                      key: const Key('firstServerLabel'),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.playerLabel,
+                    ),
               const SizedBox(height: 12),
               OutlinedButton(
                 key: const Key('tossButton'),

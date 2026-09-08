@@ -20,6 +20,8 @@
   "player2Label": "Spieler 2",
   "player3Label": "Spieler 3",
   "player4Label": "Spieler 4",
+  "team1Label": "Team 1",
+  "team2Label": "Team 2",
   "receivingTooltip": "Rückschläger",
   "modeSinglesOption": "Einzel",
   "modeDoublesOption": "Doppel",

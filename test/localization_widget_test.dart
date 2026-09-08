@@ -269,7 +269,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('tossButton')));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // Select away from the default first, then select "3", so a pass
       // here proves the tap itself drives the engine's bestOf value

@@ -96,6 +96,14 @@
   "@player4Label": {
     "description": "Display name for the fourth player (doubles only)."
   },
+  "team1Label": "Team 1",
+  "@team1Label": {
+    "description": "Side-level display name for the first side in doubles — used for the toss result and game/match-complete banners, where 'Player 1' would be ambiguous about whether it means one specific individual or the whole side. Not used for the four individual on-court player labels, which stay Player 1-4."
+  },
+  "team2Label": "Team 2",
+  "@team2Label": {
+    "description": "Side-level display name for the second side in doubles — see team1Label."
+  },
   "receivingTooltip": "Receiving",
   "@receivingTooltip": {
     "description": "Accessibility label on the icon that marks which player is currently receiving serve (doubles only)."

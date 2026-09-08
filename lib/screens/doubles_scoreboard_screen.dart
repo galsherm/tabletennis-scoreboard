@@ -17,11 +17,15 @@ import '../widgets/animated_score_text.dart';
 /// here is purely who-serves/who-receives display, via
 /// [currentDoublesServingState], and a 4-name layout instead of 2.
 ///
-/// Game/match-won banners and voice announcements refer to sides
-/// generically as "Player 1"/"Player 2" (the same wording singles uses,
-/// via the same [AppLocalizations]/[CommentaryStrings] — not redesigned
-/// for doubles), even though the on-court display below numbers all four
-/// individuals 1–4. See PHASE4_VERIFICATION.md for why.
+/// Game/match-won banners refer to sides as "Team 1"/"Team 2" (see
+/// [_teamLabel] — Phase 4C), distinct from the on-court display's four
+/// individually-numbered players, since "Player 1" winning would be
+/// ambiguous about whether that means one person or their whole side.
+/// Voice announcements still say "Player 1"/"Player 2" via the same
+/// [CommentaryStrings] singles uses — not redesigned for doubles, per
+/// PHASE4_VERIFICATION.md — so voice and the on-screen banner
+/// deliberately differ in wording for the same event; see
+/// PHASE4C_TOSS_AND_TEAM_LABELS.md for why that split is acceptable here.
 class DoublesScoreboardScreen extends StatefulWidget {
   final int bestOf;
   final Player firstServingTeam;
@@ -95,12 +99,14 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
 
   void _resetMatch() => setState(() => _engine.resetMatch());
 
-  /// The side's team-level display name for banners/dialogs — "Player
-  /// 1"/"Player 2" meaning "side 1"/"side 2", the same wording and the
-  /// same strings singles uses (see class doc comment).
+  /// The side's team-level display name for banners/dialogs — "Team
+  /// 1"/"Team 2", not "Player 1"/"Player 2": with 4 individually-numbered
+  /// players on screen, "Player 1" winning would be ambiguous about
+  /// whether that means one specific person or their whole side. See
+  /// PHASE4C_TOSS_AND_TEAM_LABELS.md.
   String _teamLabel(Player team) {
     final l10n = AppLocalizations.of(context);
-    return team == Player.one ? l10n.player1Label : l10n.player2Label;
+    return team == Player.one ? l10n.team1Label : l10n.team2Label;
   }
 
   void _showChangeEndsBanner() {

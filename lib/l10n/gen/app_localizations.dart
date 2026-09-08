@@ -220,6 +220,18 @@ abstract class AppLocalizations {
   /// **'Player 4'**
   String get player4Label;
 
+  /// Side-level display name for the first side in doubles — used for the toss result and game/match-complete banners, where 'Player 1' would be ambiguous about whether it means one specific individual or the whole side. Not used for the four individual on-court player labels, which stay Player 1-4.
+  ///
+  /// In en, this message translates to:
+  /// **'Team 1'**
+  String get team1Label;
+
+  /// Side-level display name for the second side in doubles — see team1Label.
+  ///
+  /// In en, this message translates to:
+  /// **'Team 2'**
+  String get team2Label;
+
   /// Accessibility label on the icon that marks which player is currently receiving serve (doubles only).
   ///
   /// In en, this message translates to:

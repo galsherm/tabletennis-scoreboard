@@ -4,9 +4,14 @@ import 'package:tabletennis_scoreboard/main.dart';
 
 /// Helper: taps the coin-toss button, then starts the match, on whatever
 /// screen the app currently shows (assumes SetupScreen is on screen).
+///
+/// `pumpAndSettle` (not a single `pump`) after the toss tap: Phase 4C
+/// added a brief coin-flip animation before the result is actually set,
+/// so a single zero-duration `pump()` would catch the screen mid-flip,
+/// before `_firstServer` (and therefore "Start match") is enabled.
 Future<void> _tossAndStart(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('tossButton')));
-  await tester.pump();
+  await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('startMatchButton')));
   await tester.pumpAndSettle();
 }
@@ -22,7 +27,7 @@ void main() {
     expect(startButton.onPressed, isNull);
 
     await tester.tap(find.byKey(const Key('tossButton')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     startButton = tester.widget(startButtonFinder);
     expect(startButton.onPressed, isNotNull);
@@ -112,7 +117,7 @@ void main() {
     await tester.pumpWidget(const TableTennisScoreboardApp());
 
     await tester.tap(find.byKey(const Key('tossButton')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     // switch from the default best-of-5 to best-of-3 for a shorter test
     await tester.tap(find.text('3'));
     await tester.pump();
@@ -137,7 +142,7 @@ void main() {
     await tester.pumpWidget(const TableTennisScoreboardApp());
 
     await tester.tap(find.byKey(const Key('tossButton')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.text('3'));
     await tester.pump();
     await tester.tap(find.byKey(const Key('startMatchButton')));

@@ -141,7 +141,7 @@ void main() {
       await tester.tap(find.text('Doubles'));
       await tester.pump();
       await tester.tap(find.byKey(const Key('tossButton')));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('startMatchButton')));
       await tester.pumpAndSettle();
 
@@ -206,7 +206,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('matchCompleteDialog')), findsOneWidget);
-      expect(find.text('Player 1 wins the match!'), findsOneWidget);
+      // Doubles banners say "Team 1," not "Player 1" — see
+      // PHASE4C_TOSS_AND_TEAM_LABELS.md.
+      expect(find.text('Team 1 wins the match!'), findsOneWidget);
     });
 
     testWidgets('scoring announces the score by voice, reusing Phase 2/3\'s '
