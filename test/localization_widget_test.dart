@@ -211,6 +211,91 @@ void main() {
     });
   });
 
+  group('best-of selector localization (Gewinnsätze)', () {
+    testWidgets('English shows the raw best-of-N numbers', (tester) async {
+      _setDeviceLocale(tester, const Locale('en'));
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text('7'), findsOneWidget);
+      expect(find.textContaining('Gewinnsätze'), findsNothing);
+    });
+
+    testWidgets('French shows the raw best-of-N numbers, unchanged',
+        (tester) async {
+      _setDeviceLocale(tester, const Locale('fr'));
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Au meilleur de'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text('7'), findsOneWidget);
+    });
+
+    testWidgets(
+        'German shows "2/3/4 Gewinnsätze" (games needed to win) instead '
+        'of the raw 3/5/7 best-of-N numbers', (tester) async {
+      _setDeviceLocale(tester, const Locale('de'));
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Spielformat'), findsOneWidget);
+      expect(find.text('2 Gewinnsätze'), findsOneWidget);
+      expect(find.text('3 Gewinnsätze'), findsOneWidget);
+      expect(find.text('4 Gewinnsätze'), findsOneWidget);
+      // The raw numbers should not appear as standalone segment labels.
+      expect(find.text('3'), findsNothing);
+      expect(find.text('5'), findsNothing);
+      expect(find.text('7'), findsNothing);
+    });
+
+    testWidgets(
+        'tapping "3 Gewinnsätze" in German starts a match identical to '
+        'tapping "5" ("Best of 5") in English', (tester) async {
+      _setDeviceLocale(tester, const Locale('de'));
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pump();
+
+      // Select away from the default first, then select "3 Gewinnsätze",
+      // so a pass here proves the tap itself drives the engine's bestOf
+      // value rather than coincidentally matching the initial default
+      // (which also happens to be bestOf=5 / "3 Gewinnsätze").
+      await tester.tap(find.text('2 Gewinnsätze'));
+      await tester.pump();
+      await tester.tap(find.text('3 Gewinnsätze'));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('startMatchButton')));
+      await tester.pumpAndSettle();
+
+      // Best-of-5 needs exactly 3 games to win (matching English's plain
+      // "5" segment, and widget_test.dart's default-best-of-5 behavior):
+      // winning 2 games must not end the match yet.
+      for (var game = 0; game < 2; game++) {
+        for (var i = 0; i < 11; i++) {
+          await tester.tap(find.byKey(const Key('player1Zone')));
+          await tester.pump();
+        }
+      }
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('matchCompleteDialog')), findsNothing);
+
+      // A 3rd game should now end the match.
+      for (var i = 0; i < 11; i++) {
+        await tester.tap(find.byKey(const Key('player1Zone')));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('matchCompleteDialog')), findsOneWidget);
+    });
+  });
+
   group('ScoreboardScreen localization', () {
     testWidgets('shows German tooltips and labels', (tester) async {
       _setDeviceLocale(tester, const Locale('de'));

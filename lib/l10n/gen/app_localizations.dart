@@ -124,11 +124,17 @@ abstract class AppLocalizations {
   /// **'System default'**
   String get languageSystemOption;
 
-  /// Label above the 3/5/7 best-of-N game-count selector.
+  /// Label above the best-of-N game-count selector.
   ///
   /// In en, this message translates to:
   /// **'Best of'**
   String get bestOfLabel;
+
+  /// Label for one segment of the best-of-N selector. English/French show the raw best-of-N number (paired with bestOfLabel above it); German shows the number of *winning* games needed instead ("Gewinnsätze"), which is how German table tennis sources describe match format, e.g. "3 Gewinnsätze im Einzel" for what this app calls best-of-5 — see PHASE3_VERIFICATION.md.
+  ///
+  /// In en, this message translates to:
+  /// **'{bestOf}'**
+  String bestOfSegmentLabel(int bestOf, int gamesToWin);
 
   /// Shown before the coin toss has been used to pick the first server.
   ///

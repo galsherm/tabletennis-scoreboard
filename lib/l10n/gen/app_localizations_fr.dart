@@ -24,6 +24,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bestOfLabel => 'Au meilleur de';
 
   @override
+  String bestOfSegmentLabel(int bestOf, int gamesToWin) {
+    return '$bestOf';
+  }
+
+  @override
   String get tossPrompt => 'Tirage au sort pour décider qui sert en premier';
 
   @override

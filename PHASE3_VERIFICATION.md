@@ -7,12 +7,16 @@ verify terminology myself), which strings are flagged as guesses rather
 than confirmed terminology, test results, and two real bugs found and fixed
 during implementation.
 
-**Status:** built and passing (79/79 tests). Two real bugs found in this
+**Status:** built and passing (83/83 tests). Two real bugs found in this
 phase's own new code during verification (not pre-existing) — both fixed,
 see §5. A follow-up verification pass (§7) confirmed locale fallback for
 unsupported/RTL languages (Spanish, Arabic) works correctly and added two
-more tests. One scope decision needs your confirmation before Phase 4: no
-real German/French bundled voice clips ship yet (see §4).
+more tests. §8 corrects a wrong German deuce term found via external
+research. §9 adapts the German best-of-N selector to say "Gewinnsätze"
+(games needed to win) instead of the raw best-of-N number, matching how
+German table tennis sources actually describe match format. One scope
+decision needs your confirmation before Phase 4: no real German/French
+bundled voice clips ship yet (see §4).
 
 ---
 
@@ -74,7 +78,8 @@ real German/French bundled voice clips ship yet (see §4).
 | newMatchScreenTitle | New match | Neues Spiel | Nouveau match |
 | languageMenuTooltip | Language | Sprache | Langue |
 | languageSystemOption | System default | Systemstandard | Système |
-| bestOfLabel | Best of | Best of *(kept, see §3)* | Au meilleur de |
+| bestOfLabel | Best of | Spielformat *(see §9)* | Au meilleur de |
+| bestOfSegmentLabel | {bestOf} (e.g. "3") | {gamesToWin} Gewinnsätze (e.g. "2 Gewinnsätze") *(see §9)* | {bestOf} (e.g. "3") |
 | tossPrompt | Toss to decide who serves first | Münzwurf, um zu entscheiden, wer zuerst aufschlägt | Tirage au sort pour décider qui sert en premier |
 | firstServerLabel | First server: {player} | Zuerst am Aufschlag: {player} | Premier serveur : {player} |
 | tossButton | Toss coin | Münze werfen | Tirer à pile ou face |
@@ -102,7 +107,7 @@ bundled clip keys. `$w` is the winner's player label from the table above.
 | Concept | English | German | French |
 |---|---|---|---|
 | Score (server, receiver) | `"$s, $r"` | `"$s, $r"` | `"$s, $r"` |
-| Deuce | Deuce | Einstand | Égalité |
+| Deuce | Deuce | Gleichstand | Égalité |
 | Game won | `Game, $w. Change ends.` | `Satz, $w. Seitenwechsel.` | `Manche, $w. Changement de côté.` |
 | Mid-game change-ends suffix | `. Change ends.` | `. Seitenwechsel.` | `. Changement de côté.` |
 | Match won | `Match. $w wins the match.` | `Spiel. $w gewinnt das Spiel.` | `Match. $w gagne le match.` |
@@ -117,17 +122,15 @@ Spieler 1/2, Joueur 1/2, Rückgängig, Annuler, Sätze/manche (game-count
 noun — corroborated by the spec's own "Satzball"/"balle de set" using the
 same root words), Tennis de table, Tischtennis.
 
+**Resolved since the initial pass:** the German deuce term (originally
+"Einstand") was wrong and has been corrected to "Gleichstand" — see §8 for
+the full correction. The French deuce term, "Égalité," has been separately
+verified as correct and needs no change. The German best-of-N selector
+(originally "Best of," flagged below as a judgment call) has also been
+replaced with research-backed "Gewinnsätze" wording — see §9.
+
 **Moderate confidence — my own choices, not given by the spec, worth a
 native check:**
-- **Einstand** (German deuce) / **Égalité** (French deuce): plausible
-  borrowed tennis/table-tennis terms, but I'm not certain either is what a
-  German or French umpire would actually say for table tennis specifically
-  (vs. e.g. just repeating the tied score). Flagging both.
-- **"Best of"** kept untranslated for German (`bestOfLabel`): I judged this
-  a common enough borrowed term in German sports/esports UI, but this is a
-  judgment call, not a confirmed convention. The French side has a real
-  idiom instead ("Au meilleur de"), which is asymmetric and worth
-  double-checking makes sense.
 - **"Manche"** vs **"set"** for a French table-tennis game: I used *manche*
   (the official FFTT federation term) for `gamesCountLabel` and
   `gameCompleteMessage`/the spoken "game won" phrase. The phase spec's own
@@ -295,3 +298,101 @@ flutter test    → 00:05 +79: All tests passed!
 ```
 
 No regressions; the two new tests bring the suite from 77 to 79.
+
+## 8. Correction: German deuce term ("Einstand" → "Gleichstand")
+
+**What was wrong:** the German deuce phrase was originally "Einstand." That
+word is specific to lawn tennis's 15-30-40 scoring system — it names the
+moment both players return to 40-40 within that system. Table tennis has
+no such structure (it's a flat point count with no equivalent of
+"advantage"), so "Einstand" doesn't actually apply to a 10:10 table tennis
+situation.
+
+**How it was caught:** external research, not native-speaker review —
+German table tennis sources (DTTB-affiliated club rules pages, tt-dm.de)
+consistently use "Gleichstand" for a tied score, or simply state the score
+("10:10"), never "Einstand." This was flagged from outside this project,
+not by the native-speaker review process §2/§3 called for — worth noting
+because it means the "moderate confidence, needs a native check" flag on
+the original term (§3, now removed) was correctly cautious, but the actual
+error was found by domain research rather than the review this document
+asked for. The French deuce term, "Égalité," was checked against the same
+kind of sourcing at the same time and confirmed correct — no change there.
+
+**Fix applied:** `deuce: 'Einstand'` → `deuce: 'Gleichstand'` in
+`lib/services/commentary_strings.dart` (the only place the word was
+hardcoded — no ARB string used it). `test/voice_announcer_test.dart` had
+one test using "Einstand" as a literal example string; updated to
+"Gleichstand" for consistency, though that test doesn't read from
+`CommentaryStrings.de` directly so it wasn't asserting the word choice
+itself. `test/match_commentary_test.dart`'s German deuce coverage reads
+`strings.deuce` dynamically rather than a hardcoded string, so it picked
+up the correction automatically with no edit needed.
+
+```
+flutter analyze → No issues found!
+flutter test    → 00:04 +79: All tests passed!
+```
+
+Test count unchanged (79) — this was a value correction, not new coverage.
+
+## 9. German best-of-N selector: "Gewinnsätze" instead of the raw number
+
+**What was wrong:** the setup screen's format selector showed the raw
+`bestOf` value (3/5/7) as each segment's label for every language,
+alongside a `bestOfLabel` heading — German's heading was the untranslated
+"Best of" (already flagged in §3 as a judgment call, not a confirmed
+convention). Research into German table tennis rules sources found this
+doesn't match how the format is actually described in German: club rules
+pages consistently phrase it in terms of **Gewinnsätze** — the number of
+*winning* games needed — not the total possible games, e.g. "3
+Gewinnsätze im Einzel" for what this app calls best-of-5 (`gamesToWin =
+(bestOf ~/ 2) + 1 = 3`).
+
+**Fix applied — display only, engine untouched:**
+- `lib/l10n/app_en.arb` / `app_de.arb` / `app_fr.arb`: added
+  `bestOfSegmentLabel`, an ARB key with two placeholders (`bestOf`,
+  `gamesToWin`) so each locale's translation can use whichever number
+  fits its own phrasing. English and French use `"{bestOf}"` (unchanged
+  behavior — still shows the raw 3/5/7). German uses `"{gamesToWin}
+  Gewinnsätze"`, so the three segments now read "2 Gewinnsätze," "3
+  Gewinnsätze," "4 Gewinnsätze" for bestOf 3/5/7 respectively.
+- `app_de.arb`'s `bestOfLabel` heading changed from "Best of" to
+  "Spielformat" ("match format") — a generic, low-risk word (not
+  domain-specific jargon, so it didn't need the same research-backed
+  verification as "Gewinnsätze") — since a `bestOfLabel` heading was still
+  wanted for visual/layout consistency with English and French, even
+  though each German segment is now already self-descriptive.
+- `lib/screens/setup_screen.dart`: the segmented button's segments are now
+  built from `[3, 5, 7].map(...)`, calling
+  `l10n.bestOfSegmentLabel(bestOf, (bestOf ~/ 2) + 1)` for each segment's
+  label instead of a hardcoded `Text('3')`/`Text('5')`/`Text('7')`. The
+  segment **values** (3, 5, 7) — what actually gets passed to
+  `TableTennisScoringEngine(bestOf: ...)` — are unchanged; only the label
+  text differs by language. `(bestOf ~/ 2) + 1` is the same formula the
+  engine itself uses for `gamesToWin`, so the displayed number is
+  guaranteed consistent with actual engine behavior.
+
+**Tests added** (`test/localization_widget_test.dart`, new group
+"best-of selector localization (Gewinnsätze)"):
+- English shows raw "3"/"5"/"7" (unchanged), and no "Gewinnsätze" text
+  appears anywhere.
+- French shows raw "3"/"5"/"7" (unchanged) alongside "Au meilleur de".
+- German shows "2 Gewinnsätze"/"3 Gewinnsätze"/"4 Gewinnsätze" and
+  "Spielformat"; the raw numbers no longer appear as standalone segment
+  labels.
+- End-to-end equivalence: selects away from the default first, then taps
+  "3 Gewinnsätze" in the German UI, starts a match, and confirms it
+  behaves exactly like English's plain "5" segment — winning 2 games does
+  *not* end the match, but a 3rd game does (best-of-5's real semantics:
+  3 games needed to win).
+
+```
+flutter analyze → No issues found!
+flutter test    → 00:05 +83: All tests passed!
+```
+
+83 tests total (79 → 83, four new for this section). No regressions —
+every existing test that selects the English "3"/"5"/"7" segments (e.g.
+`widget_test.dart`'s best-of-3 match-completion tests) is unaffected,
+since English's segment text is unchanged.

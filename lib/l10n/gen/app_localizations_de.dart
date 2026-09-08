@@ -21,7 +21,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get languageSystemOption => 'Systemstandard';
 
   @override
-  String get bestOfLabel => 'Best of';
+  String get bestOfLabel => 'Spielformat';
+
+  @override
+  String bestOfSegmentLabel(int bestOf, int gamesToWin) {
+    return '$gamesToWin Gewinnsätze';
+  }
 
   @override
   String get tossPrompt => 'Münzwurf, um zu entscheiden, wer zuerst aufschlägt';

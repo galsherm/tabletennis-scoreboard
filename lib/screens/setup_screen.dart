@@ -123,11 +123,21 @@ class _SetupScreenState extends State<SetupScreen> {
             const SizedBox(height: 8),
             SegmentedButton<int>(
               key: const Key('bestOfSelector'),
-              segments: const [
-                ButtonSegment(value: 3, label: Text('3')),
-                ButtonSegment(value: 5, label: Text('5')),
-                ButtonSegment(value: 7, label: Text('7')),
-              ],
+              segments: [3, 5, 7]
+                  .map((bestOf) => ButtonSegment(
+                        value: bestOf,
+                        // English/French show the raw best-of-N number;
+                        // German shows "N Gewinnsätze" (games needed to
+                        // *win*) instead — see bestOfSegmentLabel's ARB
+                        // description and PHASE3_VERIFICATION.md. The
+                        // underlying `bestOf` value passed to the engine
+                        // is unaffected either way.
+                        label: Text(l10n.bestOfSegmentLabel(
+                          bestOf,
+                          (bestOf ~/ 2) + 1,
+                        )),
+                      ))
+                  .toList(),
               selected: {_bestOf},
               onSelectionChanged: (selection) {
                 setState(() => _bestOf = selection.first);

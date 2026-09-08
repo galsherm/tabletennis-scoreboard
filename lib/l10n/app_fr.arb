@@ -5,6 +5,7 @@
   "languageMenuTooltip": "Langue",
   "languageSystemOption": "Système",
   "bestOfLabel": "Au meilleur de",
+  "bestOfSegmentLabel": "{bestOf}",
   "tossPrompt": "Tirage au sort pour décider qui sert en premier",
   "firstServerLabel": "Premier serveur : {player}",
   "tossButton": "Tirer à pile ou face",

@@ -169,11 +169,11 @@ void main() {
         strings: CommentaryStrings.de,
       );
 
-      await voice.announce(const Announcement('Einstand', ['deuce']));
+      await voice.announce(const Announcement('Gleichstand', ['deuce']));
 
       expect(voice.backend, VoiceBackend.deviceTts);
       expect(tts.languageSet, 'de-DE');
-      expect(tts.spoken, ['Einstand']);
+      expect(tts.spoken, ['Gleichstand']);
     });
 
     test('French commentary strings request fr-FR from the device TTS',

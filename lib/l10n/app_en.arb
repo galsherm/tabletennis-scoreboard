@@ -18,7 +18,21 @@
   },
   "bestOfLabel": "Best of",
   "@bestOfLabel": {
-    "description": "Label above the 3/5/7 best-of-N game-count selector."
+    "description": "Label above the best-of-N game-count selector."
+  },
+  "bestOfSegmentLabel": "{bestOf}",
+  "@bestOfSegmentLabel": {
+    "description": "Label for one segment of the best-of-N selector. English/French show the raw best-of-N number (paired with bestOfLabel above it); German shows the number of *winning* games needed instead (\"Gewinnsätze\"), which is how German table tennis sources describe match format, e.g. \"3 Gewinnsätze im Einzel\" for what this app calls best-of-5 — see PHASE3_VERIFICATION.md.",
+    "placeholders": {
+      "bestOf": {
+        "type": "int",
+        "example": "5"
+      },
+      "gamesToWin": {
+        "type": "int",
+        "example": "3"
+      }
+    }
   },
   "tossPrompt": "Toss to decide who serves first",
   "@tossPrompt": {

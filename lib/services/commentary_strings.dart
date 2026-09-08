@@ -89,7 +89,7 @@ class CommentaryStrings {
     ttsLocale: 'de-DE',
     clipFolder: 'de',
     score: _scoreDe,
-    deuce: 'Einstand',
+    deuce: 'Gleichstand',
     gameWon: _gameWonDe,
     changeEndsSuffix: '. Seitenwechsel.',
     matchWon: _matchWonDe,
