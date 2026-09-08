@@ -66,7 +66,11 @@ class AdMobAdsService implements AdsService {
   @override
   Future<void> initialize() async {
     try {
-      await MobileAds.instance.initialize();
+      final status = await MobileAds.instance.initialize();
+      final adapterSummary = status.adapterStatuses.entries
+          .map((e) => '${e.key}=${e.value.state.name}')
+          .join(', ');
+      debugPrint('AdMobAdsService: SDK initialized ($adapterSummary)');
     } catch (e) {
       debugPrint('AdMobAdsService.initialize failed: $e');
     }
@@ -75,18 +79,22 @@ class AdMobAdsService implements AdsService {
   @override
   Future<void> loadInterstitial() async {
     _retryTimer?.cancel();
+    final adUnitId = _testInterstitialAdUnitId;
+    debugPrint('AdMobAdsService: requesting interstitial ($adUnitId)');
     try {
       await InterstitialAd.load(
-        adUnitId: _testInterstitialAdUnitId,
+        adUnitId: adUnitId,
         request: const AdRequest(),
         adLoadCallback: InterstitialAdLoadCallback(
           onAdLoaded: (ad) {
+            debugPrint('AdMobAdsService: interstitial loaded successfully');
             _interstitialAd = ad;
             _retryDelay = _initialRetryDelay;
           },
           onAdFailedToLoad: (error) {
-            debugPrint('AdMobAdsService: interstitial failed to load: '
-                '$error');
+            debugPrint('AdMobAdsService: interstitial failed to load — '
+                'code=${error.code} domain=${error.domain} '
+                'message=${error.message}');
             _interstitialAd = null;
             _scheduleRetry();
           },
@@ -115,16 +123,23 @@ class AdMobAdsService implements AdsService {
           'match end');
       return; // no ad ready — never block match-end on one
     }
+    debugPrint('AdMobAdsService: showing interstitial at match end');
     _interstitialAd = null;
     try {
       ad.fullScreenContentCallback = FullScreenContentCallback(
+        onAdShowedFullScreenContent: (ad) {
+          debugPrint('AdMobAdsService: interstitial presented on screen');
+        },
         onAdDismissedFullScreenContent: (ad) {
+          debugPrint('AdMobAdsService: interstitial dismissed, preloading '
+              'next');
           ad.dispose();
           loadInterstitial(); // preload the next one for the match after
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
-          debugPrint('AdMobAdsService: interstitial failed to show: '
-              '$error');
+          debugPrint('AdMobAdsService: interstitial failed to show — '
+              'code=${error.code} domain=${error.domain} '
+              'message=${error.message}');
           ad.dispose();
           loadInterstitial();
         },

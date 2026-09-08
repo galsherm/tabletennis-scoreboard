@@ -12,6 +12,13 @@ this phase's first pass + 8 from the real-device-testing fixes below).
 **Update (real-device testing round):** four issues were found running
 a real build on a connected device and fixed — see §10.
 
+**Update (ad-loading deep-dive):** verified the manifest's AdMob App ID
+was already correct, added verbose logging around the ad-load
+lifecycle, and reproduced the failure live on a connected device by
+actually playing a match to completion — see §11 for the exact error
+this surfaced and why it's a device/Google-Play-Services condition, not
+a bug in this app's code.
+
 ---
 
 ## 1. Scope decisions (made with the user before building)
@@ -363,3 +370,135 @@ reuses the exact same `ProDialog` the app-bar icon opens. **The
 purchase flow itself is never gated by this** — the app-bar Pro icon on
 the setup screen opens the same dialog at any time, on any match count,
 whether or not the automatic upsell has fired or been dismissed.
+
+## 11. Ad-loading deep-dive: reproduced live on a real device
+
+Before assuming the ad-loading *logic* itself was broken, the manifest
+was checked first, since a missing AdMob App ID meta-data entry is the
+single most common AdMob setup mistake and fails completely silently.
+
+**The manifest entry is present and correct.**
+`android/app/src/main/AndroidManifest.xml` already has, inside
+`<application>` (added in §8 of this document, before the first
+real-device round):
+
+```xml
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-3940256099942544~3347511713"/>
+```
+
+This is Google's genuine published test App ID, correctly placed. Not
+the cause.
+
+### What the verbose logging showed, running live on a connected device
+
+`lib/services/ads_service.dart` already logged failures (§10.1), but
+not enough to answer "is the request firing / what's the exact error /
+is a loaded ad just not being shown." Added:
+
+- A log line the instant a load is requested, with the ad unit ID.
+- A log line on successful load (previously silent).
+- The full `LoadAdError`/`AdError` breakdown (`code`, `domain`,
+  `message`) on every failure, not just a bare `toString()`.
+- A log line when an interstitial actually presents on screen
+  (`onAdShowedFullScreenContent`), so a "loaded but never shown" case
+  would be distinguishable from a "never loaded" case.
+- An `InitializationStatus` adapter summary logged right after
+  `MobileAds.instance.initialize()` completes.
+
+Then — rather than reasoning about this in the abstract — the app was
+actually built and run on a real connected Android device (`flutter run
+-d <device>`), driven end-to-end via `adb` (tapping through best-of-3
+selection, tossing the coin, starting the match, and playing a full
+straight-2-0 match), while capturing the live console output. This
+directly answers all three of the diagnostic questions this round of
+work was asked to resolve:
+
+**(a) Is the ad request firing at all? Yes**, every time — confirmed by
+a `requesting interstitial (ca-app-pub-.../1033173712)` log line at
+launch and again after every retry.
+
+**(b) Is it failing with a specific error code? Yes:**
+
+```
+AdMobAdsService: SDK initialized (com.google.android.gms.ads.MobileAds=notReady)
+AdMobAdsService: requesting interstitial (ca-app-pub-3940256099942544/1033173712)
+AdMobAdsService: interstitial failed to load — code=0 domain=com.google.android.gms.ads message=Unable to obtain a JavascriptEngine.
+```
+
+This repeated on every retry throughout the session (the exponential
+backoff added in §10.1 was confirmed working — retries actually fired
+at increasing intervals, all hitting the same error), and the SDK's own
+`InitializationStatus` reported its core adapter as `notReady` from the
+very first check, before any ad was ever requested.
+
+**(c) Is it succeeding but not being mounted into the widget tree? Not
+applicable, and confirmed not the issue anyway.** An `InterstitialAd` is
+not a Flutter widget — `ad.show()` presents a native full-screen overlay
+managed entirely outside the Flutter widget tree, so "mounted in the
+tree" doesn't apply the way it would for a `BannerAd`/`AdWidget` (which
+this app doesn't use — see §10.1). More directly: the ad never reached
+the *loaded* state in the first place (confirmed by (b)), so
+`showMatchEndInterstitial()` correctly and safely logged `no
+interstitial ready to show at match end` and no-opped — exactly the
+intended graceful-degradation behavior, not a bug. Played through to
+the match-complete dialog to confirm this directly: the trophy dialog
+("Player 1 wins the match!") appeared normally, with no crash, no hang,
+and no visual gap where an ad should have been.
+
+### Root cause: an upstream Google Mobile Ads SDK / Play Services condition, not an app bug
+
+`code=0` is AdMob's generic `ERROR_CODE_INTERNAL_ERROR`, and "Unable to
+obtain a JavascriptEngine" is a known (if not consistently resolved)
+failure in the Google Mobile Ads SDK's own ad-rendering layer, which is
+WebView/JavaScript-engine-based even for test creatives. It's reported
+across many Flutter and native Android AdMob integrations with no
+single universal fix — see
+[googleads/googleads-mobile-flutter#149](https://github.com/googleads/googleads-mobile-flutter/issues/149)
+and the
+[AdMob community thread on the same error](https://support.google.com/admob/thread/223987238/in-my-flutter-app-ads-are-not-coming-error-occurring-like-unable-to-obtain-a-javascriptengine),
+where Google's own SDK support team's response was to request device
+logs and SDK version rather than point to a known fix.
+
+Checked and ruled out everything on this app's side of the boundary:
+
+- **Manifest App ID:** present, correct (above).
+- **Ad unit IDs:** genuine, official Google test IDs (§10.1).
+- **`google_mobile_ads` plugin version:** `flutter pub outdated` reports
+  9.1.0 as current *and* latest — not an outdated-plugin issue.
+- **Android System WebView on the test device:** `adb shell dumpsys
+  webviewupdate` confirms `com.google.android.webview` (151.0.7922.199)
+  is installed, valid, and the active preferred provider — not a
+  missing/broken WebView package.
+- **Google Play services on the test device:** installed at 26.32.34, a
+  current version — not simply stale.
+- **App code logic:** confirmed correct and behaving exactly as
+  designed under this failure (retry with backoff firing, graceful
+  no-op at match end, no crash).
+
+What's left after ruling all of that out is the SDK's own internal
+ad-rendering engine failing to initialize on this specific device at
+this specific time — most likely (per the pattern in the linked
+reports) a Google Play services "Dynamite" module (dynamically-
+downloaded code Play services delivers separately from its main APK)
+that the Ads SDK depends on for JS rendering not being ready on this
+device, rather than anything a code change in this repository can fix.
+
+**Practical next steps, all device-side (not app-code):**
+1. Restart the test device — this class of issue is often tied to a
+   stuck Play services module state that a restart clears.
+2. Check for a pending Google Play services update (Play Store → search
+   "Google Play services" → Update, if offered) — the Ads SDK's
+   rendering module is delivered through it.
+3. Try the same build on a second device/emulator to confirm whether
+   it's specific to this one device or systemic.
+4. For a first-party diagnostic beyond what this app's logging can show,
+   Google's own [Ad Inspector](https://developers.google.com/admob/flutter/ad-inspector)
+   tool can be wired in temporarily — it's what Google's own AdMob
+   support directs developers to for exactly this class of error.
+
+None of the above require a code change in this repository, and nothing
+found in this investigation points to one — the app-side logging,
+retry, and graceful-degradation behavior added in §10.1 are already
+doing everything they can on this side of the failure.
