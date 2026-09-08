@@ -110,4 +110,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get newMatchButton => 'Nouveau match';
+
+  @override
+  String get matchStartCheer => 'C\'est parti !';
 }

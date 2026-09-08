@@ -285,6 +285,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New match'**
   String get newMatchButton;
+
+  /// Energetic, centered on-screen phrase shown during the brief ball-flyby transition between tapping "Start match" and landing on the scoreboard — see PHASE4E_MATCH_START_TRANSITION.md. Deliberately casual/energetic copy, not official rules terminology.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s Play!'**
+  String get matchStartCheer;
 }
 
 class _AppLocalizationsDelegate

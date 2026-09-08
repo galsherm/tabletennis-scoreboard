@@ -110,4 +110,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newMatchButton => 'New match';
+
+  @override
+  String get matchStartCheer => 'Let\'s Play!';
 }

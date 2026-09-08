@@ -30,5 +30,6 @@
   "gameCompleteMessage": "{player} remporte la manche — changement de côté",
   "matchCompleteDialogTitle": "Match terminé",
   "matchCompleteMessage": "{player} remporte le match !",
-  "newMatchButton": "Nouveau match"
+  "newMatchButton": "Nouveau match",
+  "matchStartCheer": "C'est parti !"
 }

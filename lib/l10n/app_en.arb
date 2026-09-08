@@ -156,5 +156,9 @@
   "newMatchButton": "New match",
   "@newMatchButton": {
     "description": "Button on the match-complete dialog that starts a fresh match."
+  },
+  "matchStartCheer": "Let's Play!",
+  "@matchStartCheer": {
+    "description": "Energetic, centered on-screen phrase shown during the brief ball-flyby transition between tapping \"Start match\" and landing on the scoreboard — see PHASE4E_MATCH_START_TRANSITION.md. Deliberately casual/energetic copy, not official rules terminology."
   }
 }

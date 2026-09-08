@@ -8,7 +8,7 @@ import 'package:tabletennis_scoreboard/screens/match_transition_screen.dart';
 import 'package:tabletennis_scoreboard/services/clip_player.dart';
 import 'package:tabletennis_scoreboard/services/tts_engine.dart';
 import 'package:tabletennis_scoreboard/services/voice_announcer.dart';
-import 'package:tabletennis_scoreboard/widgets/ball_flyby_indicator.dart';
+import 'package:tabletennis_scoreboard/widgets/match_start_transition.dart';
 
 class _NoopTts implements TtsEngine {
   @override
@@ -187,36 +187,110 @@ void main() {
     });
   });
 
-  group('ball-flyby transition animation', () {
-    testWidgets('onComplete fires once, well under a second', (tester) async {
+  group('match-start transition choreography math (Phase 4E)', () {
+    test('the ball is exactly centered (dx=0, dy=0) at the impact moment',
+        () {
+      expect(matchStartBallDx(matchStartImpactT), closeTo(0, 1e-9));
+      expect(matchStartBallDy(matchStartImpactT), closeTo(0, 1e-9));
+    });
+
+    test('the ball travels from off-left to off-right over the full '
+        'timeline', () {
+      expect(matchStartBallDx(0), lessThan(-1));
+      expect(matchStartBallDx(1), greaterThan(1));
+    });
+
+    test(
+        'the text stays completely undeformed before impact, then jumps '
+        'to full deformation exactly at impact', () {
+      expect(matchStartTextEnvelope(0), 0);
+      expect(matchStartTextEnvelope(matchStartImpactT - 0.01), 0);
+      expect(matchStartTextEnvelope(matchStartImpactT), 1);
+    });
+
+    test('the text deformation decays smoothly to near-zero by the end '
+        '(it has sprung back before the ball is off-screen)', () {
+      expect(matchStartTextEnvelope(1), lessThan(0.01));
+    });
+
+    test('the ball-impact squash peaks exactly at impact and fades within '
+        'a small window either side', () {
+      expect(matchStartImpactProximity(matchStartImpactT), 1);
+      expect(matchStartImpactProximity(matchStartImpactT - 0.2), 0);
+      expect(matchStartImpactProximity(matchStartImpactT + 0.2), 0);
+    });
+
+    test(
+        'the deformation is localized to characters near the impact point '
+        '— not a uniform whole-word effect', () {
+      const impactIndex = 5.0;
+      final atImpact = matchStartCharFalloff(5, impactIndex);
+      final oneAway = matchStartCharFalloff(4, impactIndex);
+      final farAway = matchStartCharFalloff(0, impactIndex);
+
+      expect(atImpact, 1);
+      expect(oneAway, lessThan(atImpact));
+      expect(farAway, lessThan(0.01),
+          reason: 'a character 5 slots from impact should barely deform');
+    });
+  });
+
+  group('match-start transition (Phase 4E)', () {
+    testWidgets('renders the full phrase, split across per-character '
+        'widgets, in English', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MatchStartTransition(
+            text: "Let's Play!",
+            onComplete: () {},
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final rendered = tester
+          .widgetList<Text>(find.descendant(
+            of: find.byKey(const Key('matchStartTextRow')),
+            matching: find.byType(Text),
+          ))
+          .map((w) => w.data)
+          .join();
+      expect(rendered, "Let's Play!");
+    });
+
+    testWidgets('onComplete fires exactly once, at the end of the sequence',
+        (tester) async {
       var completions = 0;
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: BallFlybyIndicator(onComplete: () => completions++),
+          body: MatchStartTransition(
+            text: 'Test',
+            onComplete: () => completions++,
+          ),
         ),
       ));
 
       await tester.pump(); // mount, animation starts
       expect(completions, 0);
 
-      await tester.pump(const Duration(milliseconds: 900)); // past duration
+      await tester.pump(const Duration(milliseconds: 950)); // past duration
       expect(completions, 1);
 
       await tester.pump(); // let the completed state settle
-      expect(completions, 1, reason: 'onEnd must fire exactly once');
+      expect(completions, 1, reason: 'onComplete must fire exactly once');
     });
 
     testWidgets(
-        'partial, unsettled pumps through the flyby never throw — one '
-        'clean TweenAnimationBuilder mount, no AnimatedSwitcher-style '
+        'partial, unsettled pumps through the whole sequence never throw '
+        '— one clean AnimationController mount, no AnimatedSwitcher-style '
         'double mount', (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: BallFlybyIndicator(onComplete: () {}),
+          body: MatchStartTransition(text: "Let's Play!", onComplete: () {}),
         ),
       ));
 
-      for (var i = 0; i < 10; i++) {
+      for (var i = 0; i < 15; i++) {
         await tester.pump(const Duration(milliseconds: 60));
         expect(tester.takeException(), isNull);
       }
@@ -224,10 +298,45 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('the localized cheer text is correct in German and French',
+        (tester) async {
+      for (final entry in {
+        'de': 'Auf geht\'s!',
+        'fr': 'C\'est parti !',
+      }.entries) {
+        _setDeviceLocale(tester, Locale(entry.key));
+        // A fresh ValueKey per iteration forces a real remount instead of
+        // updating the previous iteration's still-navigated-to-scoreboard
+        // app instance in place (the same reused-State pitfall noted in
+        // PHASE4B_UI_POLISH.md's screenshot tooling).
+        await tester.pumpWidget(TableTennisScoreboardApp(
+          key: ValueKey('app-${entry.key}'),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('tossButton')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('startMatchButton')));
+        await tester.pump();
+        await tester.pump(); // route attaches (see notes below)
+
+        final rendered = tester
+            .widgetList<Text>(find.descendant(
+              of: find.byKey(const Key('matchStartTextRow')),
+              matching: find.byType(Text),
+            ))
+            .map((w) => w.data)
+            .join();
+        expect(rendered, entry.value, reason: 'locale ${entry.key}');
+
+        await tester.pumpAndSettle();
+      }
+    });
+
     testWidgets(
-        'tapping "Start match" plays the ball transition, then lands on '
-        'the singles scoreboard — the transition screen never lingers on '
-        'the back stack', (tester) async {
+        'tapping "Start match" plays the match-start transition, then '
+        'lands on the singles scoreboard — the transition screen never '
+        'lingers on the back stack', (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
@@ -237,11 +346,12 @@ void main() {
       // Two frames: the first applies the tap's Navigator.push, the
       // second actually builds the newly pushed route's widget subtree
       // (a one-pump gap that shows up whenever a route is pushed from an
-      // onPressed callback) — after that, the ball transition is
-      // showing, and the destination scoreboard is not yet built.
+      // onPressed callback) — after that, the transition is showing, and
+      // the destination scoreboard is not yet built.
       await tester.pump();
       await tester.pump();
-      expect(find.byKey(const Key('ballFlybyIndicator')), findsOneWidget);
+      expect(find.byKey(const Key('transitionBall')), findsOneWidget);
+      expect(find.byKey(const Key('matchStartTextRow')), findsOneWidget);
       expect(find.byKey(const Key('player1Zone')), findsNothing);
 
       await tester.pumpAndSettle();

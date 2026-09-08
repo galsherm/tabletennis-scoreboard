@@ -30,5 +30,6 @@
   "gameCompleteMessage": "{player} gewinnt den Satz — Seitenwechsel",
   "matchCompleteDialogTitle": "Spiel beendet",
   "matchCompleteMessage": "{player} gewinnt das Spiel!",
-  "newMatchButton": "Neues Spiel"
+  "newMatchButton": "Neues Spiel",
+  "matchStartCheer": "Auf geht's!"
 }

@@ -110,4 +110,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get newMatchButton => 'Neues Spiel';
+
+  @override
+  String get matchStartCheer => 'Auf geht\'s!';
 }

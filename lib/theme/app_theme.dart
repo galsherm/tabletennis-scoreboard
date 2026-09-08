@@ -101,6 +101,18 @@ class AppTypography {
     color: AppColors.mutedText,
     letterSpacing: 1.1,
   );
+
+  /// The energetic "Let's Play!" phrase shown during the match-start
+  /// transition (Phase 4E) — large and confident enough to read as the
+  /// full-screen moment's one focal point, but well below [scoreDisplay]
+  /// since it's a brief flourish, not the score.
+  static const transitionHeadline = TextStyle(
+    fontFamily: 'Roboto',
+    fontSize: 40,
+    fontWeight: FontWeight.w900,
+    color: AppColors.scoreText,
+    letterSpacing: 0.3,
+  );
 }
 
 /// Touch targets sized for quick, imprecise courtside taps rather than
