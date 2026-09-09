@@ -31,8 +31,8 @@ class _NoopClipPlayer implements ClipPlayer {
   Future<void> stop() async {}
 }
 
-VoiceAnnouncer _silentVoice() =>
-    VoiceAnnouncer(ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
+VoiceAnnouncer _silentVoice() => VoiceAnnouncer(
+    ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
 
 /// WCAG relative luminance / contrast ratio, used to check the light and
 /// dark palettes both hit a real accessible-contrast bar rather than
@@ -54,7 +54,8 @@ double _contrastRatio(Color a, Color b) {
 
 void main() {
   group('AppPalette (Phase 4F light theme)', () {
-    test('light and dark are genuinely different palettes, not the same '
+    test(
+        'light and dark are genuinely different palettes, not the same '
         'colors twice', () {
       expect(AppPalette.light.background, isNot(AppPalette.dark.background));
       expect(AppPalette.light.scoreText, isNot(AppPalette.dark.scoreText));
@@ -67,13 +68,15 @@ void main() {
       expect(AppPalette.dark.accent, const Color(0xFFFF8A34));
     });
 
-    test('light background is a light color and dark background is a '
+    test(
+        'light background is a light color and dark background is a '
         'dark one (not just inverted labels)', () {
       expect(_relativeLuminance(AppPalette.light.background), greaterThan(0.8));
       expect(_relativeLuminance(AppPalette.dark.background), lessThan(0.05));
     });
 
-    test('scoreText hits at least WCAG AAA contrast (7:1) against '
+    test(
+        'scoreText hits at least WCAG AAA contrast (7:1) against '
         'background in both palettes — the score must always be legible '
         'at a glance', () {
       expect(
@@ -81,16 +84,15 @@ void main() {
         greaterThanOrEqualTo(7.0),
       );
       expect(
-        _contrastRatio(
-            AppPalette.light.scoreText, AppPalette.light.background),
+        _contrastRatio(AppPalette.light.scoreText, AppPalette.light.background),
         greaterThanOrEqualTo(7.0),
       );
     });
 
-    test('accent hits at least WCAG AA contrast (3:1, the large-content/'
+    test(
+        'accent hits at least WCAG AA contrast (3:1, the large-content/'
         'graphical-object threshold) against background in both palettes '
-        '— the light palette deepens the accent specifically for this',
-        () {
+        '— the light palette deepens the accent specifically for this', () {
       expect(
         _contrastRatio(AppPalette.dark.accent, AppPalette.dark.background),
         greaterThanOrEqualTo(3.0),
@@ -101,8 +103,7 @@ void main() {
       );
     });
 
-    test('buildAppTheme attaches the matching palette as a ThemeExtension',
-        () {
+    test('buildAppTheme attaches the matching palette as a ThemeExtension', () {
       final dark = buildAppTheme(Brightness.dark);
       final light = buildAppTheme(Brightness.light);
       expect(dark.extension<AppPalette>(), AppPalette.dark);
@@ -153,8 +154,43 @@ void main() {
     });
   });
 
+  group('Setup screen: menu surface colors (Phase 4K)', () {
+    testWidgets(
+        'the menu\'s background and submenu flyouts use this app\'s own '
+        'AppPalette.surface, not Material 3\'s auto-derived (and, on this '
+        'app\'s orange-accented theme, visibly wrong pink/brown-tinted) '
+        'surfaceTintColor default', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      final scaffoldContext = tester.element(find.byType(Scaffold).first);
+      final palette = scaffoldContext.palette;
+
+      final anchor = tester
+          .widget<MenuAnchor>(find.byKey(const Key('overflowMenuAnchor')));
+      expect(anchor.style?.backgroundColor?.resolve({}), palette.surface);
+      expect(anchor.style?.surfaceTintColor?.resolve({}), Colors.transparent);
+
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+
+      final themeSubmenu =
+          tester.widget<SubmenuButton>(find.byKey(const Key('themeSubmenu')));
+      expect(themeSubmenu.menuStyle?.backgroundColor?.resolve({}),
+          palette.surface);
+      expect(themeSubmenu.menuStyle?.surfaceTintColor?.resolve({}),
+          Colors.transparent);
+
+      final proButton =
+          tester.widget<MenuItemButton>(find.byKey(const Key('proMenuButton')));
+      expect(proButton.style?.foregroundColor?.resolve({}), palette.scoreText);
+    });
+  });
+
   group('Setup screen: theme menu (Phase 4F)', () {
-    testWidgets('shows a theme menu with System/Light/Dark options, '
+    testWidgets(
+        'shows a theme menu with System/Light/Dark options, '
         'checkmarking the current mode', (tester) async {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(const TableTennisScoreboardApp());
@@ -180,12 +216,12 @@ void main() {
       // before Phase 4J's switch to `MenuItemButton`.
       expect(find.byKey(const Key('themeOptionDark_check')), findsOneWidget,
           reason: 'dark is the default with nothing persisted yet');
-      expect(
-          find.byKey(const Key('themeOptionSystem_check')), findsNothing);
+      expect(find.byKey(const Key('themeOptionSystem_check')), findsNothing);
       expect(find.byKey(const Key('themeOptionLight_check')), findsNothing);
     });
 
-    testWidgets('selecting Light actually switches the rendered theme '
+    testWidgets(
+        'selecting Light actually switches the rendered theme '
         'brightness', (tester) async {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(const TableTennisScoreboardApp());
@@ -230,7 +266,8 @@ void main() {
       expect(materialApp.themeMode, ThemeMode.light);
     });
 
-    testWidgets('a fresh install with nothing persisted still defaults to '
+    testWidgets(
+        'a fresh install with nothing persisted still defaults to '
         'dark — this feature adds choice, it does not change the default '
         '(PHASE4B_UI_POLISH.md)', (tester) async {
       SharedPreferences.setMockInitialValues({});
@@ -298,10 +335,10 @@ void main() {
         ),
       ));
 
-      final serverIcon = tester
-          .widget<Icon>(find.byKey(const Key('team1Slot0ServerIcon')));
-      final receiverIcon = tester
-          .widget<Icon>(find.byKey(const Key('team2Slot0ReceiverIcon')));
+      final serverIcon =
+          tester.widget<Icon>(find.byKey(const Key('team1Slot0ServerIcon')));
+      final receiverIcon =
+          tester.widget<Icon>(find.byKey(const Key('team2Slot0ReceiverIcon')));
 
       expect(serverIcon.icon, Icons.sports_tennis);
       expect(receiverIcon.icon, Icons.sports_tennis,

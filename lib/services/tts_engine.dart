@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 /// Thin wrapper around the platform text-to-speech engine.
@@ -17,6 +20,35 @@ abstract class TtsEngine {
   Future<void> speak(String text);
 
   Future<void> stop();
+}
+
+/// Requests/abandons Android audio focus directly via `MainActivity.kt`'s
+/// native channel, rather than through `flutter_tts`'s own built-in
+/// `focus: true` handling.
+///
+/// Real-device testing (Phase 4K) found `flutter_tts`'s own focus request
+/// (read from its Kotlin source) already asks for the right *type*
+/// (`AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`, never one that asks others to
+/// pause) but builds it with no explicit `AudioAttributes` at all, which
+/// `adb shell dumpsys audio` shows registering as a bare `USAGE_MEDIA`/
+/// `CONTENT_TYPE_UNKNOWN` request. Android's own guidance for this exact
+/// case — a brief spoken announcement over other audio, the same category
+/// as turn-by-turn navigation — is `USAGE_ASSISTANCE_SONIFICATION`/
+/// `CONTENT_TYPE_SPEECH`, which the plugin has no API to configure. See
+/// PHASE4K_AUDIO_MENU_AND_ICON.md.
+class _AndroidAudioDucking {
+  static const _channel =
+      MethodChannel('com.example.tabletennis_scoreboard/audio_ducking');
+
+  static Future<void> requestFocus() async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod('requestDuckingFocus').catchError((_) {});
+  }
+
+  static Future<void> abandonFocus() async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod('abandonDuckingFocus').catchError((_) {});
+  }
 }
 
 /// Real [TtsEngine] backed by `flutter_tts`.
@@ -45,6 +77,15 @@ class FlutterTtsEngine implements TtsEngine {
               .interruptSpokenAudioAndMixWithOthers,
         ])
         .catchError((_) {});
+    // Android audio focus is released the moment this utterance finishes,
+    // is cancelled, or errors — matching exactly the three paths
+    // `flutter_tts`'s own Kotlin plugin releases its (unused, since we
+    // pass `focus: false`) internal focus request from. Without covering
+    // all three, a cancelled or failed announcement would leave this app
+    // holding focus indefinitely, keeping other apps ducked/paused.
+    _tts.setCompletionHandler(() => _AndroidAudioDucking.abandonFocus());
+    _tts.setCancelHandler(() => _AndroidAudioDucking.abandonFocus());
+    _tts.setErrorHandler((_) => _AndroidAudioDucking.abandonFocus());
   }
 
   @override
@@ -64,22 +105,19 @@ class FlutterTtsEngine implements TtsEngine {
 
   @override
   Future<void> speak(String text) async {
-    // Android: `flutter_tts.speak()` only requests audio focus (which is
-    // what actually triggers other apps' ducking behavior) when `focus:
-    // true` is passed — it defaults to `false`, i.e. no focus request at
-    // all. Verified on a real device that this was the actual bug: with
-    // the default, no entry for this app ever appeared in `adb shell
-    // dumpsys audio`'s focus stack while a TTS announcement played over
-    // Spotify — the announcement just mixed in uncoordinated, and
-    // Spotify never ducked. `focus: true` makes the plugin request
-    // `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` before speaking and abandon it
-    // after, which is what actually signals other apps to lower their
-    // volume. See PHASE4J_MENU_AUDIO_AND_NAME_SAVE.md.
-    await _tts.speak(text, focus: true);
+    // Android audio focus is requested through `_AndroidAudioDucking`
+    // (native `MainActivity.kt` code — see its doc comment and
+    // PHASE4K_AUDIO_MENU_AND_ICON.md) rather than `flutter_tts`'s own
+    // `focus: true`, so it's requested with the right `AudioAttributes`
+    // and `focus: false` here avoids the plugin making a second,
+    // differently-configured request of its own alongside it.
+    await _AndroidAudioDucking.requestFocus();
+    await _tts.speak(text, focus: false);
   }
 
   @override
   Future<void> stop() async {
     await _tts.stop();
+    await _AndroidAudioDucking.abandonFocus();
   }
 }

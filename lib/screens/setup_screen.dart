@@ -224,6 +224,42 @@ class _SetupScreenState extends State<SetupScreen> {
         child: selected ? Icon(Icons.check, key: key, size: 18) : null,
       );
 
+  /// Forces every menu surface (the top-level flyout and each
+  /// `SubmenuButton`'s own flyout) onto this app's explicit
+  /// [AppPalette.surface]/[AppPalette.divider], instead of Material 3's
+  /// default `MenuStyle`.
+  ///
+  /// A real bug found via real-device testing (Phase 4K): with no
+  /// explicit style, the menu rendered with a visibly wrong pale
+  /// pink/brown background instead of this app's actual surface color
+  /// (near-black in dark mode, white in light mode). The cause is
+  /// Material 3's elevation-overlay behavion — an elevated surface's
+  /// `surfaceTintColor` (which defaults to `ColorScheme.primary`, i.e.
+  /// this app's orange accent) gets blended over its background color,
+  /// and that blend is what actually rendered — the menu was never
+  /// reading a wrong color, it was correctly applying a design system
+  /// default this app never opted out of. `surfaceTintColor:
+  /// Colors.transparent` disables that blend so the menu shows this
+  /// app's real surface color unmodified. See
+  /// PHASE4K_AUDIO_MENU_AND_ICON.md.
+  MenuStyle _menuStyle(BuildContext context) => MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(context.palette.surface),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        elevation: const WidgetStatePropertyAll(3),
+        side:
+            WidgetStatePropertyAll(BorderSide(color: context.palette.divider)),
+      );
+
+  /// Forces a menu row's own text/icon color onto [AppPalette.scoreText]
+  /// (this app's primary foreground) instead of Material 3's
+  /// auto-derived `onSurface`, matching the "explicit `AppColors`, not
+  /// Material-derived" fix alongside [_menuStyle]. Shared by every
+  /// `MenuItemButton` and `SubmenuButton` row in this menu.
+  ButtonStyle _menuItemStyle(BuildContext context) => ButtonStyle(
+        foregroundColor: WidgetStatePropertyAll(context.palette.scoreText),
+        iconColor: WidgetStatePropertyAll(context.palette.scoreText),
+      );
+
   /// The single settings menu covering theme, language, and the Pro
   /// purchase dialog (Phase 4I consolidated three separate app-bar icons
   /// into this one menu; Phase 4J changed how it's built and what it
@@ -238,8 +274,11 @@ class _SetupScreenState extends State<SetupScreen> {
   /// flat, one-tap `MenuItemButton`: a single purchase flow doesn't
   /// benefit from being tucked behind another expand step.
   Widget _buildOverflowMenu(AppLocalizations l10n) {
+    final menuStyle = _menuStyle(context);
+    final itemStyle = _menuItemStyle(context);
     return MenuAnchor(
       key: const Key('overflowMenuAnchor'),
+      style: menuStyle,
       builder: (context, controller, child) => IconButton(
         key: const Key('overflowMenuButton'),
         // A hamburger (three horizontal lines) reads more clearly at a
@@ -255,9 +294,12 @@ class _SetupScreenState extends State<SetupScreen> {
       menuChildren: [
         SubmenuButton(
           key: const Key('themeSubmenu'),
+          style: itemStyle,
+          menuStyle: menuStyle,
           menuChildren: [
             MenuItemButton(
               key: const Key('themeOptionSystem'),
+              style: itemStyle,
               leadingIcon: _leadingCheck(widget.themeMode == ThemeMode.system,
                   const Key('themeOptionSystem_check')),
               onPressed: () => widget.onThemeModeChanged(ThemeMode.system),
@@ -265,6 +307,7 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             MenuItemButton(
               key: const Key('themeOptionLight'),
+              style: itemStyle,
               leadingIcon: _leadingCheck(widget.themeMode == ThemeMode.light,
                   const Key('themeOptionLight_check')),
               onPressed: () => widget.onThemeModeChanged(ThemeMode.light),
@@ -272,6 +315,7 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             MenuItemButton(
               key: const Key('themeOptionDark'),
+              style: itemStyle,
               leadingIcon: _leadingCheck(widget.themeMode == ThemeMode.dark,
                   const Key('themeOptionDark_check')),
               onPressed: () => widget.onThemeModeChanged(ThemeMode.dark),
@@ -282,9 +326,12 @@ class _SetupScreenState extends State<SetupScreen> {
         ),
         SubmenuButton(
           key: const Key('languageSubmenu'),
+          style: itemStyle,
+          menuStyle: menuStyle,
           menuChildren: [
             MenuItemButton(
               key: const Key('languageOptionSystem'),
+              style: itemStyle,
               leadingIcon: _leadingCheck(widget.currentLocaleOverride == null,
                   const Key('languageOptionSystem_check')),
               onPressed: () => widget.onLocaleChanged(null),
@@ -294,6 +341,7 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             MenuItemButton(
               key: const Key('languageOptionEn'),
+              style: itemStyle,
               leadingIcon: _leadingCheck(
                   widget.currentLocaleOverride == const Locale('en'),
                   const Key('languageOptionEn_check')),
@@ -305,6 +353,7 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             MenuItemButton(
               key: const Key('languageOptionDe'),
+              style: itemStyle,
               leadingIcon: _leadingCheck(
                   widget.currentLocaleOverride == const Locale('de'),
                   const Key('languageOptionDe_check')),
@@ -313,6 +362,7 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             MenuItemButton(
               key: const Key('languageOptionFr'),
+              style: itemStyle,
               leadingIcon: _leadingCheck(
                   widget.currentLocaleOverride == const Locale('fr'),
                   const Key('languageOptionFr_check')),
@@ -322,12 +372,13 @@ class _SetupScreenState extends State<SetupScreen> {
           ],
           child: Text(l10n.languageMenuTooltip),
         ),
-        const Divider(height: 1),
+        Divider(height: 1, color: context.palette.divider),
         // Flat — a single tap to one purchase flow doesn't need (or
         // benefit from) a submenu the way Theme/Language's multi-choice
         // pickers do.
         MenuItemButton(
           key: const Key('proMenuButton'),
+          style: itemStyle,
           leadingIcon: Icon(
             _monetization.isPro ? Icons.verified : Icons.workspace_premium,
             size: 20,
