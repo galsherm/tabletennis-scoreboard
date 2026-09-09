@@ -208,6 +208,37 @@ void main() {
       expect(find.byType(TextField), findsNothing);
     });
 
+    testWidgets(
+        'typing a name and tapping elsewhere (not pressing Enter) still '
+        'saves it', (tester) async {
+      // A real bug found via real-device testing (Phase 4J): tapping a
+      // non-interactive area of the screen (e.g. this "BEST OF" heading)
+      // while a name field was being edited didn't move Flutter's focus
+      // away from the field at all, so the field's own focus-loss commit
+      // never fired and the typed name was silently discarded — only
+      // pressing Enter/Done ever saved it. Fixed by having the setup
+      // screen's body explicitly drop focus on any tap, not just relying
+      // on some other widget happening to steal it. See
+      // PHASE4J_MENU_AUDIO_AND_NAME_SAVE.md.
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('player1PreviewNameText')));
+      await tester.pump();
+      await tester.enterText(
+          find.byKey(const Key('player1PreviewNameField')), 'Sam');
+      // Deliberately not calling receiveAction(TextInputAction.done) —
+      // the whole point of this test is the non-Enter, tap-away path.
+      await tester.tap(find.text('BEST OF'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sam'), findsOneWidget);
+      expect(find.text('Player 1'), findsNothing);
+      expect(find.byType(TextField), findsNothing,
+          reason: 'the field should have committed and returned to its '
+              'read-only display, not stayed open');
+    });
+
     testWidgets('clearing a singles name on setup reverts it to the '
         'default before the match even starts', (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());

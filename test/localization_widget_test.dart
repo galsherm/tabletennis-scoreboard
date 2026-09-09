@@ -46,8 +46,13 @@ void _setDeviceLocale(WidgetTester tester, Locale locale) {
 Future<void> _openLanguageMenuAndSelect(
     WidgetTester tester, Key optionKey) async {
   // The theme/language/Pro icons were consolidated into one app-bar
-  // overflow menu in Phase 4I — see PHASE4I_POLISH_ROUND2.md.
+  // overflow menu in Phase 4I (see PHASE4I_POLISH_ROUND2.md), then
+  // Phase 4J turned Theme/Language into real nested submenus (built on
+  // MenuAnchor/SubmenuButton), so reaching a language option now takes
+  // one more tap to expand "Language" first.
   await tester.tap(find.byKey(const Key('overflowMenuButton')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('languageSubmenu')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(optionKey));
   await tester.pumpAndSettle();
@@ -210,15 +215,16 @@ void main() {
 
       await tester.tap(find.byKey(const Key('overflowMenuButton')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('languageSubmenu')));
+      await tester.pumpAndSettle();
 
-      // The menu's value type is a private enum in setup_screen.dart, so
-      // this reads it through `dynamic` rather than naming that type here.
-      final systemItem = tester.widget<CheckedPopupMenuItem<dynamic>>(
-          find.byKey(const Key('languageOptionSystem')));
-      final deItem = tester.widget<CheckedPopupMenuItem<dynamic>>(
-          find.byKey(const Key('languageOptionDe')));
-      expect(systemItem.checked, isTrue);
-      expect(deItem.checked, isFalse);
+      // Each option's checkmark (present only when selected) carries its
+      // own key — see SetupScreen._leadingCheck — rather than a
+      // `checked` property the way `CheckedPopupMenuItem` used to expose
+      // before Phase 4J's switch to `MenuItemButton`.
+      expect(find.byKey(const Key('languageOptionSystem_check')),
+          findsOneWidget);
+      expect(find.byKey(const Key('languageOptionDe_check')), findsNothing);
     });
   });
 

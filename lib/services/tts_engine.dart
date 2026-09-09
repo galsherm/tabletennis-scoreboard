@@ -24,11 +24,26 @@ class FlutterTtsEngine implements TtsEngine {
   final FlutterTts _tts = FlutterTts();
 
   FlutterTtsEngine() {
-    // Best-effort, iOS-only: use the "ambient" session category so an
-    // announcement mixes with whatever else is playing (e.g. music)
-    // instead of interrupting it. Never let this block construction.
+    // Best-effort: configure both platforms to duck (lower the volume of)
+    // other audio — e.g. music — rather than either silently overlapping
+    // it or fully interrupting it. Never let this block construction.
+    //
+    // iOS: the `ambient` category previously used here mixes with other
+    // audio at full volume with no ducking at all — Apple's
+    // `duckOthers`/`interruptSpokenAudioAndMixWithOthers` options are
+    // only valid under the `playback` (or `playAndRecord`) category, not
+    // `ambient`. `interruptSpokenAudioAndMixWithOthers` is Apple's own
+    // recommended pairing for "occasional spoken audio" apps (turn-by-
+    // turn navigation, exercise apps — the same category this app's
+    // announcements fall into): duck non-spoken audio (music), but fully
+    // pause-and-resume other *spoken* audio (podcasts, other TTS) rather
+    // than overlapping two voices unintelligibly.
     _tts
-        .setIosAudioCategory(IosTextToSpeechAudioCategory.ambient, const [])
+        .setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
+          IosTextToSpeechAudioCategoryOptions.duckOthers,
+          IosTextToSpeechAudioCategoryOptions
+              .interruptSpokenAudioAndMixWithOthers,
+        ])
         .catchError((_) {});
   }
 
@@ -49,7 +64,18 @@ class FlutterTtsEngine implements TtsEngine {
 
   @override
   Future<void> speak(String text) async {
-    await _tts.speak(text);
+    // Android: `flutter_tts.speak()` only requests audio focus (which is
+    // what actually triggers other apps' ducking behavior) when `focus:
+    // true` is passed — it defaults to `false`, i.e. no focus request at
+    // all. Verified on a real device that this was the actual bug: with
+    // the default, no entry for this app ever appeared in `adb shell
+    // dumpsys audio`'s focus stack while a TTS announcement played over
+    // Spotify — the announcement just mixed in uncoordinated, and
+    // Spotify never ducked. `focus: true` makes the plugin request
+    // `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` before speaking and abandon it
+    // after, which is what actually signals other apps to lower their
+    // volume. See PHASE4J_MENU_AUDIO_AND_NAME_SAVE.md.
+    await _tts.speak(text, focus: true);
   }
 
   @override

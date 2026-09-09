@@ -110,6 +110,49 @@ void main() {
     });
   });
 
+  group('Setup screen: app-bar menu icon (Phase 4J)', () {
+    testWidgets(
+        'the overflow menu is a hamburger icon in the app bar\'s leading '
+        '(left) position, not the vertical-dots overflow glyph it '
+        'replaced', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      final iconButton = tester
+          .widget<IconButton>(find.byKey(const Key('overflowMenuButton')));
+      expect((iconButton.icon as Icon).icon, Icons.menu);
+
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      expect(appBar.leading, isA<MenuAnchor>(),
+          reason: 'the menu anchor lives in the leading slot, not actions');
+    });
+
+    testWidgets(
+        'Theme and Language are real nested submenus (a tap expands '
+        'them, revealing a chevron), while Remove Ads / Pro stays a '
+        'single flat action', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+
+      // Collapsed: the submenu triggers are visible, but their options
+      // are not, until expanded.
+      expect(find.byKey(const Key('themeSubmenu')), findsOneWidget);
+      expect(find.byKey(const Key('languageSubmenu')), findsOneWidget);
+      expect(find.byKey(const Key('proMenuButton')), findsOneWidget);
+      expect(find.byKey(const Key('themeOptionDark')), findsNothing);
+      expect(find.byKey(const Key('languageOptionEn')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('themeSubmenu')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('themeOptionDark')), findsOneWidget);
+    });
+  });
+
   group('Setup screen: theme menu (Phase 4F)', () {
     testWidgets('shows a theme menu with System/Light/Dark options, '
         'checkmarking the current mode', (tester) async {
@@ -119,19 +162,27 @@ void main() {
 
       await tester.tap(find.byKey(const Key('overflowMenuButton')));
       await tester.pumpAndSettle();
+      // Theme/Language became real nested submenus in Phase 4J (built on
+      // MenuAnchor/SubmenuButton rather than a flat PopupMenuButton, so
+      // they could have an actual expand step with a chevron) — the
+      // options aren't visible until "Theme" itself is tapped to expand
+      // it.
+      await tester.tap(find.byKey(const Key('themeSubmenu')));
+      await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('themeOptionSystem')), findsOneWidget);
       expect(find.byKey(const Key('themeOptionLight')), findsOneWidget);
       expect(find.byKey(const Key('themeOptionDark')), findsOneWidget);
 
-      // The menu's value type is a private enum in setup_screen.dart (all
-      // three consolidated overflow-menu sections share it since Phase
-      // 4I), so this reads it through `dynamic` rather than naming that
-      // type here.
-      final darkItem = tester.widget<CheckedPopupMenuItem<dynamic>>(
-          find.byKey(const Key('themeOptionDark')));
-      expect(darkItem.checked, isTrue,
+      // Each option's checkmark (present only when selected) carries its
+      // own key — see SetupScreen._leadingCheck — rather than a
+      // `checked` property the way `CheckedPopupMenuItem` used to expose
+      // before Phase 4J's switch to `MenuItemButton`.
+      expect(find.byKey(const Key('themeOptionDark_check')), findsOneWidget,
           reason: 'dark is the default with nothing persisted yet');
+      expect(
+          find.byKey(const Key('themeOptionSystem_check')), findsNothing);
+      expect(find.byKey(const Key('themeOptionLight_check')), findsNothing);
     });
 
     testWidgets('selecting Light actually switches the rendered theme '
@@ -141,6 +192,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('themeSubmenu')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('themeOptionLight')));
       await tester.pumpAndSettle();
@@ -160,6 +213,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('themeSubmenu')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('themeOptionLight')));
       await tester.pumpAndSettle();

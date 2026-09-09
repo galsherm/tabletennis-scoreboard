@@ -17,34 +17,6 @@ import 'doubles_scoreboard_screen.dart';
 import 'match_transition_screen.dart';
 import 'scoreboard_screen.dart';
 
-/// Every action reachable from the setup screen's single app-bar overflow
-/// menu (Phase 4I) — theme, language, and the Pro purchase dialog used to
-/// be three separate icon buttons competing for attention; consolidating
-/// them behind one "⋮" matches how most apps tuck several secondary
-/// settings behind a single overflow menu. Each item keeps exactly the
-/// functionality it had as its own icon — only the entry point moved.
-/// See PHASE4I_POLISH_ROUND2.md.
-///
-/// A flat enum (rather than nesting `ThemeMode`/`Locale?` values
-/// directly) exists for the same reason the old language-only menu
-/// needed one: `PopupMenuButton`'s `onSelected` is never called for a
-/// `null` selection (Flutter treats that identically to the menu being
-/// dismissed with no choice made — see `popup_menu.dart`'s
-/// `_PopupMenuButtonState._handleMenu`), so "System default" language
-/// needs its own non-null value (`languageSystem`) to be selectable at
-/// all; folding every other action into the same enum keeps one
-/// `PopupMenuButton<_OverflowAction>` instead of mixing types.
-enum _OverflowAction {
-  themeSystem,
-  themeLight,
-  themeDark,
-  languageSystem,
-  languageEn,
-  languageDe,
-  languageFr,
-  pro,
-}
-
 class SetupScreen extends StatefulWidget {
   /// Current manual language override, or null to follow the device
   /// locale. Used only to show a checkmark against the active choice in
@@ -213,41 +185,8 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
-  void _onOverflowSelected(_OverflowAction action) {
-    switch (action) {
-      case _OverflowAction.themeSystem:
-        widget.onThemeModeChanged(ThemeMode.system);
-      case _OverflowAction.themeLight:
-        widget.onThemeModeChanged(ThemeMode.light);
-      case _OverflowAction.themeDark:
-        widget.onThemeModeChanged(ThemeMode.dark);
-      case _OverflowAction.languageSystem:
-        widget.onLocaleChanged(null);
-      case _OverflowAction.languageEn:
-        widget.onLocaleChanged(const Locale('en'));
-      case _OverflowAction.languageDe:
-        widget.onLocaleChanged(const Locale('de'));
-      case _OverflowAction.languageFr:
-        widget.onLocaleChanged(const Locale('fr'));
-      case _OverflowAction.pro:
-        _openProDialog();
-    }
-  }
-
   Widget _eyebrow(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text(text.toUpperCase(), style: AppTypography.eyebrow(context)),
-      );
-
-  /// A non-interactive heading inside the overflow menu (Phase 4I) —
-  /// `enabled: false` keeps it unselectable/untappable while still
-  /// reading clearly as a section divider between theme, language, and
-  /// the Pro action, now that all three live in one menu instead of
-  /// their own separate icons.
-  PopupMenuEntry<_OverflowAction> _sectionLabel(String text) =>
-      PopupMenuItem<_OverflowAction>(
-        enabled: false,
-        height: 32,
         child: Text(text.toUpperCase(), style: AppTypography.eyebrow(context)),
       );
 
@@ -263,291 +202,338 @@ class _SetupScreenState extends State<SetupScreen> {
         children: [
           Text(flag, style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 6),
-          // Flexible + ellipsis rather than a bare Text: the popup menu's
-          // available width is constrained by how much screen space
-          // remains between its anchor (the app-bar icon) and the screen
-          // edge, not just by its content — a bare Text overflowed and
-          // crashed layout for longer localized labels once a leading
-          // flag was added. See PHASE4I_POLISH_ROUND2.md.
+          // Flexible + ellipsis defensively, as elsewhere in this menu —
+          // a submenu flyout has more room than the old single-level
+          // popup menu did, but a very long localized label still
+          // shouldn't be able to overflow it. See
+          // PHASE4I_POLISH_ROUND2.md.
           Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
         ],
       );
 
-  /// Tighter than `PopupMenuItem`'s 16px-a-side default — freed up just
-  /// enough room for the flag/icon rows added in Phase 4I, which
-  /// overflowed the default width for the longer language labels (e.g.
-  /// French "Français") once a leading glyph was added. See
-  /// PHASE4I_POLISH_ROUND2.md.
-  static const _tightItemPadding = EdgeInsets.symmetric(horizontal: 10);
+  /// A checkmark shown in a `MenuItemButton`'s `leadingIcon` slot when
+  /// [selected], or an equally-sized blank space when not — keeps every
+  /// item's label aligned regardless of which one is currently checked,
+  /// the same visual role `CheckedPopupMenuItem` played before the
+  /// Phase 4J switch to `MenuAnchor`/`SubmenuButton` (needed for real
+  /// nested submenus, which `PopupMenuButton` can't do). The checkmark
+  /// itself carries [key] so tests can assert on selection state without
+  /// depending on internal `MenuItemButton` structure.
+  Widget _leadingCheck(bool selected, Key key) => SizedBox(
+        width: 24,
+        child: selected ? Icon(Icons.check, key: key, size: 18) : null,
+      );
+
+  /// The single settings menu covering theme, language, and the Pro
+  /// purchase dialog (Phase 4I consolidated three separate app-bar icons
+  /// into this one menu; Phase 4J changed how it's built and what it
+  /// looks like).
+  ///
+  /// Built on `MenuAnchor`/`SubmenuButton`/`MenuItemButton` rather than
+  /// `PopupMenuButton` specifically so Theme and Language can be real
+  /// nested submenus (tapping "Theme" reveals Light/Dark/System behind
+  /// it, with the chevron `SubmenuButton` draws automatically) rather
+  /// than a flat list of every option shown at once — `PopupMenuButton`
+  /// has no nested-submenu support at all. "Remove Ads / Pro" stays a
+  /// flat, one-tap `MenuItemButton`: a single purchase flow doesn't
+  /// benefit from being tucked behind another expand step.
+  Widget _buildOverflowMenu(AppLocalizations l10n) {
+    return MenuAnchor(
+      key: const Key('overflowMenuAnchor'),
+      builder: (context, controller, child) => IconButton(
+        key: const Key('overflowMenuButton'),
+        // A hamburger (three horizontal lines) reads more clearly at a
+        // glance as "there's a menu here" than the vertical-dots overflow
+        // glyph it replaces — see PHASE4J_MENU_AUDIO_AND_NAME_SAVE.md for
+        // the placement reasoning (this app settled on the app bar's
+        // leading/left position, the conventional spot for this icon).
+        icon: const Icon(Icons.menu),
+        tooltip: l10n.moreOptionsTooltip,
+        onPressed: () =>
+            controller.isOpen ? controller.close() : controller.open(),
+      ),
+      menuChildren: [
+        SubmenuButton(
+          key: const Key('themeSubmenu'),
+          menuChildren: [
+            MenuItemButton(
+              key: const Key('themeOptionSystem'),
+              leadingIcon: _leadingCheck(widget.themeMode == ThemeMode.system,
+                  const Key('themeOptionSystem_check')),
+              onPressed: () => widget.onThemeModeChanged(ThemeMode.system),
+              child: Text(l10n.themeSystemOption),
+            ),
+            MenuItemButton(
+              key: const Key('themeOptionLight'),
+              leadingIcon: _leadingCheck(widget.themeMode == ThemeMode.light,
+                  const Key('themeOptionLight_check')),
+              onPressed: () => widget.onThemeModeChanged(ThemeMode.light),
+              child: Text(l10n.themeLightOption),
+            ),
+            MenuItemButton(
+              key: const Key('themeOptionDark'),
+              leadingIcon: _leadingCheck(widget.themeMode == ThemeMode.dark,
+                  const Key('themeOptionDark_check')),
+              onPressed: () => widget.onThemeModeChanged(ThemeMode.dark),
+              child: Text(l10n.themeDarkOption),
+            ),
+          ],
+          child: Text(l10n.themeMenuTooltip),
+        ),
+        SubmenuButton(
+          key: const Key('languageSubmenu'),
+          menuChildren: [
+            MenuItemButton(
+              key: const Key('languageOptionSystem'),
+              leadingIcon: _leadingCheck(widget.currentLocaleOverride == null,
+                  const Key('languageOptionSystem_check')),
+              onPressed: () => widget.onLocaleChanged(null),
+              // A globe rather than a specific flag — "system default"
+              // isn't any one country/language.
+              child: _flagOption('🌐', l10n.languageSystemOption),
+            ),
+            MenuItemButton(
+              key: const Key('languageOptionEn'),
+              leadingIcon: _leadingCheck(
+                  widget.currentLocaleOverride == const Locale('en'),
+                  const Key('languageOptionEn_check')),
+              onPressed: () => widget.onLocaleChanged(const Locale('en')),
+              // Language names are always shown in their own language,
+              // not translated, so a reader can find their language
+              // regardless of what the UI currently displays.
+              child: _flagOption('🇬🇧', 'English'),
+            ),
+            MenuItemButton(
+              key: const Key('languageOptionDe'),
+              leadingIcon: _leadingCheck(
+                  widget.currentLocaleOverride == const Locale('de'),
+                  const Key('languageOptionDe_check')),
+              onPressed: () => widget.onLocaleChanged(const Locale('de')),
+              child: _flagOption('🇩🇪', 'Deutsch'),
+            ),
+            MenuItemButton(
+              key: const Key('languageOptionFr'),
+              leadingIcon: _leadingCheck(
+                  widget.currentLocaleOverride == const Locale('fr'),
+                  const Key('languageOptionFr_check')),
+              onPressed: () => widget.onLocaleChanged(const Locale('fr')),
+              child: _flagOption('🇫🇷', 'Français'),
+            ),
+          ],
+          child: Text(l10n.languageMenuTooltip),
+        ),
+        const Divider(height: 1),
+        // Flat — a single tap to one purchase flow doesn't need (or
+        // benefit from) a submenu the way Theme/Language's multi-choice
+        // pickers do.
+        MenuItemButton(
+          key: const Key('proMenuButton'),
+          leadingIcon: Icon(
+            _monetization.isPro ? Icons.verified : Icons.workspace_premium,
+            size: 20,
+          ),
+          onPressed: _openProDialog,
+          child: Text(l10n.proMenuTooltip),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
+        leading: _buildOverflowMenu(l10n),
         title: Text(l10n.newMatchScreenTitle),
-        actions: [
-          PopupMenuButton<_OverflowAction>(
-            key: const Key('overflowMenuButton'),
-            icon: const Icon(Icons.more_vert),
-            tooltip: l10n.moreOptionsTooltip,
-            onSelected: _onOverflowSelected,
-            itemBuilder: (context) => [
-              _sectionLabel(l10n.themeMenuTooltip),
-              CheckedPopupMenuItem<_OverflowAction>(
-                key: const Key('themeOptionSystem'),
-                value: _OverflowAction.themeSystem,
-                checked: widget.themeMode == ThemeMode.system,
-                child: Text(l10n.themeSystemOption),
-              ),
-              CheckedPopupMenuItem<_OverflowAction>(
-                key: const Key('themeOptionLight'),
-                value: _OverflowAction.themeLight,
-                checked: widget.themeMode == ThemeMode.light,
-                child: Text(l10n.themeLightOption),
-              ),
-              CheckedPopupMenuItem<_OverflowAction>(
-                key: const Key('themeOptionDark'),
-                value: _OverflowAction.themeDark,
-                checked: widget.themeMode == ThemeMode.dark,
-                child: Text(l10n.themeDarkOption),
-              ),
-              const PopupMenuDivider(),
-              _sectionLabel(l10n.languageMenuTooltip),
-              CheckedPopupMenuItem<_OverflowAction>(
-                key: const Key('languageOptionSystem'),
-                value: _OverflowAction.languageSystem,
-                checked: widget.currentLocaleOverride == null,
-                padding: _tightItemPadding,
-                // A globe rather than a specific flag — "system default"
-                // isn't any one country/language.
-                child: _flagOption('🌐', l10n.languageSystemOption),
-              ),
-              CheckedPopupMenuItem<_OverflowAction>(
-                key: const Key('languageOptionEn'),
-                value: _OverflowAction.languageEn,
-                checked: widget.currentLocaleOverride == const Locale('en'),
-                padding: _tightItemPadding,
-                // Language names are always shown in their own language,
-                // not translated, so a reader can find their language
-                // regardless of what the UI currently displays.
-                child: _flagOption('🇬🇧', 'English'),
-              ),
-              CheckedPopupMenuItem<_OverflowAction>(
-                key: const Key('languageOptionDe'),
-                value: _OverflowAction.languageDe,
-                checked: widget.currentLocaleOverride == const Locale('de'),
-                padding: _tightItemPadding,
-                child: _flagOption('🇩🇪', 'Deutsch'),
-              ),
-              CheckedPopupMenuItem<_OverflowAction>(
-                key: const Key('languageOptionFr'),
-                value: _OverflowAction.languageFr,
-                checked: widget.currentLocaleOverride == const Locale('fr'),
-                padding: _tightItemPadding,
-                child: _flagOption('🇫🇷', 'Français'),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem<_OverflowAction>(
-                key: const Key('proMenuButton'),
-                value: _OverflowAction.pro,
-                padding: _tightItemPadding,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _monetization.isPro
-                          ? Icons.verified
-                          : Icons.workspace_premium,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    // Flexible + ellipsis — see _flagOption's doc comment
-                    // for why a bare Text isn't safe here across all
-                    // three languages.
-                    Flexible(
-                      child: Text(l10n.proMenuTooltip,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 4),
-        ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SegmentedButton<bool>(
-                key: const Key('modeSelector'),
-                segments: [
-                  ButtonSegment(
-                      value: false, label: Text(l10n.modeSinglesOption)),
-                  ButtonSegment(
-                      value: true, label: Text(l10n.modeDoublesOption)),
-                ],
-                selected: {_isDoubles},
-                onSelectionChanged: (selection) {
-                  setState(() => _isDoubles = selection.first);
-                },
-              ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                child: !_isDoubles
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        // The same tap-to-rename preview doubles already
-                        // had — singles previously had no equivalent
-                        // step at all. See
-                        // PHASE4H_NAME_EDITING_REFINEMENT.md.
-                        child: Row(
-                          key: const Key('singlesPlayerNames'),
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            EditableNameLabel(
-                              displayName:
-                                  _names.resolve(1, l10n.player1Label),
-                              defaultLabel: l10n.player1Label,
-                              style: AppTypography.playerLabel(context),
-                              editHint: l10n.editNameHint,
-                              textKey: const Key('player1PreviewNameText'),
-                              fieldKey:
-                                  const Key('player1PreviewNameField'),
-                              onChanged: (name) =>
-                                  setState(() => _names.set(1, name)),
-                            ),
-                            EditableNameLabel(
-                              displayName:
-                                  _names.resolve(2, l10n.player2Label),
-                              defaultLabel: l10n.player2Label,
-                              style: AppTypography.playerLabel(context),
-                              editHint: l10n.editNameHint,
-                              textKey: const Key('player2PreviewNameText'),
-                              fieldKey:
-                                  const Key('player2PreviewNameField'),
-                              onChanged: (name) =>
-                                  setState(() => _names.set(2, name)),
-                            ),
-                          ],
+      // A real bug found via real-device testing (Phase 4J): tapping a
+      // non-interactive area of the screen (e.g. the "BEST OF" heading)
+      // while a name field is being edited does *not*, by itself, move
+      // Flutter's focus away from that field — nothing else claims the
+      // tap, so the `TextField`'s own focus-loss commit (see
+      // `EditableNameLabel._onFocusChange`) never fires, and the typed
+      // name is left stuck in an uncommitted edit. Tapping an actual
+      // button/control elsewhere already worked correctly (Material
+      // widgets request focus for themselves on tap), so this only
+      // affected "dead space" taps — but that's exactly what "tap away
+      // to save" means to a user. Wrapping the whole body in a tap
+      // handler that explicitly unfocuses closes that gap for every
+      // dead-space tap, without changing how any other tappable widget
+      // behaves. See PHASE4J_MENU_AUDIO_AND_NAME_SAVE.md.
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SegmentedButton<bool>(
+                  key: const Key('modeSelector'),
+                  segments: [
+                    ButtonSegment(
+                        value: false, label: Text(l10n.modeSinglesOption)),
+                    ButtonSegment(
+                        value: true, label: Text(l10n.modeDoublesOption)),
+                  ],
+                  selected: {_isDoubles},
+                  onSelectionChanged: (selection) {
+                    setState(() => _isDoubles = selection.first);
+                  },
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: !_isDoubles
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          // The same tap-to-rename preview doubles already
+                          // had — singles previously had no equivalent
+                          // step at all. See
+                          // PHASE4H_NAME_EDITING_REFINEMENT.md.
+                          child: Row(
+                            key: const Key('singlesPlayerNames'),
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              EditableNameLabel(
+                                displayName:
+                                    _names.resolve(1, l10n.player1Label),
+                                defaultLabel: l10n.player1Label,
+                                style: AppTypography.playerLabel(context),
+                                editHint: l10n.editNameHint,
+                                textKey: const Key('player1PreviewNameText'),
+                                fieldKey: const Key('player1PreviewNameField'),
+                                onChanged: (name) =>
+                                    setState(() => _names.set(1, name)),
+                              ),
+                              EditableNameLabel(
+                                displayName:
+                                    _names.resolve(2, l10n.player2Label),
+                                defaultLabel: l10n.player2Label,
+                                style: AppTypography.playerLabel(context),
+                                editHint: l10n.editNameHint,
+                                textKey: const Key('player2PreviewNameText'),
+                                fieldKey: const Key('player2PreviewNameField'),
+                                onChanged: (name) =>
+                                    setState(() => _names.set(2, name)),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: Row(
+                            key: const Key('doublesPlayerSlots'),
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _TeamSlotPreview(
+                                teamNumber: 1,
+                                defaultTeamLabel: l10n.team1Label,
+                                teamLabelKey: const Key('team1PreviewHeading'),
+                                slots: const [1, 2],
+                                defaultLabels: [
+                                  l10n.player1Label,
+                                  l10n.player2Label
+                                ],
+                                names: _names,
+                                editHint: l10n.editNameHint,
+                                onNameChanged: (slot, name) =>
+                                    setState(() => _names.set(slot, name)),
+                                onTeamNameChanged: (name) =>
+                                    setState(() => _names.setTeam(1, name)),
+                              ),
+                              _TeamSlotPreview(
+                                teamNumber: 2,
+                                defaultTeamLabel: l10n.team2Label,
+                                teamLabelKey: const Key('team2PreviewHeading'),
+                                slots: const [3, 4],
+                                defaultLabels: [
+                                  l10n.player3Label,
+                                  l10n.player4Label
+                                ],
+                                names: _names,
+                                editHint: l10n.editNameHint,
+                                onNameChanged: (slot, name) =>
+                                    setState(() => _names.set(slot, name)),
+                                onTeamNameChanged: (name) =>
+                                    setState(() => _names.setTeam(2, name)),
+                              ),
+                            ],
+                          ),
                         ),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: Row(
-                          key: const Key('doublesPlayerSlots'),
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _TeamSlotPreview(
-                              teamNumber: 1,
-                              defaultTeamLabel: l10n.team1Label,
-                              teamLabelKey: const Key('team1PreviewHeading'),
-                              slots: const [1, 2],
-                              defaultLabels: [
-                                l10n.player1Label,
-                                l10n.player2Label
-                              ],
-                              names: _names,
-                              editHint: l10n.editNameHint,
-                              onNameChanged: (slot, name) =>
-                                  setState(() => _names.set(slot, name)),
-                              onTeamNameChanged: (name) => setState(
-                                  () => _names.setTeam(1, name)),
-                            ),
-                            _TeamSlotPreview(
-                              teamNumber: 2,
-                              defaultTeamLabel: l10n.team2Label,
-                              teamLabelKey: const Key('team2PreviewHeading'),
-                              slots: const [3, 4],
-                              defaultLabels: [
-                                l10n.player3Label,
-                                l10n.player4Label
-                              ],
-                              names: _names,
-                              editHint: l10n.editNameHint,
-                              onNameChanged: (slot, name) =>
-                                  setState(() => _names.set(slot, name)),
-                              onTeamNameChanged: (name) => setState(
-                                  () => _names.setTeam(2, name)),
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 28),
-              _eyebrow(l10n.bestOfLabel),
-              SegmentedButton<int>(
-                key: const Key('bestOfSelector'),
-                segments: [3, 5, 7]
-                    .map((bestOf) => ButtonSegment(
-                          value: bestOf,
-                          // Every language shows a bare number here — the
-                          // explanatory word lives once, in the eyebrow
-                          // heading above ("Best of" / "Gewinnsätze" /
-                          // "Au meilleur de"), never inside the segment
-                          // itself. German used to embed "Gewinnsätze" in
-                          // each segment, tripling its text versus
-                          // English/French and overflowing the segment —
-                          // see PHASE4B_UI_POLISH.md.
-                          label: Text(l10n.bestOfSegmentLabel(
-                            bestOf,
-                            (bestOf ~/ 2) + 1,
-                          )),
-                        ))
-                    .toList(),
-                selected: {_bestOf},
-                onSelectionChanged: (selection) {
-                  setState(() => _bestOf = selection.first);
-                },
-              ),
-              const SizedBox(height: 36),
-              // Not height-constrained: the toss prompt wraps to two
-              // lines in German/French (it's noticeably longer than
-              // English), so a fixed-height box here would clip it. Only
-              // shown before the first toss — once a result exists, the
-              // coin's own settled face communicates that clearly enough.
-              if (_pendingResult == null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    l10n.tossPrompt,
-                    key: const Key('tossPromptText'),
-                    textAlign: TextAlign.center,
-                    style: AppTypography.playerLabel(context),
+                ),
+                const SizedBox(height: 28),
+                _eyebrow(l10n.bestOfLabel),
+                SegmentedButton<int>(
+                  key: const Key('bestOfSelector'),
+                  segments: [3, 5, 7]
+                      .map((bestOf) => ButtonSegment(
+                            value: bestOf,
+                            // Every language shows a bare number here — the
+                            // explanatory word lives once, in the eyebrow
+                            // heading above ("Best of" / "Gewinnsätze" /
+                            // "Au meilleur de"), never inside the segment
+                            // itself. German used to embed "Gewinnsätze" in
+                            // each segment, tripling its text versus
+                            // English/French and overflowing the segment —
+                            // see PHASE4B_UI_POLISH.md.
+                            label: Text(l10n.bestOfSegmentLabel(
+                              bestOf,
+                              (bestOf ~/ 2) + 1,
+                            )),
+                          ))
+                      .toList(),
+                  selected: {_bestOf},
+                  onSelectionChanged: (selection) {
+                    setState(() => _bestOf = selection.first);
+                  },
+                ),
+                const SizedBox(height: 36),
+                // Not height-constrained: the toss prompt wraps to two
+                // lines in German/French (it's noticeably longer than
+                // English), so a fixed-height box here would clip it. Only
+                // shown before the first toss — once a result exists, the
+                // coin's own settled face communicates that clearly enough.
+                if (_pendingResult == null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      l10n.tossPrompt,
+                      key: const Key('tossPromptText'),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.playerLabel(context),
+                    ),
+                  ),
+                // The coin is the toss control itself (Phase 4I) — there is
+                // no separate "Toss coin" button. It's always mounted (not
+                // rebuilt fresh per toss via a keyed remount, unlike Phase
+                // 4C) so it can sit idle and tappable before the first
+                // toss; CoinFlipIndicator notices `_tossSequence` changing
+                // and plays the flip itself. The result is read directly
+                // off the coin's face once it lands — no separate result
+                // text. See PHASE4C_TOSS_AND_TEAM_LABELS.md and
+                // PHASE4I_POLISH_ROUND2.md.
+                Center(
+                  child: CoinFlipIndicator(
+                    player1Label: _sideLabel(l10n, Player.one),
+                    player2Label: _sideLabel(l10n, Player.two),
+                    winner: _pendingResult,
+                    tossSequence: _tossSequence,
+                    onTap: _tossCoin,
+                    onComplete: _onCoinFlipComplete,
                   ),
                 ),
-              // The coin is the toss control itself (Phase 4I) — there is
-              // no separate "Toss coin" button. It's always mounted (not
-              // rebuilt fresh per toss via a keyed remount, unlike Phase
-              // 4C) so it can sit idle and tappable before the first
-              // toss; CoinFlipIndicator notices `_tossSequence` changing
-              // and plays the flip itself. The result is read directly
-              // off the coin's face once it lands — no separate result
-              // text. See PHASE4C_TOSS_AND_TEAM_LABELS.md and
-              // PHASE4I_POLISH_ROUND2.md.
-              Center(
-                child: CoinFlipIndicator(
-                  player1Label: _sideLabel(l10n, Player.one),
-                  player2Label: _sideLabel(l10n, Player.two),
-                  winner: _pendingResult,
-                  tossSequence: _tossSequence,
-                  onTap: _tossCoin,
-                  onComplete: _onCoinFlipComplete,
+                const SizedBox(height: 28),
+                ElevatedButton(
+                  key: const Key('startMatchButton'),
+                  onPressed: _firstServer == null ? null : _start,
+                  child: Text(l10n.startMatchButton),
                 ),
-              ),
-              const SizedBox(height: 28),
-              ElevatedButton(
-                key: const Key('startMatchButton'),
-                onPressed: _firstServer == null ? null : _start,
-                child: Text(l10n.startMatchButton),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
