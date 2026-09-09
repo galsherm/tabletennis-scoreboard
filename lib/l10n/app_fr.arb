@@ -53,5 +53,9 @@
   "proStatusRestoreNotFound": "Aucun achat précédent trouvé.",
   "exportMatchButton": "Exporter le résultat du match",
   "exportMatchCopied": "Résultat du match copié dans le presse-papiers",
-  "exportGameLine": "Manche {number} : {player1Points}-{player2Points}"
+  "exportGameLine": "Manche {number} : {player1Points}-{player2Points}",
+  "correctScoreHint": "Maintenir pour corriger",
+  "correctScoreDialogTitle": "Corriger le score de {player}",
+  "correctScoreCancelButton": "Annuler",
+  "correctScoreConfirmButton": "Valider"
 }

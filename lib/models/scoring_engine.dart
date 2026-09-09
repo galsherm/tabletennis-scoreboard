@@ -179,6 +179,52 @@ class TableTennisScoringEngine {
     return PointEvent(changeEndsNow: midGameChangeEnds);
   }
 
+  /// The highest value [player] could be manually corrected to right
+  /// now (see [correctScore]) without that alone already being a
+  /// game-winning score against the other player's current total.
+  ///
+  /// Below 11 there's no such ceiling from the other player's total
+  /// alone — any value 0-10 is always a legal (unfinished) game state
+  /// regardless of what the other side has. At or above 11, the
+  /// win-by-2 rule (Law 2.11) caps it: [player] can be corrected up to
+  /// (but not past) one more point than the other side, since anything
+  /// past that would already be a won game — e.g. with the other side
+  /// at 10, 11 is fine (11-10 isn't won yet) but 12 isn't (12-10 is).
+  int maxCorrectablePoints(Player player) {
+    final other = player == Player.one ? _p2 : _p1;
+    return other < 10 ? 10 : other + 1;
+  }
+
+  /// Directly sets [player]'s current-game point total to [newValue] —
+  /// a quick manual correction for an accidental or missed tap (see
+  /// PHASE4M_QUICK_SCORE_CORRECTION.md), not a way to skip playing:
+  /// this only ever changes the running point count, never anything
+  /// else (games/serve/ends are all still derived exactly as before —
+  /// see [currentServer]'s doc comment).
+  ///
+  /// Returns `false` (a no-op — the engine's state is left completely
+  /// unchanged) if the match is already over, [newValue] is negative,
+  /// or [newValue] exceeds [maxCorrectablePoints] and so would already
+  /// be a won game. Returns `true` once the correction is applied.
+  ///
+  /// A successful correction clears the undo stack rather than trying
+  /// to preserve/rewrite it against an edit that didn't go through
+  /// [addPoint] — simpler, and a manual correction is itself the
+  /// "undo" for whatever tap it's fixing.
+  bool correctScore(Player player, int newValue) {
+    if (!canScore) return false;
+    if (newValue < 0) return false;
+    if (newValue > maxCorrectablePoints(player)) return false;
+
+    if (player == Player.one) {
+      _p1 = newValue;
+    } else {
+      _p2 = newValue;
+    }
+    _undoStack.clear();
+    return true;
+  }
+
   /// Reverts the most recent [addPoint] call. Safe to call with no
   /// history — it's then a no-op.
   void undo() {

@@ -185,4 +185,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String exportGameLine(int number, int player1Points, int player2Points) {
     return 'Manche $number : $player1Points-$player2Points';
   }
+
+  @override
+  String get correctScoreHint => 'Maintenir pour corriger';
+
+  @override
+  String correctScoreDialogTitle(String player) {
+    return 'Corriger le score de $player';
+  }
+
+  @override
+  String get correctScoreCancelButton => 'Annuler';
+
+  @override
+  String get correctScoreConfirmButton => 'Valider';
 }

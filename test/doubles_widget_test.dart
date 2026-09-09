@@ -132,8 +132,7 @@ void main() {
       expect(find.text('Joueur 4'), findsOneWidget);
     });
 
-    testWidgets(
-        'starting a doubles match navigates to the 4-player scoreboard',
+    testWidgets('starting a doubles match navigates to the 4-player scoreboard',
         (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
@@ -194,8 +193,7 @@ void main() {
       );
     });
 
-    testWidgets(
-        'winning the match (best of 3) shows the match-complete dialog',
+    testWidgets('winning the match (best of 3) shows the match-complete dialog',
         (tester) async {
       final voice = VoiceAnnouncer(
           ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
@@ -215,7 +213,8 @@ void main() {
       expect(find.text('Team 1 wins the match!'), findsOneWidget);
     });
 
-    testWidgets('scoring announces the score by voice, reusing Phase 2/3\'s '
+    testWidgets(
+        'scoring announces the score by voice, reusing Phase 2/3\'s '
         'system unchanged', (tester) async {
       final tts = _RecordingTtsEngine();
       final voice =
@@ -254,7 +253,8 @@ void main() {
   });
 
   group('DoublesScoreboardScreen: localized tooltips', () {
-    testWidgets('server/receiver tooltips use the German terms Aufschlag '
+    testWidgets(
+        'server/receiver tooltips use the German terms Aufschlag '
         'and Rückschläger', (tester) async {
       final voice = VoiceAnnouncer(
           ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
@@ -345,6 +345,39 @@ void main() {
         await tester.tap(find.byKey(const Key('team1Zone')));
         await tester.pump();
       }
+    });
+  });
+
+  group('Quick score correction in doubles (Phase 4M)', () {
+    testWidgets(
+        "long-pressing a team's score digit opens the corrector, and a "
+        "valid correction updates that team's score without touching "
+        'the other team', (tester) async {
+      final voice = VoiceAnnouncer(
+          ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
+      await _pumpDoublesScoreboard(tester,
+          voice: voice, firstServingTeam: Player.one);
+
+      await tester
+          .longPress(find.byKey(const Key('team1ScoreCorrectorTrigger')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('scoreCorrectorDialog')), findsOneWidget);
+
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.byKey(const Key('scoreCorrectorIncrement')));
+        await tester.pump();
+      }
+      await tester.tap(find.byKey(const Key('scoreCorrectorConfirm')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<Text>(find.byKey(const Key('team1PointsText'))).data,
+        '4',
+      );
+      expect(
+        tester.widget<Text>(find.byKey(const Key('team2PointsText'))).data,
+        '0',
+      );
     });
   });
 }

@@ -16,6 +16,7 @@ import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
 import '../widgets/match_complete_dialog.dart';
 import '../widgets/pro_dialog.dart';
+import '../widgets/score_corrector_dialog.dart';
 
 class ScoreboardScreen extends StatefulWidget {
   final int bestOf;
@@ -175,6 +176,29 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   void _undo() => setState(() => _engine.undo());
 
+  /// Opens the long-press score corrector for [player] (Phase 4M) — a
+  /// quick fix for an accidental/missed tap, not a way to skip playing.
+  /// A no-op while the match is over, same lock-during-play gate
+  /// [_scorePoint] already uses, since [TableTennisScoringEngine.
+  /// correctScore] itself refuses once `canScore` is false anyway; the
+  /// early return here just skips opening a dialog that couldn't do
+  /// anything.
+  Future<void> _correctScore(Player player) async {
+    if (!_engine.canScore) return;
+    final current =
+        player == Player.one ? _engine.player1Points : _engine.player2Points;
+    final newValue = await showDialog<int>(
+      context: context,
+      builder: (_) => ScoreCorrectorDialog(
+        playerLabel: _playerLabel(player),
+        initialValue: current,
+        maxValue: _engine.maxCorrectablePoints(player),
+      ),
+    );
+    if (newValue == null || !mounted) return;
+    setState(() => _engine.correctScore(player, newValue));
+  }
+
   /// Resets the match itself. Custom names are *not* cleared — see the
   /// [_names] doc comment (Phase 4H changed this from Phase 4F's
   /// behavior, where "New match" used to reset names too).
@@ -333,7 +357,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               pointsKey: const Key('player1PointsText'),
               serverIconKey: const Key('player1ServerIcon'),
               nameTextKey: const Key('player1NameText'),
+              correctorTriggerKey: const Key('player1ScoreCorrectorTrigger'),
               onTap: () => _scorePoint(Player.one),
+              onLongPressScore: () => _correctScore(Player.one),
+              correctScoreHint: l10n.correctScoreHint,
             ),
           ),
           VerticalDivider(width: 1, color: context.palette.divider),
@@ -348,7 +375,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               pointsKey: const Key('player2PointsText'),
               serverIconKey: const Key('player2ServerIcon'),
               nameTextKey: const Key('player2NameText'),
+              correctorTriggerKey: const Key('player2ScoreCorrectorTrigger'),
               onTap: () => _scorePoint(Player.two),
+              onLongPressScore: () => _correctScore(Player.two),
+              correctScoreHint: l10n.correctScoreHint,
             ),
           ),
         ],
@@ -370,7 +400,22 @@ class _PlayerZone extends StatelessWidget {
   final Key pointsKey;
   final Key serverIconKey;
   final Key nameTextKey;
+  final Key correctorTriggerKey;
   final VoidCallback onTap;
+
+  /// Opens the quick score corrector (Phase 4M) — a long-press on the
+  /// score digit specifically, not the whole zone (which already means
+  /// "score a point" on a plain tap). Not gated here on whether the
+  /// match is over: the callback itself is a no-op in that case (see
+  /// `ScoreboardScreen._correctScore`), so there's nothing extra for
+  /// this purely-presentational widget to check.
+  final VoidCallback onLongPressScore;
+
+  /// Accessibility label describing the long-press affordance — not a
+  /// visible [Tooltip], since a `Tooltip`'s default mobile trigger is
+  /// itself a long-press, which would compete with [onLongPressScore]
+  /// for the same gesture.
+  final String correctScoreHint;
 
   const _PlayerZone({
     super.key,
@@ -382,7 +427,10 @@ class _PlayerZone extends StatelessWidget {
     required this.pointsKey,
     required this.serverIconKey,
     required this.nameTextKey,
+    required this.correctorTriggerKey,
     required this.onTap,
+    required this.onLongPressScore,
+    required this.correctScoreHint,
   });
 
   @override
@@ -428,7 +476,15 @@ class _PlayerZone extends StatelessWidget {
               ),
               Expanded(
                 child: Center(
-                  child: AnimatedScoreText(points: points, scoreKey: pointsKey),
+                  child: Semantics(
+                    hint: correctScoreHint,
+                    child: GestureDetector(
+                      key: correctorTriggerKey,
+                      onLongPress: onLongPressScore,
+                      child: AnimatedScoreText(
+                          points: points, scoreKey: pointsKey),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 6),

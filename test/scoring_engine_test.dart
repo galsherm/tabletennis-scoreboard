@@ -77,8 +77,7 @@ void main() {
       expect(engine.currentServer, Player.one);
     });
 
-    test('server changes every single point once both reach 10 (deuce)',
-        () {
+    test('server changes every single point once both reach 10 (deuce)', () {
       final engine =
           TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
       for (var i = 0; i < 10; i++) {
@@ -252,8 +251,7 @@ void main() {
       expect(engine.currentServer, Player.one);
     });
 
-    test('undo also restores the correct server across a game boundary',
-        () {
+    test('undo also restores the correct server across a game boundary', () {
       final engine =
           TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
       for (var i = 0; i < 11; i++) {
@@ -287,6 +285,145 @@ void main() {
       expect(engine.canUndo, isFalse);
       expect(engine.player1Points, 0);
       expect(engine.completedGames, isEmpty);
+    });
+  });
+
+  group('Manual score correction (Phase 4M)', () {
+    test('sets a valid value correctly', () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+      engine.addPoint(Player.one); // 1-0, so there's something to correct
+      final applied = engine.correctScore(Player.one, 7);
+      expect(applied, isTrue);
+      expect(engine.player1Points, 7);
+      expect(engine.player2Points, 0);
+    });
+
+    test('rejects a negative value — engine state is left unchanged', () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+      engine.addPoint(Player.one); // 1-0
+      final applied = engine.correctScore(Player.one, -1);
+      expect(applied, isFalse);
+      expect(engine.player1Points, 1, reason: 'unchanged, not clamped to 0');
+    });
+
+    test(
+        'rejects a value that would already be a won game against the '
+        "other player's current total", () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+      // Player two sits at 0; setting player one to 11 would already be
+      // an 11-0 won game, which must go through addPoint's own win
+      // detection (and the game/reset/next-server flow that comes with
+      // it), never be conjured directly by a "correction."
+      final applied = engine.correctScore(Player.one, 11);
+      expect(applied, isFalse);
+      expect(engine.player1Points, 0);
+      expect(engine.completedGames, isEmpty);
+    });
+
+    test(
+        'in deuce territory, the win-by-2 boundary is exactly where '
+        'maxCorrectablePoints says it is', () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+      for (var i = 0; i < 10; i++) {
+        engine.addPoint(Player.one);
+        engine.addPoint(Player.two);
+      }
+      // 10-10. Player one can be corrected up to 11 (11-10 isn't won
+      // yet) but not 12 (12-10 would already be won).
+      expect(engine.maxCorrectablePoints(Player.one), 11);
+      expect(engine.correctScore(Player.one, 12), isFalse);
+      expect(engine.correctScore(Player.one, 11), isTrue);
+      expect(engine.player1Points, 11);
+      expect(engine.completedGames, isEmpty, reason: '11-10 is not a won game');
+    });
+
+    test(
+        'below 11, any value up to 10 is always correctable regardless '
+        "of the other player's score", () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+      engine.addPoint(Player.two); // player two: 1
+      expect(engine.maxCorrectablePoints(Player.one), 10);
+      expect(engine.correctScore(Player.one, 10), isTrue);
+      expect(engine.player1Points, 10);
+      expect(engine.completedGames, isEmpty);
+    });
+
+    test(
+        'a no-op once the match is over — the lock-during-play gate '
+        'addPoint already uses', () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 3, firstServer: Player.one);
+      for (var i = 0; i < 11; i++) {
+        engine.addPoint(Player.one); // wins game 1
+      }
+      for (var i = 0; i < 11; i++) {
+        engine.addPoint(Player.one); // wins game 2 -> wins the match
+      }
+      expect(engine.isMatchOver, isTrue);
+      final applied = engine.correctScore(Player.one, 3);
+      expect(applied, isFalse);
+      expect(engine.player1Points, 0,
+          reason: 'reset after the match-ending game');
+    });
+
+    test(
+        'currentServer recalculates correctly from the corrected total — '
+        'it is derived, not separately tracked state', () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+      // Correct player one straight to 3 (total points = 3, an odd
+      // block boundary pre-deuce: blockIndex = 3~/2 = 1, odd -> the
+      // opponent of whoever served first is serving).
+      engine.correctScore(Player.one, 3);
+      expect(engine.currentServer, Player.two);
+
+      // Now correct into deuce territory directly and confirm the
+      // single-point-per-serve-change rule is honored immediately,
+      // with no leftover state from before the correction.
+      engine.correctScore(Player.two, 10); // 3-10 -> correct player one too
+      engine.correctScore(Player.one, 10); // 10-10, total=20, block=1
+      expect(engine.currentServer, Player.one);
+    });
+
+    test(
+        'a correction to exactly 5 in the deciding game does not retrigger '
+        'changeEndsNow a second time on the next ordinary point', () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 3, firstServer: Player.one);
+      for (var i = 0; i < 11; i++) {
+        engine.addPoint(Player.one);
+      }
+      for (var i = 0; i < 11; i++) {
+        engine.addPoint(Player.two);
+      }
+      expect(engine.isDecidingGame, isTrue);
+
+      // Jump straight to 5 via a correction rather than playing through
+      // it — the mid-game change-of-ends prompt is tied to addPoint's
+      // own before/after comparison, so a direct correction doesn't
+      // (and isn't expected to) raise it itself; what matters is that
+      // it doesn't get "confused" and mis-fire afterward either.
+      expect(engine.correctScore(Player.one, 5), isTrue);
+      final next = engine.addPoint(Player.one); // 6-0
+      expect(next.changeEndsNow, isFalse);
+    });
+
+    test(
+        'a correction clears the undo stack rather than trying to '
+        'preserve it', () {
+      final engine =
+          TableTennisScoringEngine(bestOf: 5, firstServer: Player.one);
+      engine.addPoint(Player.one);
+      engine.addPoint(Player.two);
+      expect(engine.canUndo, isTrue);
+
+      engine.correctScore(Player.one, 4);
+      expect(engine.canUndo, isFalse);
     });
   });
 

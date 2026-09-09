@@ -259,5 +259,27 @@
         "type": "int"
       }
     }
+  },
+  "correctScoreHint": "Hold to correct",
+  "@correctScoreHint": {
+    "description": "Tooltip/semantic hint on the score digit describing the long-press-to-correct affordance (Phase 4M)."
+  },
+  "correctScoreDialogTitle": "Correct {player}'s score",
+  "@correctScoreDialogTitle": {
+    "description": "Title of the lightweight inline score-correction dialog opened by long-pressing a score digit (Phase 4M).",
+    "placeholders": {
+      "player": {
+        "type": "String",
+        "example": "Player 1"
+      }
+    }
+  },
+  "correctScoreCancelButton": "Cancel",
+  "@correctScoreCancelButton": {
+    "description": "Dismisses the score-correction dialog without changing anything."
+  },
+  "correctScoreConfirmButton": "Set score",
+  "@correctScoreConfirmButton": {
+    "description": "Confirms the score-correction dialog, applying the chosen value."
   }
 }

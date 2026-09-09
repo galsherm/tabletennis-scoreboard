@@ -18,6 +18,7 @@ import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
 import '../widgets/match_complete_dialog.dart';
 import '../widgets/pro_dialog.dart';
+import '../widgets/score_corrector_dialog.dart';
 
 /// Doubles scoreboard: reuses [TableTennisScoringEngine] exactly as
 /// singles does (it only ever knows about two *sides* scoring points —
@@ -179,6 +180,26 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
   }
 
   void _undo() => setState(() => _engine.undo());
+
+  /// Opens the long-press score corrector for [team] (Phase 4M) — see
+  /// `ScoreboardScreen._correctScore`'s doc comment for the full
+  /// rationale; identical here, just keyed off a team's points instead
+  /// of a lone player's.
+  Future<void> _correctScore(Player team) async {
+    if (!_engine.canScore) return;
+    final current =
+        team == Player.one ? _engine.player1Points : _engine.player2Points;
+    final newValue = await showDialog<int>(
+      context: context,
+      builder: (_) => ScoreCorrectorDialog(
+        playerLabel: _teamLabel(team),
+        initialValue: current,
+        maxValue: _engine.maxCorrectablePoints(team),
+      ),
+    );
+    if (newValue == null || !mounted) return;
+    setState(() => _engine.correctScore(team, newValue));
+  }
 
   /// Resets the match itself. Custom names are *not* cleared — since
   /// Phase 4H, names can only be edited on the setup screen, so clearing
@@ -368,7 +389,10 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
               slot1ReceiverIconKey: const Key('team1Slot1ReceiverIcon'),
               slot0NameTextKey: const Key('player1NameText'),
               slot1NameTextKey: const Key('player2NameText'),
+              correctorTriggerKey: const Key('team1ScoreCorrectorTrigger'),
               onTap: () => _scorePoint(Player.one),
+              onLongPressScore: () => _correctScore(Player.one),
+              correctScoreHint: l10n.correctScoreHint,
             ),
           ),
           VerticalDivider(width: 1, color: context.palette.divider),
@@ -394,7 +418,10 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
               slot1ReceiverIconKey: const Key('team2Slot1ReceiverIcon'),
               slot0NameTextKey: const Key('player3NameText'),
               slot1NameTextKey: const Key('player4NameText'),
+              correctorTriggerKey: const Key('team2ScoreCorrectorTrigger'),
               onTap: () => _scorePoint(Player.two),
+              onLongPressScore: () => _correctScore(Player.two),
+              correctScoreHint: l10n.correctScoreHint,
             ),
           ),
         ],
@@ -427,7 +454,15 @@ class _DoublesTeamZone extends StatelessWidget {
   final Key slot1ReceiverIconKey;
   final Key slot0NameTextKey;
   final Key slot1NameTextKey;
+  final Key correctorTriggerKey;
   final VoidCallback onTap;
+
+  /// Opens the quick score corrector (Phase 4M) for this team — see
+  /// `_PlayerZone.onLongPressScore` (singles) for the full rationale.
+  final VoidCallback onLongPressScore;
+
+  /// See `_PlayerZone.correctScoreHint`.
+  final String correctScoreHint;
 
   const _DoublesTeamZone({
     super.key,
@@ -450,7 +485,10 @@ class _DoublesTeamZone extends StatelessWidget {
     required this.slot1ReceiverIconKey,
     required this.slot0NameTextKey,
     required this.slot1NameTextKey,
+    required this.correctorTriggerKey,
     required this.onTap,
+    required this.onLongPressScore,
+    required this.correctScoreHint,
   });
 
   @override
@@ -506,7 +544,15 @@ class _DoublesTeamZone extends StatelessWidget {
               ),
               Expanded(
                 child: Center(
-                  child: AnimatedScoreText(points: points, scoreKey: pointsKey),
+                  child: Semantics(
+                    hint: correctScoreHint,
+                    child: GestureDetector(
+                      key: correctorTriggerKey,
+                      onLongPress: onLongPressScore,
+                      child: AnimatedScoreText(
+                          points: points, scoreKey: pointsKey),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 6),

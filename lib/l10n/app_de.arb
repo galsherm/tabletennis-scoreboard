@@ -53,5 +53,9 @@
   "proStatusRestoreNotFound": "Kein vorheriger Kauf gefunden.",
   "exportMatchButton": "Spielergebnis exportieren",
   "exportMatchCopied": "Spielergebnis in die Zwischenablage kopiert",
-  "exportGameLine": "Satz {number}: {player1Points}-{player2Points}"
+  "exportGameLine": "Satz {number}: {player1Points}-{player2Points}",
+  "correctScoreHint": "Zum Korrigieren halten",
+  "correctScoreDialogTitle": "Punktestand von {player} korrigieren",
+  "correctScoreCancelButton": "Abbrechen",
+  "correctScoreConfirmButton": "Übernehmen"
 }

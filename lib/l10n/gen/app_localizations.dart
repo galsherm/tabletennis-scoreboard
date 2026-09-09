@@ -423,6 +423,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Game {number}: {player1Points}-{player2Points}'**
   String exportGameLine(int number, int player1Points, int player2Points);
+
+  /// Tooltip/semantic hint on the score digit describing the long-press-to-correct affordance (Phase 4M).
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to correct'**
+  String get correctScoreHint;
+
+  /// Title of the lightweight inline score-correction dialog opened by long-pressing a score digit (Phase 4M).
+  ///
+  /// In en, this message translates to:
+  /// **'Correct {player}\'s score'**
+  String correctScoreDialogTitle(String player);
+
+  /// Dismisses the score-correction dialog without changing anything.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get correctScoreCancelButton;
+
+  /// Confirms the score-correction dialog, applying the chosen value.
+  ///
+  /// In en, this message translates to:
+  /// **'Set score'**
+  String get correctScoreConfirmButton;
 }
 
 class _AppLocalizationsDelegate
