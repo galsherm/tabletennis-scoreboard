@@ -45,6 +45,19 @@ class SetupScreen extends StatefulWidget {
   /// the caller owns it instead.
   final MonetizationController? monetization;
 
+  /// Whether voice/sound is muted — lifted up to `main.dart` (see its
+  /// own doc comment) so it's available here, before any match (and its
+  /// [VoiceAnnouncer]) exists, to silence the coin-flip landing sound.
+  /// Defaults to `false` so existing direct constructions of this screen
+  /// (this file's own tests included) keep behaving exactly as before.
+  final bool muted;
+
+  /// Called when the mute state changes — passed straight through to
+  /// whichever scoreboard screen this one starts, so a mid-match mute
+  /// toggle bubbles back up to `main.dart`'s shared state instead of
+  /// staying local to that match's own [VoiceAnnouncer].
+  final ValueChanged<bool>? onMutedChanged;
+
   const SetupScreen({
     super.key,
     required this.currentLocaleOverride,
@@ -52,6 +65,8 @@ class SetupScreen extends StatefulWidget {
     required this.themeMode,
     required this.onThemeModeChanged,
     this.monetization,
+    this.muted = false,
+    this.onMutedChanged,
   });
 
   @override
@@ -168,12 +183,16 @@ class _SetupScreenState extends State<SetupScreen> {
             firstServingTeam: firstServer,
             initialNames: _names,
             monetization: _monetization,
+            initialMuted: widget.muted,
+            onMutedChanged: widget.onMutedChanged,
           )
         : ScoreboardScreen(
             bestOf: _bestOf,
             firstServer: firstServer,
             initialNames: _names,
             monetization: _monetization,
+            initialMuted: widget.muted,
+            onMutedChanged: widget.onMutedChanged,
           );
     // A brief ball-flyby transition plays first, then replaces itself
     // with `destination` — see MatchTransitionScreen and
@@ -575,6 +594,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     tossSequence: _tossSequence,
                     onTap: _tossCoin,
                     onComplete: _onCoinFlipComplete,
+                    muted: widget.muted,
                   ),
                 ),
                 const SizedBox(height: 28),

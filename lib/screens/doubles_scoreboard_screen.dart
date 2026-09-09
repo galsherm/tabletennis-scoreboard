@@ -64,6 +64,13 @@ class DoublesScoreboardScreen extends StatefulWidget {
   /// monetization] for the ownership rule this follows.
   final MonetizationController? monetization;
 
+  /// Seeds the real [VoiceAnnouncer]'s initial mute state; see
+  /// [ScoreboardScreen.initialMuted] for the full rationale.
+  final bool initialMuted;
+
+  /// See [ScoreboardScreen.onMutedChanged].
+  final ValueChanged<bool>? onMutedChanged;
+
   const DoublesScoreboardScreen({
     super.key,
     required this.bestOf,
@@ -71,6 +78,8 @@ class DoublesScoreboardScreen extends StatefulWidget {
     this.voiceAnnouncer,
     this.initialNames,
     this.monetization,
+    this.initialMuted = false,
+    this.onMutedChanged,
   });
 
   @override
@@ -128,6 +137,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
                 Localizations.localeOf(context).languageCode,
               ),
             ),
+            initiallyMuted: widget.initialMuted,
           );
     }
   }
@@ -135,7 +145,8 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
   void _scorePoint(Player scorer) {
     if (!_engine.canScore) return;
     final event = _engine.addPoint(scorer);
-    final server = _engine.currentServer; // who serves next, not who just served
+    final server =
+        _engine.currentServer; // who serves next, not who just served
     setState(() {});
 
     // isDoubles: true — voice must say "Team 1"/"Team 2" (or a custom
@@ -162,7 +173,10 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
     }
   }
 
-  void _toggleMute() => setState(() => _voice.toggleMuted());
+  void _toggleMute() {
+    setState(() => _voice.toggleMuted());
+    widget.onMutedChanged?.call(_voice.isMuted);
+  }
 
   void _undo() => setState(() => _engine.undo());
 
@@ -183,8 +197,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
   String _teamLabel(Player team) {
     final l10n = AppLocalizations.of(context);
     final teamNumber = team == Player.one ? 1 : 2;
-    final defaultLabel =
-        team == Player.one ? l10n.team1Label : l10n.team2Label;
+    final defaultLabel = team == Player.one ? l10n.team1Label : l10n.team2Label;
     return _names.resolveTeam(teamNumber, defaultLabel);
   }
 
@@ -559,7 +572,8 @@ class _DoublesPlayerRow extends StatelessWidget {
                         Icons.sports_tennis,
                         key: receiverIconKey,
                         size: 18,
-                        color: context.palette.mutedText.withValues(alpha: 0.55),
+                        color:
+                            context.palette.mutedText.withValues(alpha: 0.55),
                       ),
                     )
                   : null,

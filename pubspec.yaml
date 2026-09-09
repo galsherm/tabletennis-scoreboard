@@ -32,6 +32,7 @@ flutter:
   generate: true
   assets:
     - assets/audio/en/
+    - assets/audio/coin_flip.wav
 
 # Phase 4K app icon: a rounded-square-look icon split diagonally into
 # near-black (#0B0F14) and orange (#FF8A34), a white ball (#F5F7FA)

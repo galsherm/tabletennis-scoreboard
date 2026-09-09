@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../models/player.dart';
+import '../services/sound_effect_player.dart';
 import '../theme/app_theme.dart';
 
 /// The coin itself is the toss control (Phase 4I) — there is no separate
@@ -63,6 +64,20 @@ class CoinFlipIndicator extends StatefulWidget {
   /// Called once, when the flip animation finishes.
   final VoidCallback onComplete;
 
+  /// Silences the landing clink (Phase 4K follow-up) when the app's own
+  /// mute setting is on — the same setting [VoiceAnnouncer.isMuted]
+  /// controls during a match, threaded down here since the toss happens
+  /// before a match (and its [VoiceAnnouncer]) exists yet. Defaults to
+  /// `false` so every existing direct construction of this widget (this
+  /// file's own tests included) keeps behaving exactly as before.
+  final bool muted;
+
+  /// Overridable for tests, so they can assert a landing sound was
+  /// requested without touching a real platform audio channel — mirrors
+  /// [ScoreboardScreen.voiceAnnouncer]'s optional-with-safe-default
+  /// pattern. Defaults to a real [AudioPlayersSoundEffectPlayer].
+  final SoundEffectPlayer? soundEffectPlayer;
+
   const CoinFlipIndicator({
     super.key,
     required this.player1Label,
@@ -71,6 +86,8 @@ class CoinFlipIndicator extends StatefulWidget {
     required this.tossSequence,
     required this.onTap,
     required this.onComplete,
+    this.muted = false,
+    this.soundEffectPlayer,
   });
 
   /// Total flip duration, spin-plus-bounce combined — comfortably under a
@@ -92,6 +109,11 @@ class CoinFlipIndicator extends StatefulWidget {
   /// purely a visual arc, not a real physics simulation.
   static const _liftHeight = 26.0;
 
+  /// Language-independent — a coin clink isn't speech, so unlike the
+  /// bundled announcement clips it doesn't live under a per-language
+  /// subfolder.
+  static const _landingSoundAsset = 'audio/coin_flip.wav';
+
   @override
   State<CoinFlipIndicator> createState() => _CoinFlipIndicatorState();
 }
@@ -100,15 +122,23 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
     with TickerProviderStateMixin {
   late final AnimationController _flipController;
   late final AnimationController _idleController;
+  late final SoundEffectPlayer _sound;
   bool _isFlipping = false;
+
+  /// Guards the landing clink to fire at most once per flip — the
+  /// listener below is checked on every animation tick, and without this
+  /// it would re-fire on every tick once the spin phase has ended.
+  bool _landingSoundFired = false;
 
   @override
   void initState() {
     super.initState();
+    _sound = widget.soundEffectPlayer ?? AudioPlayersSoundEffectPlayer();
     _flipController = AnimationController(
       vsync: this,
       duration: CoinFlipIndicator._totalDuration,
     );
+    _flipController.addListener(_maybePlayLandingSound);
     _idleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
@@ -130,11 +160,28 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
     }
   }
 
+  /// Plays the landing clink at the exact instant the coin actually
+  /// touches down — the spin phase's own arc math (see [build]'s
+  /// `height` calculation) returns to 0 exactly when [_flipController]
+  /// crosses `_spinFraction`, before the brief decaying bounce begins.
+  /// That's the true "landing" beat, not the moment the whole animation
+  /// (spin *and* bounce) finishes — which is what [CoinFlipIndicator.
+  /// onComplete] fires on instead, since it's used to unlock "Start
+  /// match," not to time this sound.
+  void _maybePlayLandingSound() {
+    if (!_isFlipping || _landingSoundFired) return;
+    if (_flipController.value < CoinFlipIndicator._spinFraction) return;
+    _landingSoundFired = true;
+    if (widget.muted) return;
+    _sound.play(CoinFlipIndicator._landingSoundAsset).catchError((_) {});
+  }
+
   @override
   void didUpdateWidget(covariant CoinFlipIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.tossSequence != oldWidget.tossSequence) {
       _isFlipping = true;
+      _landingSoundFired = false;
       _flipController.forward(from: 0).whenComplete(() {
         if (!mounted) return;
         setState(() => _isFlipping = false);
@@ -145,6 +192,7 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
 
   @override
   void dispose() {
+    _flipController.removeListener(_maybePlayLandingSound);
     _flipController.dispose();
     _idleController.dispose();
     super.dispose();
@@ -204,8 +252,7 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
           // single hump (0 -> 1 -> 0) over the idle controller's one-shot
           // forward run, not a repeating ping-pong — see initState.
           final idleBob = isIdle ? sin(_idleController.value * pi) : 0.0;
-          final lift = height * CoinFlipIndicator._liftHeight +
-              idleBob * 4.0;
+          final lift = height * CoinFlipIndicator._liftHeight + idleBob * 4.0;
           final scale = 1.0 + 0.16 * height + idleBob * 0.02;
           final shadowScale = 1.0 - 0.45 * height - idleBob * 0.08;
           final shadowOpacity = 0.30 - 0.18 * height - idleBob * 0.05;
@@ -215,7 +262,9 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
 
           return SizedBox(
             width: CoinFlipIndicator._diameter + 32,
-            height: CoinFlipIndicator._diameter + CoinFlipIndicator._liftHeight + 24,
+            height: CoinFlipIndicator._diameter +
+                CoinFlipIndicator._liftHeight +
+                24,
             child: Stack(
               alignment: Alignment.bottomCenter,
               children: [

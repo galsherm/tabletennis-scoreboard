@@ -5,9 +5,58 @@ import 'package:tabletennis_scoreboard/main.dart';
 import 'package:tabletennis_scoreboard/models/player.dart';
 import 'package:tabletennis_scoreboard/screens/doubles_scoreboard_screen.dart';
 import 'package:tabletennis_scoreboard/services/clip_player.dart';
+import 'package:tabletennis_scoreboard/services/sound_effect_player.dart';
 import 'package:tabletennis_scoreboard/services/tts_engine.dart';
 import 'package:tabletennis_scoreboard/services/voice_announcer.dart';
 import 'package:tabletennis_scoreboard/widgets/coin_flip_indicator.dart';
+
+class _FakeSoundEffectPlayer implements SoundEffectPlayer {
+  final List<String> played = [];
+  @override
+  Future<void> play(String assetPath) async {
+    played.add(assetPath);
+  }
+}
+
+/// Mimics just enough of [SetupScreen]'s own toss-driving logic (decide a
+/// winner, bump a sequence counter, rebuild) to exercise
+/// [CoinFlipIndicator]'s real animation lifecycle directly, without
+/// going through the full app — which has no way to inject a fake
+/// [SoundEffectPlayer].
+class _TossHarness extends StatefulWidget {
+  final SoundEffectPlayer soundEffectPlayer;
+  final bool muted;
+  const _TossHarness({required this.soundEffectPlayer, this.muted = false});
+
+  @override
+  State<_TossHarness> createState() => _TossHarnessState();
+}
+
+class _TossHarnessState extends State<_TossHarness> {
+  Player? _winner;
+  int _tossSequence = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: CoinFlipIndicator(
+          player1Label: 'Player 1',
+          player2Label: 'Player 2',
+          winner: _winner,
+          tossSequence: _tossSequence,
+          onTap: () => setState(() {
+            _winner = Player.one;
+            _tossSequence++;
+          }),
+          onComplete: () {},
+          muted: widget.muted,
+          soundEffectPlayer: widget.soundEffectPlayer,
+        ),
+      ),
+    );
+  }
+}
 
 class _NoopTts implements TtsEngine {
   @override
@@ -99,8 +148,7 @@ void main() {
     testWidgets(
         'partial, unsettled pumps through the flip never throw — one '
         'coin, continuously mounted, never two faces at once (see '
-        'PHASE4B_UI_POLISH.md and PHASE4I_POLISH_ROUND2.md)',
-        (tester) async {
+        'PHASE4B_UI_POLISH.md and PHASE4I_POLISH_ROUND2.md)', (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
@@ -214,7 +262,8 @@ void main() {
       expect(_coinFaceText(tester), 'Team 2');
     });
 
-    testWidgets('with no winner yet, shows the idle icon regardless of '
+    testWidgets(
+        'with no winner yet, shows the idle icon regardless of '
         'tossSequence', (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
@@ -251,6 +300,59 @@ void main() {
 
       await tester.tap(find.byKey(const Key('tossButton')));
       expect(tapped, 1);
+    });
+  });
+
+  group('coin landing sound effect (Phase 4K follow-up)', () {
+    testWidgets(
+        'plays the landing clink at the moment the coin actually lands, '
+        'not before, and not again when the whole animation later '
+        'settles', (tester) async {
+      final sound = _FakeSoundEffectPlayer();
+      await tester.pumpWidget(_TossHarness(soundEffectPlayer: sound));
+
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pump(); // apply the tap's setState, start the flip at t=0
+
+      // Mid-spin, well before the ~700ms landing instant — no sound yet.
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(sound.played, isEmpty,
+          reason: 'the clink must not play before the coin has landed');
+
+      // Cross the spin/bounce boundary — the coin has now landed.
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(sound.played, ['audio/coin_flip.wav']);
+
+      // Let the trailing bounce and the rest of the animation finish —
+      // must not play a second time.
+      await tester.pumpAndSettle();
+      expect(sound.played, ['audio/coin_flip.wav']);
+    });
+
+    testWidgets('does not play at all when muted', (tester) async {
+      final sound = _FakeSoundEffectPlayer();
+      await tester
+          .pumpWidget(_TossHarness(soundEffectPlayer: sound, muted: true));
+
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pumpAndSettle();
+
+      expect(sound.played, isEmpty);
+    });
+
+    testWidgets(
+        'a second toss plays the clink again (the once-per-flip '
+        'guard resets between tosses)', (tester) async {
+      final sound = _FakeSoundEffectPlayer();
+      await tester.pumpWidget(_TossHarness(soundEffectPlayer: sound));
+
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pumpAndSettle();
+      expect(sound.played, ['audio/coin_flip.wav']);
+
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pumpAndSettle();
+      expect(sound.played, ['audio/coin_flip.wav', 'audio/coin_flip.wav']);
     });
   });
 
@@ -374,7 +476,8 @@ void main() {
       expect(_coinFaceText(tester), 'Team $side');
     });
 
-    testWidgets('the doubles game-complete banner still says "Team 1"/'
+    testWidgets(
+        'the doubles game-complete banner still says "Team 1"/'
         '"Team 2" (unaffected by the coin-face change)', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

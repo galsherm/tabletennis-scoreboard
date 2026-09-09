@@ -38,6 +38,19 @@ class ScoreboardScreen extends StatefulWidget {
   /// follows.
   final MonetizationController? monetization;
 
+  /// Seeds the real [VoiceAnnouncer]'s initial mute state from
+  /// `main.dart`'s shared mute setting (see its doc comment) — ignored
+  /// when [voiceAnnouncer] is injected, matching how [initialNames]/
+  /// [monetization] only affect the default, non-injected path. Defaults
+  /// to `false`, this widget's existing behavior before this setting
+  /// existed.
+  final bool initialMuted;
+
+  /// Called whenever this screen's own mute toggle changes state, so the
+  /// change bubbles back up to `main.dart`'s shared setting instead of
+  /// staying local to this match's [VoiceAnnouncer].
+  final ValueChanged<bool>? onMutedChanged;
+
   const ScoreboardScreen({
     super.key,
     required this.bestOf,
@@ -45,6 +58,8 @@ class ScoreboardScreen extends StatefulWidget {
     this.voiceAnnouncer,
     this.initialNames,
     this.monetization,
+    this.initialMuted = false,
+    this.onMutedChanged,
   });
 
   @override
@@ -113,6 +128,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                 Localizations.localeOf(context).languageCode,
               ),
             ),
+            initiallyMuted: widget.initialMuted,
           );
     }
   }
@@ -120,7 +136,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   void _scorePoint(Player scorer) {
     if (!_engine.canScore) return;
     final event = _engine.addPoint(scorer);
-    final server = _engine.currentServer; // who serves next, not who just served
+    final server =
+        _engine.currentServer; // who serves next, not who just served
     setState(() {});
 
     // nameFor: a custom name (Phase 4F), once set, is what voice should
@@ -151,7 +168,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     }
   }
 
-  void _toggleMute() => setState(() => _voice.toggleMuted());
+  void _toggleMute() {
+    setState(() => _voice.toggleMuted());
+    widget.onMutedChanged?.call(_voice.isMuted);
+  }
 
   void _undo() => setState(() => _engine.undo());
 

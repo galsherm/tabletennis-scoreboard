@@ -1,11 +1,13 @@
-# Phase 4K: Real Audio Ducking Fix, Menu Color Bug, App Icon
+# Phase 4K: Real Audio Ducking Fix, Menu Color Bug, App Icon, Coin Sound
 
 Follow-up fixes from further real-device user testing on top of Phase 4J,
-plus a new app icon. **Status:** 253/253 tests passing (252 previous + 1
-new), `flutter analyze` clean. Every fix below was reproduced and
-re-verified on the same real Android device (`RZCX60372PZ`) used in prior
-phases; the icon was additionally verified on a clean emulator's home
-screen and app drawer.
+plus a new app icon. **Status:** 256/256 tests passing (252 Phase 4J + 1
+menu-color + 3 coin-sound), `flutter analyze` clean. Every fix below was
+reproduced and re-verified on real hardware or a booted emulator — the
+audio/menu fixes on the real Android device (`RZCX60372PZ`) used in prior
+phases; the icon on a clean emulator's home screen and app drawer; the
+coin sound on a separately booted emulator (no physical device was
+connected for that round).
 
 **Update, same day:** the user reported the audio ducking fix below
 still wasn't working in real use after this doc was first written. That
@@ -14,6 +16,13 @@ race condition that a single-announcement test never exercised. See
 §1a for the full re-investigation and the actual fix, found and verified
 with fresh, literal `adb` output rather than re-asserting the original
 write-up.
+
+**Update, same day:** the coin-flip sound effect (§3) was originally
+skipped in this doc, citing test-suite risk. Told that wasn't
+acceptable, it's now actually implemented — the real blocker (an unsafe
+completion-timeout pattern) was fixed at its root with a new,
+purpose-built fire-and-forget sound interface, rather than left
+unaddressed.
 
 ---
 
@@ -279,34 +288,119 @@ regression test: this would have caught the bug the moment
 `MenuAnchor` was first adopted, since it fails without the new styling
 and passes with it.
 
-## 3. Coin flip sound effect: skipped, as explicitly permitted
+## 3. Coin flip sound effect: implemented (update — no longer skipped)
 
-The request allowed skipping this if it needed new asset licensing or
-turned out to be more effort than expected. Both applied:
+This was originally skipped in this doc's first version, on the
+reasoning that wiring a real audio call into `CoinFlipIndicator`
+unsafely risked breaking the many existing widget tests that tap the
+coin (`ClipPlayer.playClip`'s 5-second `onPlayerComplete` timeout could
+leave a pending `Timer` under `flutter test`, which Flutter's test
+framework fails on). Told this was not optional, the actual blocker —
+not the feature itself — was fixed instead of working around it.
 
-- No licensed sound asset was available to source in this offline
-  environment (no browser/network tool was loaded for this session), so
-  a truly "found" sound was never an option here.
-- A synthesized placeholder clink (built from scratch with Python's
-  standard-library `wave`/`struct`/`math` — no licensing question,
-  since nothing was downloaded) was prototyped and sounds reasonable,
-  but wiring it in safely turned out to be more than "quick": every
-  other sound in this app (`ClipPlayer`, `TtsEngine`) is an injectable
-  interface specifically so widget tests can substitute a fake instead
-  of touching a real platform audio channel — `SetupScreen`'s coin toss
-  has no such seam today, and `CoinFlipIndicator` is exercised by a
-  large number of existing widget tests (`toss_and_team_labels_test.dart`
-  and others) that tap the coin repeatedly. Calling a real
-  `AudioPlayersClipPlayer` directly from `_tossCoin()` risks those
-  tests failing on Flutter's "a Timer is still pending" check, since
-  `AudioPlayersClipPlayer.playClip` awaits completion with a 5-second
-  timeout that has no real platform implementation under `flutter
-  test`. Doing this properly means threading a new injectable
-  dependency through `SetupScreen` and updating every affected test to
-  inject a fake — real, non-trivial work for a "small nice-to-have,"
-  so it was skipped rather than rushed in a way that could quietly
-  break the suite or ship a half-wired dependency. The synthesized
-  prototype file was not committed.
+**The asset:** no licensed sound was sourceable in this offline
+environment (no browser/network tool loaded this session), so a short
+metallic clink was synthesized from scratch with Python's standard
+library only (`wave`/`struct`/`math`/`random` — no external library, no
+downloaded file, so no licensing question at all): a sharp initial
+"click" burst plus two decaying "clink" tones with a touch of noise
+mixed in for a metallic edge, totaling 0.32 seconds (under the
+requested 1-second cap). Saved as `assets/audio/coin_flip.wav` and
+declared in `pubspec.yaml`.
+
+**The real blocker, fixed properly:** `ClipPlayer` (used for
+announcement clips) deliberately awaits `onPlayerComplete` with a
+timeout because `VoiceAnnouncer` needs to know when one clip in a
+phrase ends before starting the next — that sequencing need is exactly
+what makes it unsafe to call from a widely-tested widget. A coin clink
+has no such need; it's fire-and-forget. So rather than reusing
+`ClipPlayer`, a new minimal interface was added instead —
+`lib/services/sound_effect_player.dart`'s `SoundEffectPlayer`
+(`AudioPlayersSoundEffectPlayer` backing it in production) — whose
+`play()` never awaits a completion stream, so it can never leave a
+pending timeout regardless of platform-channel behavior under test.
+This eliminates the original risk at its root rather than working
+around it with more test infrastructure.
+
+**Wiring** (`lib/widgets/coin_flip_indicator.dart`): `CoinFlipIndicator`
+gained two new optional constructor parameters —
+`muted` (default `false`) and `soundEffectPlayer` (default `null` →
+falls back to the real `AudioPlayersSoundEffectPlayer`), matching this
+codebase's existing optional-with-safe-default injection pattern (e.g.
+`ScoreboardScreen.voiceAnnouncer`). Both default such that every
+existing direct construction of this widget keeps behaving exactly as
+before.
+
+The clink fires at the coin's actual landing instant, not when the
+whole animation (spin *and* the brief decaying bounce afterward)
+finishes. The spin phase's own arc math already returns the coin's
+lift height to exactly 0 the moment `AnimationController.value` crosses
+`_spinFraction` (≈0.82, i.e. 700ms into the 850ms total) — that's the
+real "touches the table" beat; the existing `onComplete` callback fires
+later, at the very end, and is used to unlock "Start match," not to
+time this sound. A listener on `_flipController`, added once in
+`initState` and guarded by a per-flip `_landingSoundFired` flag (reset
+in `didUpdateWidget` whenever a new toss starts), fires the sound
+exactly once at that crossing.
+
+**Respecting mute (requirement 3):** the coin toss happens on
+`SetupScreen`, before any match — and its `VoiceAnnouncer`, the only
+place a "mute" concept previously existed — exists yet. There was
+genuinely no "existing mute setting" reachable from the setup screen to
+respect. Rather than bolt on a second, independent mute flag (which
+would drift out of sync with the real one and fail the spirit of
+"respect the app's *existing* setting"), mute was lifted to
+`main.dart`'s top-level app state — the same place `ThemeMode` and the
+locale override already live — and threaded down through `SetupScreen`
+(to gate the coin sound directly) and through to `ScoreboardScreen`/
+`DoublesScoreboardScreen` (to seed `VoiceAnnouncer`'s initial mute state
+and to bubble a mid-match mute toggle back up). This makes muting a
+single, consistent, session-wide setting instead of one reset fresh
+every match, without adding disk persistence (out of scope — this
+mirrors `VoiceAnnouncer`'s own existing session-only mute behavior,
+just now shared across screens instead of siloed per match).
+
+**Verified on the Android emulator** (no physical device was connected
+this session): built and installed the debug APK on a booted
+`Pixel_5_API_36` emulator, cleared logcat, tossed the coin, and
+confirmed via `adb logcat` — since playback can't literally be heard —
+that the real `audioplayers`-backed `MediaPlayer` genuinely attempted
+playback and completed cleanly, with zero errors or exceptions for the
+app's process:
+
+```
+09-09 20:26:10.337  3686  3686 V MediaPlayer: resetDrmState: ...
+09-09 20:26:10.640   725  1600 I MediaFocusControl: requestAudioFocus() from uid/pid 10218/3686
+    AA=USAGE_MEDIA/CONTENT_TYPE_MUSIC clientId=...xyz.luan.audioplayers.player.ModernFocusManager...
+    callingPack=com.example.tabletennis_scoreboard req=1 flags=0x0 sdk=36
+09-09 20:26:11.875   725  1933 I MediaFocusControl: abandonAudioFocus() from uid/pid 10218/3686
+    clientId=...xyz.luan.audioplayers.player.ModernFocusManager... callingPack=com.example.tabletennis_scoreboard
+```
+
+`audioplayers`' own focus manager requested and then (≈1.2s later,
+consistent with the clip's short length plus buffering) cleanly
+abandoned audio focus for this app's process — genuine evidence
+playback actually ran end to end, not just that the call was made.
+`grep`ing the same window of logs for `error|exception|fatal|crash`
+against this app's process returned nothing. The coin also visually
+landed and settled correctly (`Player 1`, "Start match" enabled)
+exactly in step with this log timeline.
+
+**Tests added** (`test/toss_and_team_labels_test.dart`, new group
+"coin landing sound effect (Phase 4K follow-up)"), using a
+`_FakeSoundEffectPlayer` (records calls, never touches a real platform
+channel) and a small `_TossHarness` that reproduces just enough of
+`SetupScreen`'s own toss-driving logic (decide a winner, bump a
+sequence counter, rebuild) to exercise `CoinFlipIndicator`'s real
+animation lifecycle directly:
+- plays the clink once the coin actually lands (asserted not-yet-played
+  at 300ms into the flip, played by 750ms — past the ~700ms landing
+  instant), and does not play a second time once the trailing bounce
+  and rest of the animation settle;
+- does not play at all when `muted: true`;
+- a second toss plays it again (the once-per-flip guard correctly
+  resets between tosses, rather than firing only ever once for the
+  widget's lifetime).
 
 ## 4. New app icon
 
@@ -378,6 +472,9 @@ iOS-side gap already disclosed in this app's phase docs.
   coverage for the same structural reason every other platform-channel
   code in this app doesn't — its correctness was verified on-device
   instead, per the evidence above.
-- No test coverage was added for the coin sound or the app icon, since
-  neither shipped a testable code path (the sound was skipped outright;
-  the icon is static build configuration/assets with no runtime logic).
+- `test/toss_and_team_labels_test.dart`: new group "coin landing sound
+  effect (Phase 4K follow-up)" — three tests covering the landing-timed
+  fire, the once-per-flip guard, and mute, using a fake
+  `SoundEffectPlayer` (see §3).
+- No test coverage was added for the app icon, since it's static build
+  configuration/assets with no runtime logic to exercise.

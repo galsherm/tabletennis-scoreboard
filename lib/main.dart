@@ -34,6 +34,17 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
   ThemeMode _themeMode = ThemeMode.dark;
   final _themePreference = ThemePreference();
 
+  /// Whether voice/sound is muted — lifted up here (rather than living
+  /// only inside whichever [VoiceAnnouncer] the current match owns) so
+  /// it survives navigating back to [SetupScreen] for the next match,
+  /// and so the setup screen's own coin-flip landing sound (added after
+  /// [VoiceAnnouncer] already existed) has a mute setting to check
+  /// before any match — and its [VoiceAnnouncer] — exists yet. Not
+  /// persisted to disk: this mirrors [VoiceAnnouncer]'s own existing
+  /// (session-only) mute behavior, just shared across screens instead of
+  /// reset per match.
+  bool _muted = false;
+
   /// Owns ads + purchases + the persisted Pro flag for the app's entire
   /// lifetime (Phase 5) — one instance, created here and threaded down
   /// through [SetupScreen] into whichever scoreboard screen is active, so
@@ -67,6 +78,10 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
   void _setThemeMode(ThemeMode mode) {
     setState(() => _themeMode = mode);
     _themePreference.save(mode);
+  }
+
+  void _setMuted(bool muted) {
+    setState(() => _muted = muted);
   }
 
   /// Matches the device's preferred locales against the languages this
@@ -114,6 +129,8 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
         themeMode: _themeMode,
         onThemeModeChanged: _setThemeMode,
         monetization: _monetization,
+        muted: _muted,
+        onMutedChanged: _setMuted,
       ),
     );
   }
