@@ -7,6 +7,14 @@ re-verified on the same real Android device (`RZCX60372PZ`) used in prior
 phases; the icon was additionally verified on a clean emulator's home
 screen and app drawer.
 
+**Update, same day:** the user reported the audio ducking fix below
+still wasn't working in real use after this doc was first written. That
+report was correct — re-testing found a genuine overlapping-announcement
+race condition that a single-announcement test never exercised. See
+§1a for the full re-investigation and the actual fix, found and verified
+with fresh, literal `adb` output rather than re-asserting the original
+write-up.
+
 ---
 
 ## 1. Audio ducking: Phase 4J's fix was real but incomplete — found and fixed
@@ -134,6 +142,93 @@ the plugin's built-in `focus` boolean:
 device** — no iOS hardware or simulator was available in this
 environment. `tts_engine_test.dart`'s existing doc comment already
 discloses this; nothing new to add here.
+
+### 1a. Follow-up: a real overlapping-announcement race, found by not trusting a single clean test
+
+After this section above was written and committed, the user reported
+still hearing music fully stop and restart rather than duck, on the
+same device, with actual music (not a podcast) — directly contradicting
+the evidence above. Rather than re-assert the existing write-up, this
+was re-tested from scratch, live, multiple times, with literal command
+output pasted at each step (not summarized).
+
+A single deliberate test (one tap, one announcement) reproduced the
+same clean result as before: correct focus type, Spotify's
+`PlaybackState` staying `PLAYING` throughout. That result was genuine,
+but it wasn't the whole picture — it only tested one isolated
+announcement, and `ScoreboardScreen._scorePoint` calls
+`_voice.announcePoint(...)` **without awaiting it**, with nothing
+debouncing rapid scoring taps. A real match scores points in bursts, so
+this was stress-tested with five rapid taps in quick succession (0.4s
+apart) instead of one:
+
+```
+09-09 22:44:53:695 requestAudioFocus() ... clientId=...@ae1b13e ...
+09-09 22:44:54:268 requestAudioFocus() ... clientId=...@a0d8b9f ...
+09-09 22:44:54:286 abandonAudioFocus() ... clientId=...@a0d8b9f
+09-09 22:44:54:882 requestAudioFocus() ... clientId=...@44914ec ...
+09-09 22:44:54:893 abandonAudioFocus() ... clientId=...@44914ec
+09-09 22:44:55:438 requestAudioFocus() ... clientId=...@20600b5 ...
+09-09 22:44:55:458 abandonAudioFocus() ... clientId=...@20600b5
+09-09 22:44:56:020 requestAudioFocus() ... clientId=...@1c3a34a ...
+09-09 22:44:56:061 abandonAudioFocus() ... clientId=...@1c3a34a
+```
+
+Each request→abandon pair is only **11-21ms apart** — physically far
+too fast for real speech to have played. That gap is the actual
+smoking gun: something was releasing audio focus almost immediately
+after grabbing it, while overlapping announcements were still
+supposed to be speaking.
+
+**Root cause:** `MainActivity.kt`'s native side tracked audio focus with
+a single mutable `AudioFocusRequest` field, overwritten by each new
+`requestDuckingFocus` call. With overlapping announcements (which are
+entirely reachable in real play, given `announcePoint` isn't awaited
+and taps aren't debounced), an *older* utterance's completion/cancel
+callback firing *after* a *newer* utterance had already requested focus
+would call `abandonDuckingFocus`, which abandoned whatever the *current*
+(newer) `AudioFocusRequest` reference was — releasing the newer,
+still-needed hold instead of the older, actually-stale one. Repeated
+overlaps produced exactly the rapid grab/release churn seen above,
+which is a very plausible match for "music fully stops and restarts":
+Spotify's volume would be yanked back to full and re-ducked repeatedly
+in the space of a second or two, rather than a single clean duck.
+
+**Fix** (`lib/services/tts_engine.dart`, `_AndroidAudioDucking` —
+entirely on the Dart side, no further native changes needed): switched
+from a single request/abandon pair to reference counting. `requestFocus`
+increments a hold count and only calls the native channel on the first
+concurrent hold (0→1); `releaseFocus` (renamed from `abandonFocus`,
+called from the completion/cancel/error handlers) decrements it and
+only calls the native channel once every concurrent hold has ended
+(→0). A separate `resetFocus`, used only by `FlutterTtsEngine.stop()`
+(reached via `VoiceAnnouncer.setMuted`), unconditionally zeroes the
+count and abandons focus — muting is a deliberate "stop everything now"
+action, not one more hold ending.
+
+**Re-verified with the identical rapid 5-tap stress test, same device,
+same music track, after the fix:**
+
+```
+09-09 22:50:50:588 requestAudioFocus() ... clientId=...@b6c48f3 ...
+09-09 22:50:54:439 abandonAudioFocus() ... clientId=...@b6c48f3
+```
+
+One request, one abandon, **3.85 seconds apart** — a realistic span for
+five queued announcements to actually speak through, instead of five
+separate 15ms flaps. The focus stack afterward showed Spotify's entry
+back to `loss: none`, and `dumpsys media_session` confirmed
+`state=PLAYING` throughout the entire burst. Full regression suite
+re-run after this change: 253/253 passing, `flutter analyze` clean —
+unchanged, since this fix only touches the platform-gated Android path
+(see `tts_engine_test.dart`'s doc comment for why that path has no
+direct unit-test coverage on this non-mobile host).
+
+This does not contradict the original finding above about podcasts —
+that remains Spotify's own `PAUSES_ON_DUCKABLE_LOSS` choice for spoken
+content, unrelated to this race. This fix is specifically about *music*
+ducking becoming unreliable under rapid, overlapping announcements,
+which is the scenario the user was actually hitting in real play.
 
 ## 2. Menu background color bug: fixed
 

@@ -36,17 +36,56 @@ abstract class TtsEngine {
 /// as turn-by-turn navigation — is `USAGE_ASSISTANCE_SONIFICATION`/
 /// `CONTENT_TYPE_SPEECH`, which the plugin has no API to configure. See
 /// PHASE4K_AUDIO_MENU_AND_ICON.md.
+///
+/// A real bug found via real-device stress testing (Phase 4K follow-up):
+/// [ScoreboardScreen._scorePoint] calls `announcePoint` without awaiting
+/// it, and nothing debounces rapid scoring taps, so a fast real rally can
+/// easily start a second announcement while the first is still speaking.
+/// `MainActivity.kt`'s native side previously tracked only a single
+/// mutable `AudioFocusRequest` reference, overwritten by each new
+/// request — so an *older* utterance's completion/cancel callback,
+/// firing after a *newer* one had already requested focus, would
+/// abandon the newer (still-needed) request instead of its own stale
+/// one, releasing focus back to the music mid-announcement. Verified on
+/// a real device: five rapid taps produced request→abandon pairs only
+/// 11-21ms apart (physically too fast for real speech), confirming
+/// overlap was actually happening. Fixed with reference counting here —
+/// entirely on the Dart side, no native change needed — so the native
+/// focus request is only actually made on the first overlapping hold and
+/// only actually abandoned once every overlapping hold has ended.
 class _AndroidAudioDucking {
   static const _channel =
       MethodChannel('com.example.tabletennis_scoreboard/audio_ducking');
 
+  static int _holdCount = 0;
+
+  /// Called once per announcement, before it starts speaking.
   static Future<void> requestFocus() async {
     if (!Platform.isAndroid) return;
+    _holdCount++;
+    if (_holdCount > 1) return; // already held by an overlapping utterance
     await _channel.invokeMethod('requestDuckingFocus').catchError((_) {});
   }
 
-  static Future<void> abandonFocus() async {
+  /// Called once per announcement, when that specific utterance ends
+  /// (completes, is cancelled, or errors) — never a hard reset, so it
+  /// can't cut off a still-speaking overlapping utterance's hold.
+  static Future<void> releaseFocus() async {
     if (!Platform.isAndroid) return;
+    if (_holdCount == 0) return; // defensive: never go negative
+    _holdCount--;
+    if (_holdCount > 0) return; // another overlapping utterance still holds it
+    await _channel.invokeMethod('abandonDuckingFocus').catchError((_) {});
+  }
+
+  /// Called from [FlutterTtsEngine.stop] (currently only reached via
+  /// [VoiceAnnouncer.setMuted]) — an explicit "stop everything now"
+  /// request, unlike [releaseFocus]'s one-hold-at-a-time accounting, so
+  /// it unconditionally resets the count and abandons focus regardless
+  /// of how many holds were outstanding.
+  static Future<void> resetFocus() async {
+    if (!Platform.isAndroid) return;
+    _holdCount = 0;
     await _channel.invokeMethod('abandonDuckingFocus').catchError((_) {});
   }
 }
@@ -83,9 +122,9 @@ class FlutterTtsEngine implements TtsEngine {
     // pass `focus: false`) internal focus request from. Without covering
     // all three, a cancelled or failed announcement would leave this app
     // holding focus indefinitely, keeping other apps ducked/paused.
-    _tts.setCompletionHandler(() => _AndroidAudioDucking.abandonFocus());
-    _tts.setCancelHandler(() => _AndroidAudioDucking.abandonFocus());
-    _tts.setErrorHandler((_) => _AndroidAudioDucking.abandonFocus());
+    _tts.setCompletionHandler(() => _AndroidAudioDucking.releaseFocus());
+    _tts.setCancelHandler(() => _AndroidAudioDucking.releaseFocus());
+    _tts.setErrorHandler((_) => _AndroidAudioDucking.releaseFocus());
   }
 
   @override
@@ -118,6 +157,6 @@ class FlutterTtsEngine implements TtsEngine {
   @override
   Future<void> stop() async {
     await _tts.stop();
-    await _AndroidAudioDucking.abandonFocus();
+    await _AndroidAudioDucking.resetFocus();
   }
 }
