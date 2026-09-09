@@ -6,8 +6,14 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- Shortened in Phase 4I so the home-screen icon caption doesn't get
+	     truncated — see android/app/src/main/res/values/strings.xml's
+	     app_name for the Android equivalent and why they must be kept in
+	     sync by hand. Separate from lib/l10n/*.arb's in-app appTitle,
+	     which stays "Table Tennis Scoreboard" — see
+	     PHASE4I_POLISH_ROUND2.md. -->
 	<key>CFBundleDisplayName</key>
-	<string>Tabletennis Scoreboard</string>
+	<string>TT Scoreboard</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

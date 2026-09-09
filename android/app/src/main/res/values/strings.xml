@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher label (home screen icon caption, app switcher) —
+     Phase 4I shortened this from "tabletennis_scoreboard" to "TT
+     Scoreboard" specifically so it doesn't get truncated on the home
+     screen grid. This is separate from the in-app Flutter localization
+     strings (lib/l10n/*.arb's appTitle, used for the AppBar title and
+     the OS task switcher entry) and from CFBundleDisplayName on iOS
+     (ios/Runner/Info.plist) — all three must be kept in sync by hand if
+     the app is ever renamed again. Not localized per-language: there are
+     no values-de/values-fr folders in this project, and a launcher name
+     is conventionally one fixed string across all languages (the
+     in-app UI is where per-language text lives). See
+     PHASE4I_POLISH_ROUND2.md. -->
+<resources>
+    <string name="app_name">TT Scoreboard</string>
+</resources>

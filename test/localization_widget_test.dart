@@ -45,7 +45,9 @@ void _setDeviceLocale(WidgetTester tester, Locale locale) {
 
 Future<void> _openLanguageMenuAndSelect(
     WidgetTester tester, Key optionKey) async {
-  await tester.tap(find.byKey(const Key('languageMenuButton')));
+  // The theme/language/Pro icons were consolidated into one app-bar
+  // overflow menu in Phase 4I — see PHASE4I_POLISH_ROUND2.md.
+  await tester.tap(find.byKey(const Key('overflowMenuButton')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(optionKey));
   await tester.pumpAndSettle();
@@ -70,7 +72,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Neues Spiel'), findsOneWidget);
-      expect(find.text('Münze werfen'), findsOneWidget);
+      expect(
+        find.text('Münzwurf, um zu entscheiden, wer zuerst aufschlägt'),
+        findsOneWidget,
+      );
     });
 
     testWidgets(
@@ -81,7 +86,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Nouveau match'), findsOneWidget);
-      expect(find.text('Tirer à pile ou face'), findsOneWidget);
+      expect(
+        find.text('Tirage au sort pour décider qui sert en premier'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('falls back to English for an unsupported device locale',
@@ -103,7 +111,10 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('New match'), findsOneWidget);
-      expect(find.text('Toss coin'), findsOneWidget);
+      expect(
+        find.text('Toss to decide who serves first'),
+        findsOneWidget,
+      );
 
       // The resolved locale is English, so the UI should render
       // left-to-right — not a half-RTL layout left over from the
@@ -197,7 +208,7 @@ void main() {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('languageMenuButton')));
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
       await tester.pumpAndSettle();
 
       // The menu's value type is a private enum in setup_screen.dart, so

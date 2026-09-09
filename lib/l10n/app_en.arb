@@ -8,9 +8,13 @@
   "@newMatchScreenTitle": {
     "description": "App bar title on the match-setup screen."
   },
+  "moreOptionsTooltip": "More options",
+  "@moreOptionsTooltip": {
+    "description": "Tooltip on the app-bar overflow (three-dot) icon that opens the consolidated theme/language/Pro menu — see PHASE4I_POLISH_ROUND2.md."
+  },
   "languageMenuTooltip": "Language",
   "@languageMenuTooltip": {
-    "description": "Tooltip on the language-picker icon button."
+    "description": "Section label for the language options within the app-bar overflow menu (Phase 4I) — previously this was its own icon button's tooltip, before the theme/language/Pro icons were consolidated into one menu."
   },
   "languageSystemOption": "System default",
   "@languageSystemOption": {
@@ -167,7 +171,7 @@
   },
   "themeMenuTooltip": "Theme",
   "@themeMenuTooltip": {
-    "description": "Tooltip on the light/dark/system theme picker icon button."
+    "description": "Section label for the theme options within the app-bar overflow menu (Phase 4I) — previously this was its own icon button's tooltip, before the theme/language/Pro icons were consolidated into one menu."
   },
   "themeSystemOption": "System default",
   "@themeSystemOption": {

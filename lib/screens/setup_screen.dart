@@ -17,13 +17,33 @@ import 'doubles_scoreboard_screen.dart';
 import 'match_transition_screen.dart';
 import 'scoreboard_screen.dart';
 
-/// Menu-item identity for the language picker. A plain `PopupMenuButton
-/// <Locale?>` can't represent "System default" as `value: null`: Flutter's
-/// own [PopupMenuButton] treats a `null` selection the same as the menu
-/// being dismissed with no choice made, so `onSelected` is never called
-/// for it (see `popup_menu.dart`'s `_PopupMenuButtonState._handleMenu`) —
-/// this enum sidesteps that by giving "system" its own non-null value.
-enum _LanguageMenuOption { system, en, de, fr }
+/// Every action reachable from the setup screen's single app-bar overflow
+/// menu (Phase 4I) — theme, language, and the Pro purchase dialog used to
+/// be three separate icon buttons competing for attention; consolidating
+/// them behind one "⋮" matches how most apps tuck several secondary
+/// settings behind a single overflow menu. Each item keeps exactly the
+/// functionality it had as its own icon — only the entry point moved.
+/// See PHASE4I_POLISH_ROUND2.md.
+///
+/// A flat enum (rather than nesting `ThemeMode`/`Locale?` values
+/// directly) exists for the same reason the old language-only menu
+/// needed one: `PopupMenuButton`'s `onSelected` is never called for a
+/// `null` selection (Flutter treats that identically to the menu being
+/// dismissed with no choice made — see `popup_menu.dart`'s
+/// `_PopupMenuButtonState._handleMenu`), so "System default" language
+/// needs its own non-null value (`languageSystem`) to be selectable at
+/// all; folding every other action into the same enum keeps one
+/// `PopupMenuButton<_OverflowAction>` instead of mixing types.
+enum _OverflowAction {
+  themeSystem,
+  themeLight,
+  themeDark,
+  languageSystem,
+  languageEn,
+  languageDe,
+  languageFr,
+  pro,
+}
 
 class SetupScreen extends StatefulWidget {
   /// Current manual language override, or null to follow the device
@@ -145,11 +165,26 @@ class _SetupScreenState extends State<SetupScreen> {
   /// own wording for side-level text (the toss result and the game/
   /// match-complete banners). The four individual on-court labels
   /// (Player 1–4) and their serve/receive icons are unaffected.
+  ///
+  /// Resolves through [_names] first (a custom player name in singles, a
+  /// custom team name in doubles), falling back to the generic localized
+  /// label — matching exactly how `ScoreboardScreen._playerLabel` and
+  /// `DoublesScoreboardScreen._teamLabel` resolve the same information.
+  /// This used to return the generic label unconditionally, so the coin
+  /// toss kept saying "Player 1"/"Player 2" even after renaming — the
+  /// same class of voice/banner desync bug fixed for Phase 4D, just not
+  /// caught here until now. See PHASE4I_POLISH_ROUND2.md.
   String _sideLabel(AppLocalizations l10n, Player player) {
     if (_isDoubles) {
-      return player == Player.one ? l10n.team1Label : l10n.team2Label;
+      final teamNumber = player == Player.one ? 1 : 2;
+      final defaultLabel =
+          player == Player.one ? l10n.team1Label : l10n.team2Label;
+      return _names.resolveTeam(teamNumber, defaultLabel);
     }
-    return player == Player.one ? l10n.player1Label : l10n.player2Label;
+    final slot = player == Player.one ? 1 : 2;
+    final defaultLabel =
+        player == Player.one ? l10n.player1Label : l10n.player2Label;
+    return _names.resolve(slot, defaultLabel);
   }
 
   void _start() {
@@ -178,16 +213,24 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
-  void _onLanguageOptionSelected(_LanguageMenuOption option) {
-    switch (option) {
-      case _LanguageMenuOption.system:
+  void _onOverflowSelected(_OverflowAction action) {
+    switch (action) {
+      case _OverflowAction.themeSystem:
+        widget.onThemeModeChanged(ThemeMode.system);
+      case _OverflowAction.themeLight:
+        widget.onThemeModeChanged(ThemeMode.light);
+      case _OverflowAction.themeDark:
+        widget.onThemeModeChanged(ThemeMode.dark);
+      case _OverflowAction.languageSystem:
         widget.onLocaleChanged(null);
-      case _LanguageMenuOption.en:
+      case _OverflowAction.languageEn:
         widget.onLocaleChanged(const Locale('en'));
-      case _LanguageMenuOption.de:
+      case _OverflowAction.languageDe:
         widget.onLocaleChanged(const Locale('de'));
-      case _LanguageMenuOption.fr:
+      case _OverflowAction.languageFr:
         widget.onLocaleChanged(const Locale('fr'));
+      case _OverflowAction.pro:
+        _openProDialog();
     }
   }
 
@@ -196,6 +239,47 @@ class _SetupScreenState extends State<SetupScreen> {
         child: Text(text.toUpperCase(), style: AppTypography.eyebrow(context)),
       );
 
+  /// A non-interactive heading inside the overflow menu (Phase 4I) —
+  /// `enabled: false` keeps it unselectable/untappable while still
+  /// reading clearly as a section divider between theme, language, and
+  /// the Pro action, now that all three live in one menu instead of
+  /// their own separate icons.
+  PopupMenuEntry<_OverflowAction> _sectionLabel(String text) =>
+      PopupMenuItem<_OverflowAction>(
+        enabled: false,
+        height: 32,
+        child: Text(text.toUpperCase(), style: AppTypography.eyebrow(context)),
+      );
+
+  /// A language option's row: a small flag/globe glyph beside the label
+  /// (Phase 4I) — a common, low-effort touch that makes the language list
+  /// easier to scan at a glance. Plain Unicode flag emoji, not image
+  /// assets: they render natively and consistently on both Android and
+  /// iOS (this app's actual targets) with no extra asset weight; emoji
+  /// flag rendering is only inconsistent on some desktop platforms, which
+  /// isn't a concern for a phone app.
+  Widget _flagOption(String flag, String label) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(flag, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 6),
+          // Flexible + ellipsis rather than a bare Text: the popup menu's
+          // available width is constrained by how much screen space
+          // remains between its anchor (the app-bar icon) and the screen
+          // edge, not just by its content — a bare Text overflowed and
+          // crashed layout for longer localized labels once a leading
+          // flag was added. See PHASE4I_POLISH_ROUND2.md.
+          Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+        ],
+      );
+
+  /// Tighter than `PopupMenuItem`'s 16px-a-side default — freed up just
+  /// enough room for the flag/icon rows added in Phase 4I, which
+  /// overflowed the default width for the longer language labels (e.g.
+  /// French "Français") once a leading glyph was added. See
+  /// PHASE4I_POLISH_ROUND2.md.
+  static const _tightItemPadding = EdgeInsets.symmetric(horizontal: 10);
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -203,77 +287,92 @@ class _SetupScreenState extends State<SetupScreen> {
       appBar: AppBar(
         title: Text(l10n.newMatchScreenTitle),
         actions: [
-          PopupMenuButton<ThemeMode>(
-            key: const Key('themeMenuButton'),
-            icon: const Icon(Icons.brightness_6),
-            tooltip: l10n.themeMenuTooltip,
-            onSelected: widget.onThemeModeChanged,
+          PopupMenuButton<_OverflowAction>(
+            key: const Key('overflowMenuButton'),
+            icon: const Icon(Icons.more_vert),
+            tooltip: l10n.moreOptionsTooltip,
+            onSelected: _onOverflowSelected,
             itemBuilder: (context) => [
-              CheckedPopupMenuItem<ThemeMode>(
+              _sectionLabel(l10n.themeMenuTooltip),
+              CheckedPopupMenuItem<_OverflowAction>(
                 key: const Key('themeOptionSystem'),
-                value: ThemeMode.system,
+                value: _OverflowAction.themeSystem,
                 checked: widget.themeMode == ThemeMode.system,
                 child: Text(l10n.themeSystemOption),
               ),
-              CheckedPopupMenuItem<ThemeMode>(
+              CheckedPopupMenuItem<_OverflowAction>(
                 key: const Key('themeOptionLight'),
-                value: ThemeMode.light,
+                value: _OverflowAction.themeLight,
                 checked: widget.themeMode == ThemeMode.light,
                 child: Text(l10n.themeLightOption),
               ),
-              CheckedPopupMenuItem<ThemeMode>(
+              CheckedPopupMenuItem<_OverflowAction>(
                 key: const Key('themeOptionDark'),
-                value: ThemeMode.dark,
+                value: _OverflowAction.themeDark,
                 checked: widget.themeMode == ThemeMode.dark,
                 child: Text(l10n.themeDarkOption),
               ),
-            ],
-          ),
-          PopupMenuButton<_LanguageMenuOption>(
-            key: const Key('languageMenuButton'),
-            icon: const Icon(Icons.language),
-            tooltip: l10n.languageMenuTooltip,
-            onSelected: _onLanguageOptionSelected,
-            itemBuilder: (context) => [
-              CheckedPopupMenuItem<_LanguageMenuOption>(
+              const PopupMenuDivider(),
+              _sectionLabel(l10n.languageMenuTooltip),
+              CheckedPopupMenuItem<_OverflowAction>(
                 key: const Key('languageOptionSystem'),
-                value: _LanguageMenuOption.system,
+                value: _OverflowAction.languageSystem,
                 checked: widget.currentLocaleOverride == null,
-                child: Text(l10n.languageSystemOption),
+                padding: _tightItemPadding,
+                // A globe rather than a specific flag — "system default"
+                // isn't any one country/language.
+                child: _flagOption('🌐', l10n.languageSystemOption),
               ),
-              CheckedPopupMenuItem<_LanguageMenuOption>(
+              CheckedPopupMenuItem<_OverflowAction>(
                 key: const Key('languageOptionEn'),
-                value: _LanguageMenuOption.en,
+                value: _OverflowAction.languageEn,
                 checked: widget.currentLocaleOverride == const Locale('en'),
+                padding: _tightItemPadding,
                 // Language names are always shown in their own language,
                 // not translated, so a reader can find their language
                 // regardless of what the UI currently displays.
-                child: const Text('English'),
+                child: _flagOption('🇬🇧', 'English'),
               ),
-              CheckedPopupMenuItem<_LanguageMenuOption>(
+              CheckedPopupMenuItem<_OverflowAction>(
                 key: const Key('languageOptionDe'),
-                value: _LanguageMenuOption.de,
+                value: _OverflowAction.languageDe,
                 checked: widget.currentLocaleOverride == const Locale('de'),
-                child: const Text('Deutsch'),
+                padding: _tightItemPadding,
+                child: _flagOption('🇩🇪', 'Deutsch'),
               ),
-              CheckedPopupMenuItem<_LanguageMenuOption>(
+              CheckedPopupMenuItem<_OverflowAction>(
                 key: const Key('languageOptionFr'),
-                value: _LanguageMenuOption.fr,
+                value: _OverflowAction.languageFr,
                 checked: widget.currentLocaleOverride == const Locale('fr'),
-                child: const Text('Français'),
+                padding: _tightItemPadding,
+                child: _flagOption('🇫🇷', 'Français'),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<_OverflowAction>(
+                key: const Key('proMenuButton'),
+                value: _OverflowAction.pro,
+                padding: _tightItemPadding,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _monetization.isPro
+                          ? Icons.verified
+                          : Icons.workspace_premium,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    // Flexible + ellipsis — see _flagOption's doc comment
+                    // for why a bare Text isn't safe here across all
+                    // three languages.
+                    Flexible(
+                      child: Text(l10n.proMenuTooltip,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
               ),
             ],
-          ),
-          ListenableBuilder(
-            listenable: _monetization,
-            builder: (context, _) => IconButton(
-              key: const Key('proMenuButton'),
-              icon: Icon(_monetization.isPro
-                  ? Icons.verified
-                  : Icons.workspace_premium),
-              tooltip: l10n.proMenuTooltip,
-              onPressed: _openProDialog,
-            ),
           ),
           const SizedBox(width: 4),
         ],
@@ -410,34 +509,37 @@ class _SetupScreenState extends State<SetupScreen> {
               const SizedBox(height: 36),
               // Not height-constrained: the toss prompt wraps to two
               // lines in German/French (it's noticeably longer than
-              // English), so a fixed-height box here would clip it.
-              _pendingResult == null
-                  ? Text(
-                      l10n.tossPrompt,
-                      key: const Key('tossPromptText'),
-                      textAlign: TextAlign.center,
-                      style: AppTypography.playerLabel(context),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Center(
-                        // The result is read directly off the coin's face
-                        // once it lands — no separate result text. See
-                        // PHASE4C_TOSS_AND_TEAM_LABELS.md.
-                        child: CoinFlipIndicator(
-                          key: ValueKey(_tossSequence),
-                          player1Label: _sideLabel(l10n, Player.one),
-                          player2Label: _sideLabel(l10n, Player.two),
-                          winner: _pendingResult!,
-                          onComplete: _onCoinFlipComplete,
-                        ),
-                      ),
-                    ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                key: const Key('tossButton'),
-                onPressed: _tossCoin,
-                child: Text(l10n.tossButton),
+              // English), so a fixed-height box here would clip it. Only
+              // shown before the first toss — once a result exists, the
+              // coin's own settled face communicates that clearly enough.
+              if (_pendingResult == null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    l10n.tossPrompt,
+                    key: const Key('tossPromptText'),
+                    textAlign: TextAlign.center,
+                    style: AppTypography.playerLabel(context),
+                  ),
+                ),
+              // The coin is the toss control itself (Phase 4I) — there is
+              // no separate "Toss coin" button. It's always mounted (not
+              // rebuilt fresh per toss via a keyed remount, unlike Phase
+              // 4C) so it can sit idle and tappable before the first
+              // toss; CoinFlipIndicator notices `_tossSequence` changing
+              // and plays the flip itself. The result is read directly
+              // off the coin's face once it lands — no separate result
+              // text. See PHASE4C_TOSS_AND_TEAM_LABELS.md and
+              // PHASE4I_POLISH_ROUND2.md.
+              Center(
+                child: CoinFlipIndicator(
+                  player1Label: _sideLabel(l10n, Player.one),
+                  player2Label: _sideLabel(l10n, Player.two),
+                  winner: _pendingResult,
+                  tossSequence: _tossSequence,
+                  onTap: _tossCoin,
+                  onComplete: _onCoinFlipComplete,
+                ),
               ),
               const SizedBox(height: 28),
               ElevatedButton(

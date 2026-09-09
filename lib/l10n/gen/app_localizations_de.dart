@@ -15,6 +15,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get newMatchScreenTitle => 'Neues Spiel';
 
   @override
+  String get moreOptionsTooltip => 'Weitere Optionen';
+
+  @override
   String get languageMenuTooltip => 'Sprache';
 
   @override

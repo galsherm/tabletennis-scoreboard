@@ -15,6 +15,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get newMatchScreenTitle => 'Nouveau match';
 
   @override
+  String get moreOptionsTooltip => 'Plus d\'options';
+
+  @override
   String get languageMenuTooltip => 'Langue';
 
   @override

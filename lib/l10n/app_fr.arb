@@ -2,6 +2,7 @@
   "@@locale": "fr",
   "appTitle": "Tableau de score de tennis de table",
   "newMatchScreenTitle": "Nouveau match",
+  "moreOptionsTooltip": "Plus d'options",
   "languageMenuTooltip": "Langue",
   "languageSystemOption": "Système",
   "bestOfLabel": "Au meilleur de",

@@ -112,7 +112,13 @@ abstract class AppLocalizations {
   /// **'New match'**
   String get newMatchScreenTitle;
 
-  /// Tooltip on the language-picker icon button.
+  /// Tooltip on the app-bar overflow (three-dot) icon that opens the consolidated theme/language/Pro menu — see PHASE4I_POLISH_ROUND2.md.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get moreOptionsTooltip;
+
+  /// Section label for the language options within the app-bar overflow menu (Phase 4I) — previously this was its own icon button's tooltip, before the theme/language/Pro icons were consolidated into one menu.
   ///
   /// In en, this message translates to:
   /// **'Language'**
@@ -298,7 +304,7 @@ abstract class AppLocalizations {
   /// **'Tap to rename'**
   String get editNameHint;
 
-  /// Tooltip on the light/dark/system theme picker icon button.
+  /// Section label for the theme options within the app-bar overflow menu (Phase 4I) — previously this was its own icon button's tooltip, before the theme/language/Pro icons were consolidated into one menu.
   ///
   /// In en, this message translates to:
   /// **'Theme'**

@@ -117,14 +117,18 @@ void main() {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('themeMenuButton')));
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('themeOptionSystem')), findsOneWidget);
       expect(find.byKey(const Key('themeOptionLight')), findsOneWidget);
       expect(find.byKey(const Key('themeOptionDark')), findsOneWidget);
 
-      final darkItem = tester.widget<CheckedPopupMenuItem<ThemeMode>>(
+      // The menu's value type is a private enum in setup_screen.dart (all
+      // three consolidated overflow-menu sections share it since Phase
+      // 4I), so this reads it through `dynamic` rather than naming that
+      // type here.
+      final darkItem = tester.widget<CheckedPopupMenuItem<dynamic>>(
           find.byKey(const Key('themeOptionDark')));
       expect(darkItem.checked, isTrue,
           reason: 'dark is the default with nothing persisted yet');
@@ -136,7 +140,7 @@ void main() {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('themeMenuButton')));
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('themeOptionLight')));
       await tester.pumpAndSettle();
@@ -155,7 +159,7 @@ void main() {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('themeMenuButton')));
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('themeOptionLight')));
       await tester.pumpAndSettle();

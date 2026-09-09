@@ -123,6 +123,11 @@ void main() {
         ),
       ));
 
+      // The theme/language/Pro icons were consolidated into one app-bar
+      // overflow menu in Phase 4I — see PHASE4I_POLISH_ROUND2.md.
+      expect(find.byKey(const Key('overflowMenuButton')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('proMenuButton')), findsOneWidget);
       await tester.tap(find.byKey(const Key('proMenuButton')));
       await tester.pumpAndSettle();
@@ -162,6 +167,8 @@ void main() {
         ),
       ));
 
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('proMenuButton')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('proBuyButton')));
@@ -204,6 +211,8 @@ void main() {
         ),
       ));
 
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('proMenuButton')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('proRestoreButton')));
@@ -444,6 +453,8 @@ void main() {
       ));
 
       expect(monetization.shouldOfferUpsell, isFalse);
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('proMenuButton')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('proBuyButton')), findsOneWidget);

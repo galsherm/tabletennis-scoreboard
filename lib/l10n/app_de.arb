@@ -2,6 +2,7 @@
   "@@locale": "de",
   "appTitle": "Tischtennis-Anzeigetafel",
   "newMatchScreenTitle": "Neues Spiel",
+  "moreOptionsTooltip": "Weitere Optionen",
   "languageMenuTooltip": "Sprache",
   "languageSystemOption": "Systemstandard",
   "bestOfLabel": "Gewinnsätze",

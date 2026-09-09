@@ -46,6 +46,16 @@ String _coinFaceText(WidgetTester tester) =>
 void main() {
   group('coin flip animation', () {
     testWidgets(
+        'before any toss, the coin shows its idle tap-affordance icon, '
+        'not a face', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('coinIdleIcon')), findsOneWidget);
+      expect(find.byKey(const Key('coinFaceLabel')), findsNothing);
+    });
+
+    testWidgets(
         'the coin (with the result on its face) is withheld until the '
         "flip settles — a single frame after tapping toss isn't enough",
         (tester) async {
@@ -73,11 +83,10 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('tossButton')));
-      // One frame to apply the tap's setState and mount the
-      // TweenAnimationBuilder (starting its ticker at t=0), then jump
-      // nearly a full second — comfortably past the 700ms flip duration —
-      // and one more frame to let the onEnd-triggered setState's rebuild
-      // land.
+      // One frame to apply the tap's setState and start the flip
+      // controller at t=0, then jump nearly a full second — comfortably
+      // past the 850ms spin+bounce duration — and one more frame to let
+      // the completion-triggered setState's rebuild land.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 950));
       await tester.pump();
@@ -88,9 +97,10 @@ void main() {
     });
 
     testWidgets(
-        'partial, unsettled pumps through the flip never throw — one clean '
-        'TweenAnimationBuilder mount, no AnimatedSwitcher-style double '
-        'mount (see PHASE4B_UI_POLISH.md)', (tester) async {
+        'partial, unsettled pumps through the flip never throw — one '
+        'coin, continuously mounted, never two faces at once (see '
+        'PHASE4B_UI_POLISH.md and PHASE4I_POLISH_ROUND2.md)',
+        (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
@@ -125,6 +135,25 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('coinFaceLabel')), findsOneWidget);
     });
+
+    testWidgets(
+        'tapping the coin again while a flip is still in progress is a '
+        'no-op — it never overlaps two flips', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pump(const Duration(milliseconds: 100));
+      // Tapping again mid-flip must not throw or restart the animation
+      // from scratch.
+      await tester.tap(find.byKey(const Key('tossButton')));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('coinFaceLabel')), findsOneWidget);
+    });
   });
 
   group('coin face content', () {
@@ -136,6 +165,8 @@ void main() {
             player1Label: 'Player 1',
             player2Label: 'Player 2',
             winner: Player.one,
+            tossSequence: 1,
+            onTap: () {},
             onComplete: () {},
           ),
         ),
@@ -153,6 +184,8 @@ void main() {
             player1Label: 'Player 1',
             player2Label: 'Player 2',
             winner: Player.two,
+            tossSequence: 1,
+            onTap: () {},
             onComplete: () {},
           ),
         ),
@@ -170,6 +203,8 @@ void main() {
             player1Label: 'Team 1',
             player2Label: 'Team 2',
             winner: Player.two,
+            tossSequence: 1,
+            onTap: () {},
             onComplete: () {},
           ),
         ),
@@ -177,6 +212,119 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(_coinFaceText(tester), 'Team 2');
+    });
+
+    testWidgets('with no winner yet, shows the idle icon regardless of '
+        'tossSequence', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: CoinFlipIndicator(
+            player1Label: 'Player 1',
+            player2Label: 'Player 2',
+            winner: null,
+            tossSequence: 0,
+            onTap: () {},
+            onComplete: () {},
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('coinIdleIcon')), findsOneWidget);
+      expect(find.byKey(const Key('coinFaceLabel')), findsNothing);
+    });
+
+    testWidgets('tapping the coin calls onTap', (tester) async {
+      var tapped = 0;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: CoinFlipIndicator(
+            player1Label: 'Player 1',
+            player2Label: 'Player 2',
+            winner: null,
+            tossSequence: 0,
+            onTap: () => tapped++,
+            onComplete: () {},
+          ),
+        ),
+      ));
+
+      await tester.tap(find.byKey(const Key('tossButton')));
+      expect(tapped, 1);
+    });
+  });
+
+  group('custom names on the toss result (Phase 4I)', () {
+    testWidgets(
+        'a custom singles player name appears on the coin instead of '
+        '"Player 1" — the coin used to always show the generic label even '
+        'after renaming', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle(); // singles is the default mode
+
+      await tester.tap(find.byKey(const Key('player1PreviewNameText')));
+      await tester.pump();
+      await tester.enterText(
+          find.byKey(const Key('player1PreviewNameField')), 'Alex');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(find.text('Alex'), findsOneWidget);
+
+      // The toss winner is random — retoss (bounded, so a real regression
+      // fails cleanly instead of hanging) until player one's side wins,
+      // to deterministically observe the custom name on the coin rather
+      // than depending on which side happens to come up first. "Player 2"
+      // showing its own generic label is expected and not the case under
+      // test here.
+      String label = '';
+      for (var attempt = 0; attempt < 20 && label != 'Alex'; attempt++) {
+        await tester.tap(find.byKey(const Key('tossButton')));
+        await tester.pumpAndSettle();
+        label = _coinFaceText(tester);
+        expect(label, anyOf('Alex', 'Player 2'),
+            reason: 'a renamed side must never fall back to its generic '
+                'default label');
+      }
+
+      expect(label, 'Alex',
+          reason: 'player one won at least once in 20 tosses with '
+              'overwhelming probability; if this fails, the coin is not '
+              'reading the custom name at all');
+    });
+
+    testWidgets(
+        'a custom doubles team name appears on the coin instead of "Team '
+        '1"', (tester) async {
+      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Doubles'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('team1PreviewHeading')));
+      await tester.pump();
+      await tester.enterText(
+          find.byKey(const Key('team1PreviewHeadingField')), 'Thunderbolts');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(find.text('Thunderbolts'), findsOneWidget);
+
+      String label = '';
+      for (var attempt = 0;
+          attempt < 20 && label != 'Thunderbolts';
+          attempt++) {
+        await tester.tap(find.byKey(const Key('tossButton')));
+        await tester.pumpAndSettle();
+        label = _coinFaceText(tester);
+        expect(label, anyOf('Thunderbolts', 'Team 2'),
+            reason: 'a renamed team must never fall back to its generic '
+                'default label');
+      }
+
+      expect(label, 'Thunderbolts',
+          reason: 'team one won at least once in 20 tosses with '
+              'overwhelming probability; if this fails, the coin is not '
+              'reading the custom team name at all');
     });
   });
 
