@@ -281,5 +281,13 @@
   "correctScoreConfirmButton": "Set score",
   "@correctScoreConfirmButton": {
     "description": "Confirms the score-correction dialog, applying the chosen value."
+  },
+  "privacyOptionsMenuItem": "Privacy options",
+  "@privacyOptionsMenuItem": {
+    "description": "Overflow-menu entry (Phase 6, EEA/UK only) that re-opens Google's UMP consent form so the user can review or change their GDPR ad-consent choice."
+  },
+  "privacyPolicyMenuItem": "Privacy Policy",
+  "@privacyPolicyMenuItem": {
+    "description": "Overflow-menu entry (Phase 6) that opens the app's hosted Privacy Policy in the device's browser."
   }
 }

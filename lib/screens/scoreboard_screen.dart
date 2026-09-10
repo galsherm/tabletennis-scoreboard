@@ -6,6 +6,7 @@ import '../models/player.dart';
 import '../models/player_names.dart';
 import '../models/scoring_engine.dart';
 import '../services/ads_service.dart';
+import '../services/consent_service.dart';
 import '../services/commentary_strings.dart';
 import '../services/match_export.dart';
 import '../services/monetization_controller.dart';
@@ -100,6 +101,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         ads: AdMobAdsService(),
         purchases: InAppPurchaseGateway(),
         proStatusStore: ProStatusStore(),
+        consent: UmpConsentService(),
       );
       _ownsMonetization = true;
       _monetization.initialize();

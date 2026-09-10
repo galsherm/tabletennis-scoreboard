@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'l10n/gen/app_localizations.dart';
 import 'screens/setup_screen.dart';
 import 'services/ads_service.dart';
+import 'services/consent_service.dart';
 import 'services/monetization_controller.dart';
 import 'services/pro_status_store.dart';
 import 'services/purchase_gateway.dart';
@@ -54,6 +55,7 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
     ads: AdMobAdsService(),
     purchases: InAppPurchaseGateway(),
     proStatusStore: ProStatusStore(),
+    consent: UmpConsentService(),
   );
 
   @override

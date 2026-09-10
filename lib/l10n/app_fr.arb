@@ -57,5 +57,7 @@
   "correctScoreHint": "Maintenir pour corriger",
   "correctScoreDialogTitle": "Corriger le score de {player}",
   "correctScoreCancelButton": "Annuler",
-  "correctScoreConfirmButton": "Valider"
+  "correctScoreConfirmButton": "Valider",
+  "privacyOptionsMenuItem": "Options de confidentialité",
+  "privacyPolicyMenuItem": "Politique de confidentialité"
 }

@@ -57,5 +57,7 @@
   "correctScoreHint": "Zum Korrigieren halten",
   "correctScoreDialogTitle": "Punktestand von {player} korrigieren",
   "correctScoreCancelButton": "Abbrechen",
-  "correctScoreConfirmButton": "Übernehmen"
+  "correctScoreConfirmButton": "Übernehmen",
+  "privacyOptionsMenuItem": "Datenschutzoptionen",
+  "privacyPolicyMenuItem": "Datenschutzerklärung"
 }

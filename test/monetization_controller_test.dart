@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabletennis_scoreboard/services/ads_service.dart';
+import 'package:tabletennis_scoreboard/services/consent_service.dart';
 import 'package:tabletennis_scoreboard/services/monetization_controller.dart';
 import 'package:tabletennis_scoreboard/services/pro_status_store.dart';
 import 'package:tabletennis_scoreboard/services/purchase_gateway.dart';
@@ -59,19 +60,46 @@ class _FakePurchaseGateway implements PurchaseGateway {
   }
 }
 
+/// Hand-written fake — never touches the real UMP SDK. Defaults mirror
+/// "no consent needed" (outside EEA/UK): consent gathering is an
+/// instant no-op, ads may always be requested, and no "Privacy options"
+/// entry is required — tests that care about the GDPR-gating behavior
+/// override these directly.
+class _FakeConsentService implements ConsentService {
+  int gatherConsentCalls = 0;
+  bool canRequestAdsResult = true;
+  bool privacyOptionsRequiredResult = false;
+  int showPrivacyOptionsFormCalls = 0;
+
+  @override
+  Future<void> gatherConsent() async => gatherConsentCalls++;
+
+  @override
+  Future<bool> canRequestAds() async => canRequestAdsResult;
+
+  @override
+  Future<bool> isPrivacyOptionsRequired() async => privacyOptionsRequiredResult;
+
+  @override
+  Future<void> showPrivacyOptionsForm() async => showPrivacyOptionsFormCalls++;
+}
+
 void main() {
   late _FakeAdsService ads;
   late _FakePurchaseGateway purchases;
+  late _FakeConsentService consent;
   late MonetizationController controller;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     ads = _FakeAdsService();
     purchases = _FakePurchaseGateway();
+    consent = _FakeConsentService();
     controller = MonetizationController(
       ads: ads,
       purchases: purchases,
       proStatusStore: ProStatusStore(),
+      consent: consent,
     );
   });
 
@@ -99,12 +127,55 @@ void main() {
         ads: ads,
         purchases: purchases,
         proStatusStore: ProStatusStore(),
+        consent: consent,
       );
       await proController.initialize();
       expect(proController.isPro, isTrue);
       expect(ads.initializeCalls, 1);
       expect(ads.loadInterstitialCalls, 0);
       proController.dispose();
+    });
+  });
+
+  group('MonetizationController — GDPR/UMP consent gating (Phase 6)', () {
+    test('gathers consent before ever loading an ad', () async {
+      await controller.initialize();
+      expect(consent.gatherConsentCalls, 1);
+    });
+
+    test('does not request an ad when UMP says ads may not be requested '
+        'yet (e.g. an EEA/UK user whose consent decision is still '
+        'outstanding)', () async {
+      consent.canRequestAdsResult = false;
+      await controller.initialize();
+      expect(ads.loadInterstitialCalls, 0);
+    });
+
+    test('requests the preload ad once consent allows it, for a non-Pro '
+        'user', () async {
+      consent.canRequestAdsResult = true;
+      await controller.initialize();
+      expect(ads.loadInterstitialCalls, 1);
+    });
+
+    test('privacyOptionsRequired reflects UMP\'s own determination after '
+        'initialize', () async {
+      consent.privacyOptionsRequiredResult = true;
+      await controller.initialize();
+      expect(controller.privacyOptionsRequired, isTrue);
+    });
+
+    test('privacyOptionsRequired is false when UMP says no entry point is '
+        'needed (outside the EEA/UK)', () async {
+      consent.privacyOptionsRequiredResult = false;
+      await controller.initialize();
+      expect(controller.privacyOptionsRequired, isFalse);
+    });
+
+    test('openPrivacyOptionsForm delegates to the consent service', () async {
+      await controller.initialize();
+      await controller.openPrivacyOptionsForm();
+      expect(consent.showPrivacyOptionsFormCalls, 1);
     });
   });
 

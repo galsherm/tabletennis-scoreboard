@@ -198,4 +198,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get correctScoreConfirmButton => 'Übernehmen';
+
+  @override
+  String get privacyOptionsMenuItem => 'Datenschutzoptionen';
+
+  @override
+  String get privacyPolicyMenuItem => 'Datenschutzerklärung';
 }

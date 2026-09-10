@@ -1,4 +1,4 @@
-package com.example.tabletennis_scoreboard
+package com.kozmokramer.tabletennisscoreboard
 
 import android.content.Context
 import android.media.AudioAttributes

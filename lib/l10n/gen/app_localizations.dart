@@ -447,6 +447,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Set score'**
   String get correctScoreConfirmButton;
+
+  /// Overflow-menu entry (Phase 6, EEA/UK only) that re-opens Google's UMP consent form so the user can review or change their GDPR ad-consent choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy options'**
+  String get privacyOptionsMenuItem;
+
+  /// Overflow-menu entry (Phase 6) that opens the app's hosted Privacy Policy in the device's browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicyMenuItem;
 }
 
 class _AppLocalizationsDelegate

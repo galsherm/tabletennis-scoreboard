@@ -198,4 +198,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get correctScoreConfirmButton => 'Set score';
+
+  @override
+  String get privacyOptionsMenuItem => 'Privacy options';
+
+  @override
+  String get privacyPolicyMenuItem => 'Privacy Policy';
 }

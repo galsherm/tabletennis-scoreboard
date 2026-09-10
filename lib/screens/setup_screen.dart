@@ -1,13 +1,16 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../models/player.dart';
 import '../models/player_names.dart';
 import '../services/ads_service.dart';
+import '../services/consent_service.dart';
 import '../services/monetization_controller.dart';
 import '../services/pro_status_store.dart';
+import '../services/privacy_links.dart';
 import '../services/purchase_gateway.dart';
 import '../theme/app_theme.dart';
 import '../widgets/coin_flip_indicator.dart';
@@ -113,6 +116,7 @@ class _SetupScreenState extends State<SetupScreen> {
         ads: AdMobAdsService(),
         purchases: InAppPurchaseGateway(),
         proStatusStore: ProStatusStore(),
+        consent: UmpConsentService(),
       );
       _ownsMonetization = true;
       _monetization.initialize();
@@ -130,6 +134,27 @@ class _SetupScreenState extends State<SetupScreen> {
       context: context,
       builder: (_) => ProDialog(monetization: _monetization),
     );
+  }
+
+  /// Re-opens the UMP consent form so an EEA/UK user can review or
+  /// change their earlier ad-consent choice — best-effort like the rest
+  /// of [MonetizationController]; a failure here (e.g. no network) is
+  /// only logged, never surfaced as a crash. See PHASE6_PRELAUNCH_PREP.md.
+  void _openPrivacyOptionsForm() {
+    _monetization.openPrivacyOptionsForm();
+  }
+
+  /// Opens the hosted Privacy Policy in the device's browser. Swallows
+  /// any failure (e.g. no browser available) rather than crashing —
+  /// same best-effort stance as every other optional, non-core action in
+  /// this app.
+  Future<void> _openPrivacyPolicy() async {
+    try {
+      await launchUrl(Uri.parse(privacyPolicyUrl),
+          mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('SetupScreen: failed to open privacy policy URL: $e');
+    }
   }
 
   void _tossCoin() {
@@ -404,6 +429,25 @@ class _SetupScreenState extends State<SetupScreen> {
           ),
           onPressed: _openProDialog,
           child: Text(l10n.proMenuTooltip),
+        ),
+        // GDPR/UK-only (Phase 6): hidden entirely outside the EEA/UK,
+        // where UMP determined no consent decision — and therefore
+        // nothing to review or change — ever existed. See
+        // PHASE6_PRELAUNCH_PREP.md.
+        if (_monetization.privacyOptionsRequired)
+          MenuItemButton(
+            key: const Key('privacyOptionsMenuButton'),
+            style: itemStyle,
+            leadingIcon: const Icon(Icons.privacy_tip_outlined, size: 20),
+            onPressed: _openPrivacyOptionsForm,
+            child: Text(l10n.privacyOptionsMenuItem),
+          ),
+        MenuItemButton(
+          key: const Key('privacyPolicyMenuButton'),
+          style: itemStyle,
+          leadingIcon: const Icon(Icons.description_outlined, size: 20),
+          onPressed: _openPrivacyPolicy,
+          child: Text(l10n.privacyPolicyMenuItem),
         ),
       ],
     );

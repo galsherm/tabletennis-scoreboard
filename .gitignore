@@ -44,5 +44,12 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Release signing secrets (Phase 6) — generated locally per README.md's
+# "Release signing" section, never committed. Every filename form the
+# keytool instructions there might produce is covered here.
+/android/key.properties
+*.jks
+*.keystore
+
 # Widget Preview related
 .widget_preview/

@@ -10,6 +10,7 @@ import 'package:tabletennis_scoreboard/screens/scoreboard_screen.dart';
 import 'package:tabletennis_scoreboard/screens/setup_screen.dart';
 import 'package:tabletennis_scoreboard/services/ads_service.dart';
 import 'package:tabletennis_scoreboard/services/clip_player.dart';
+import 'package:tabletennis_scoreboard/services/consent_service.dart';
 import 'package:tabletennis_scoreboard/services/monetization_controller.dart';
 import 'package:tabletennis_scoreboard/services/pro_status_store.dart';
 import 'package:tabletennis_scoreboard/services/purchase_gateway.dart';
@@ -61,6 +62,29 @@ class _FakePurchaseGateway implements PurchaseGateway {
   void dispose() => _controller.close();
 }
 
+/// Never touches the real UMP SDK — defaults mirror "no consent needed"
+/// (outside EEA/UK), matching what most widget tests here don't care
+/// about; see test/monetization_controller_test.dart for the dedicated
+/// GDPR-gating coverage.
+class _FakeConsentService implements ConsentService {
+  /// Settable so tests can simulate an EEA/UK user (true) vs. everyone
+  /// else (false, the default).
+  bool privacyOptionsRequired = false;
+  int showPrivacyOptionsFormCalls = 0;
+
+  @override
+  Future<void> gatherConsent() async {}
+
+  @override
+  Future<bool> canRequestAds() async => true;
+
+  @override
+  Future<bool> isPrivacyOptionsRequired() async => privacyOptionsRequired;
+
+  @override
+  Future<void> showPrivacyOptionsForm() async => showPrivacyOptionsFormCalls++;
+}
+
 class _RecordingTtsEngine implements TtsEngine {
   @override
   Future<bool> isLanguageAvailable(String language) async => true;
@@ -108,6 +132,7 @@ void main() {
         ads: _FakeAdsService(),
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
       );
       await monetization.initialize();
 
@@ -152,6 +177,7 @@ void main() {
         ads: _FakeAdsService(),
         purchases: purchases,
         proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
       );
       await monetization.initialize();
 
@@ -196,6 +222,7 @@ void main() {
         ads: _FakeAdsService(),
         purchases: purchases,
         proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
       );
       await monetization.initialize();
 
@@ -238,6 +265,7 @@ void main() {
         ads: fakeAds,
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
       );
       await monetization.initialize();
 
@@ -271,6 +299,7 @@ void main() {
         ads: fakeAds,
         purchases: purchases,
         proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
       );
       await monetization.initialize();
       purchases.emit(const PurchaseUpdate(
@@ -350,6 +379,7 @@ void main() {
         ads: _FakeAdsService(),
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
       );
       await monetization.initialize();
 
@@ -393,6 +423,7 @@ void main() {
         ads: _FakeAdsService(),
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
       );
       await monetization.initialize();
 
@@ -437,6 +468,7 @@ void main() {
         ads: _FakeAdsService(),
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
       );
       await monetization.initialize();
 
@@ -458,6 +490,83 @@ void main() {
       await tester.tap(find.byKey(const Key('proMenuButton')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('proBuyButton')), findsOneWidget);
+    });
+  });
+
+  group('GDPR "Privacy options" / "Privacy Policy" menu entries (Phase 6)',
+      () {
+    testWidgets(
+        '"Privacy options" is hidden when UMP says no consent decision '
+        'exists for this user (outside the EEA/UK)', (tester) async {
+      final consent = _FakeConsentService()..privacyOptionsRequired = false;
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: _FakePurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+        consent: consent,
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SetupScreen(
+          currentLocaleOverride: null,
+          onLocaleChanged: (_) {},
+          themeMode: ThemeMode.dark,
+          onThemeModeChanged: (_) {},
+          monetization: monetization,
+        ),
+      ));
+
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('privacyOptionsMenuButton')), findsNothing);
+      // The Privacy Policy link is unconditional — shown regardless of
+      // region, since it's just informational.
+      expect(find.byKey(const Key('privacyPolicyMenuButton')), findsOneWidget);
+
+      // Tapping it must never crash, even though `flutter test` has no
+      // real url_launcher platform implementation to actually open a
+      // browser with — the failure is caught and only logged, the same
+      // best-effort stance as every other optional action in this app.
+      await tester.tap(find.byKey(const Key('privacyPolicyMenuButton')));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+        '"Privacy options" is shown and re-opens the UMP consent form when '
+        'UMP says this user (EEA/UK) has a consent decision on file',
+        (tester) async {
+      final consent = _FakeConsentService()..privacyOptionsRequired = true;
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: _FakePurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+        consent: consent,
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SetupScreen(
+          currentLocaleOverride: null,
+          onLocaleChanged: (_) {},
+          themeMode: ThemeMode.dark,
+          onThemeModeChanged: (_) {},
+          monetization: monetization,
+        ),
+      ));
+
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+      expect(
+          find.byKey(const Key('privacyOptionsMenuButton')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('privacyOptionsMenuButton')));
+      await tester.pumpAndSettle();
+      expect(consent.showPrivacyOptionsFormCalls, 1);
     });
   });
 }

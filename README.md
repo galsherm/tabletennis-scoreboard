@@ -154,3 +154,68 @@ development but must never ship to a real store listing.
   without Play Services) — every real call is wrapped and degrades to "no
   ad" / "not Pro" silently, the same pattern already used for
   `VoiceAnnouncer` and `ThemePreference`.
+
+## Phase 6 — Play Console pre-launch prep
+
+See `PHASE6_PRELAUNCH_PREP.md` for the full write-up (GDPR/UMP consent
+gating, the application ID change, and what's still a draft for you to
+review: the hosted Privacy Policy text and the ASO store-listing copy).
+This section is just the two things that need **your** action with a
+real secret or account, not just code.
+
+### Release signing (required before any Play Console upload)
+
+Play Console rejects a debug-signed build outright — every release
+upload needs a real keystore. Generate one **once**, on your own
+machine, and keep it (and its passwords) somewhere safe *outside* this
+repo: Google cannot recover a lost signing key, and losing it means you
+can never publish an update to the same app listing again.
+
+1. **Generate the keystore** (needs a JDK — `keytool` ships with it;
+   the same JDK 17 Flutter/Android already require works fine):
+
+   ```bash
+   keytool -genkey -v -keystore /path/to/somewhere/safe/tabletennis-release.jks \
+     -keyalg RSA -keysize 2048 -validity 10000 -alias tabletennis
+   ```
+
+   `keytool` will prompt for a keystore password, your name/organization
+   details (shown on the certificate, not in the app), and a key
+   password (entering the same value as the keystore password is fine).
+   Store the resulting `.jks` file and both passwords somewhere durable
+   and private — a password manager or encrypted backup, **never this
+   git repo** (see `.gitignore`, which already excludes `*.jks`,
+   `*.keystore`, and `android/key.properties`).
+
+2. **Create `android/key.properties`** (this exact path/filename — it's
+   already git-ignored) with:
+
+   ```properties
+   storePassword=<the keystore password you chose>
+   keyPassword=<the key password you chose>
+   keyAlias=tabletennis
+   storeFile=/path/to/somewhere/safe/tabletennis-release.jks
+   ```
+
+   Use an absolute path for `storeFile` so the build finds it regardless
+   of where you run `flutter build` from.
+
+3. **That's it.** `android/app/build.gradle.kts` already reads this file
+   and signs release builds with it automatically whenever it's present
+   — falling back to debug signing (today's behavior) whenever it's
+   missing, so this repo keeps building for anyone who hasn't set this
+   up yet. Build the release bundle for Play Console with:
+
+   ```bash
+   flutter build appbundle
+   ```
+
+### Privacy Policy hosting
+
+`lib/services/privacy_links.dart` currently points the in-app "Privacy
+Policy" menu item at a placeholder URL. Once you've hosted the drafted
+policy (`privacy_policy/`, see `PHASE6_PRELAUNCH_PREP.md`) — e.g. via a
+free GitHub Pages site — update that one constant with the real URL,
+and paste the same URL into Play Console's Store Listing → Privacy
+Policy field (Google requires it there too, separately from the in-app
+link).

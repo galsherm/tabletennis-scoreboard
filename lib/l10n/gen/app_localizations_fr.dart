@@ -199,4 +199,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get correctScoreConfirmButton => 'Valider';
+
+  @override
+  String get privacyOptionsMenuItem => 'Options de confidentialité';
+
+  @override
+  String get privacyPolicyMenuItem => 'Politique de confidentialité';
 }

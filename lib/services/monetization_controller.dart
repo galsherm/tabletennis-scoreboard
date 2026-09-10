@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'ads_service.dart';
+import 'consent_service.dart';
 import 'pro_status_store.dart';
 import 'purchase_gateway.dart';
 
@@ -33,15 +34,25 @@ class MonetizationController extends ChangeNotifier {
   final AdsService ads;
   final PurchaseGateway purchases;
   final ProStatusStore proStatusStore;
+  final ConsentService consent;
 
   MonetizationController({
     required this.ads,
     required this.purchases,
     required this.proStatusStore,
+    required this.consent,
   });
 
   bool _isPro = false;
   bool get isPro => _isPro;
+
+  /// Whether UMP requires a "Privacy options" entry point for this user
+  /// (EEA/UK) — resolved once [initialize] has gathered consent; false
+  /// (hidden) until then and on any failure to determine it. Drives
+  /// whether `SetupScreen`'s overflow menu shows its "Privacy options"
+  /// item at all. See PHASE6_PRELAUNCH_PREP.md.
+  bool _privacyOptionsRequired = false;
+  bool get privacyOptionsRequired => _privacyOptionsRequired;
 
   StreamSubscription<PurchaseUpdate>? _subscription;
   final _feedbackController = StreamController<PurchaseFeedback>.broadcast();
@@ -56,11 +67,24 @@ class MonetizationController extends ChangeNotifier {
 
     _subscription = purchases.updates.listen(_onPurchaseUpdate);
 
+    // GDPR/UK consent (Phase 6) must be gathered — and, outside the
+    // EEA/UK, confirmed not required — before any ad request. This runs
+    // regardless of Pro status so the "Privacy options" menu entry stays
+    // available even if the user later restores/loses Pro.
+    await consent.gatherConsent();
+    _privacyOptionsRequired = await consent.isPrivacyOptionsRequired();
+    notifyListeners();
+
     await ads.initialize();
-    if (!_isPro) {
+    if (!_isPro && await consent.canRequestAds()) {
       await ads.loadInterstitial();
     }
   }
+
+  /// Re-opens the UMP consent form so the user can review or change
+  /// their choice — wired to "Privacy options" in `SetupScreen`'s
+  /// overflow menu.
+  Future<void> openPrivacyOptionsForm() => consent.showPrivacyOptionsForm();
 
   Future<void> _onPurchaseUpdate(PurchaseUpdate update) async {
     switch (update.outcome) {
