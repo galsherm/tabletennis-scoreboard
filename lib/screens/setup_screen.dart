@@ -150,8 +150,8 @@ class _SetupScreenState extends State<SetupScreen> {
   /// this app.
   Future<void> _openPrivacyPolicy() async {
     try {
-      await launchUrl(Uri.parse(privacyPolicyUrl),
-          mode: LaunchMode.externalApplication);
+      final url = privacyPolicyUrlFor(Localizations.localeOf(context));
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
       debugPrint('SetupScreen: failed to open privacy policy URL: $e');
     }
