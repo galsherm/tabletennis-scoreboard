@@ -181,3 +181,42 @@ before this phase + 9 new: 6 controller-level, 3 widget-level).
    testing) still applies at whatever point monetization is actually
    turned back on — none of that changed here, it was simply never
    exercised while the flag was off.
+4. Revert the `STORE_LISTING.md` wording described in §7 below back to
+   describing ads + the one-time purchase, since the listing copy is not
+   code and does not follow the flag automatically.
+
+## 7. Follow-up: store listing copy updated to match
+
+`STORE_LISTING.md`'s full description (English, German, and French) was
+drafted back in Phase 6, before this flag existed, and made two claims
+that stopped being true once monetization was switched off:
+
+- It advertised "unlocks exporting your match results as text" as the
+  paid upgrade's benefit — the same inaccurate claim already stripped
+  out of the in-app Pro dialog (see PHASE5_MONETIZATION.md §13.1) for
+  not describing a real, separate feature worth paying for. Removed
+  from the store listing for the same reason.
+- Its "FREE, WITH AN OPTIONAL ONE-TIME UPGRADE" section (and the
+  German/French equivalents) described an occasional ad and a paid
+  ad-removal purchase — neither of which exists in this build now that
+  `monetizationEnabled` is `false`. Replaced with a brief "100% FREE —
+  no ads, no in-app purchases" statement in each language, worded (e.g.
+  "available from the start" / "von Anfang an" / "dès le départ") to
+  describe the app's current state without committing in writing to
+  the free/no-ads state being permanent — since, per this whole
+  document, it isn't meant to be.
+
+Nothing else in `STORE_LISTING.md` changed: titles, short descriptions,
+keyword lists, and the rest of the feature bullet points were already
+accurate and untouched. Title/short-description character counts were
+recounted and remain within Play Console's limits (unaffected, since
+only the full description changed): EN 23/30 title, 69/80 short
+description; DE 24/30, 70/80; FR 24/30, 69/80. Full descriptions remain
+well under the 4000-character limit (1425 / 1602 / 1762 characters).
+
+**This is exactly the kind of drift this flag design doesn't catch
+automatically** — `STORE_LISTING.md` is copy for a human to paste into
+Play Console, not code the `monetizationEnabled` flag can gate, so
+re-enabling monetization later (§6) must include manually reverting
+this listing copy back to describing ads + the one-time purchase; it
+won't happen on its own the way the in-app behavior does.
