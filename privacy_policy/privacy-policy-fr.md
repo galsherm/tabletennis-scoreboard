@@ -6,7 +6,7 @@ publication. Voir privacy-policy-en.md pour l'hébergement/les liens.
 
 # Politique de confidentialité — Tableau de score Tennis de Table
 
-**Dernière mise à jour :** [DATE]
+**Dernière mise à jour :** 11 septembre 2026
 
 Cette politique de confidentialité explique quelles informations
 l'application « Tableau de score Tennis de Table » (« l'Application »)
@@ -104,4 +104,4 @@ date de « Dernière mise à jour » actualisée.
 ## Contact
 
 Pour toute question concernant cette politique de confidentialité,
-écrivez à : [E-MAIL DE CONTACT]
+écrivez à : tt.scoreboard.app@gmail.com

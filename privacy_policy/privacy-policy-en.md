@@ -12,7 +12,7 @@ Replace every [PLACEHOLDER] below before publishing.
 
 # Privacy Policy — Table Tennis Scoreboard
 
-**Last updated:** [DATE]
+**Last updated:** September 11, 2026
 
 This Privacy Policy explains what information the Table Tennis
 Scoreboard app ("the App") collects, why, and how it is handled.
@@ -93,4 +93,4 @@ posted at this same URL with an updated "Last updated" date.
 
 ## Contact
 
-Questions about this Privacy Policy can be sent to: [CONTACT EMAIL]
+Questions about this Privacy Policy can be sent to: tt.scoreboard.app@gmail.com

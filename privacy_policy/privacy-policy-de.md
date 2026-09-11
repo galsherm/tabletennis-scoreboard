@@ -6,7 +6,7 @@ privacy-policy-en.md für Hosting-/Verlinkungshinweise.
 
 # Datenschutzerklärung — Tischtennis-Anzeigetafel
 
-**Zuletzt aktualisiert:** [DATUM]
+**Zuletzt aktualisiert:** 11. September 2026
 
 Diese Datenschutzerklärung erläutert, welche Informationen die App
 „Tischtennis-Anzeigetafel" (nachfolgend „die App") erhebt, zu welchem
@@ -97,4 +97,4 @@ aktualisiert" veröffentlicht.
 ## Kontakt
 
 Fragen zu dieser Datenschutzerklärung senden Sie bitte an:
-[KONTAKT-E-MAIL]
+tt.scoreboard.app@gmail.com
