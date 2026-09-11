@@ -140,17 +140,20 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get proDialogDescriptionFree =>
-      'Achat unique : supprime les publicités et débloque l\'exportation des résultats de match.';
+      'Achat unique : supprime les publicités.';
 
   @override
   String get proDialogAlreadyProTitle => 'Vous êtes Pro !';
 
   @override
   String get proDialogAlreadyProBody =>
-      'Les publicités sont supprimées et l\'exportation des matchs est débloquée. Merci pour votre soutien !';
+      'Les publicités sont supprimées. Merci pour votre soutien !';
 
   @override
   String get proBuyButton => 'Supprimer les publicités';
+
+  @override
+  String get proPriceLoading => 'Chargement du prix…';
 
   @override
   String get proRestoreButton => 'Restaurer les achats';

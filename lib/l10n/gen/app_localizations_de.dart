@@ -139,18 +139,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String get proDialogTitle => 'Werbung entfernen / Pro';
 
   @override
-  String get proDialogDescriptionFree =>
-      'Einmaliger Kauf: entfernt Werbung und schaltet den Export der Spielergebnisse frei.';
+  String get proDialogDescriptionFree => 'Einmaliger Kauf: entfernt Werbung.';
 
   @override
   String get proDialogAlreadyProTitle => 'Du bist Pro!';
 
   @override
   String get proDialogAlreadyProBody =>
-      'Werbung ist entfernt und der Spielexport ist freigeschaltet. Danke für deine Unterstützung!';
+      'Werbung ist entfernt. Danke für deine Unterstützung!';
 
   @override
   String get proBuyButton => 'Werbung entfernen';
+
+  @override
+  String get proPriceLoading => 'Preis wird geladen …';
 
   @override
   String get proRestoreButton => 'Käufe wiederherstellen';

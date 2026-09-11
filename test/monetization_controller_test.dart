@@ -39,6 +39,17 @@ class _FakePurchaseGateway implements PurchaseGateway {
   int restorePurchasesCalls = 0;
   int disposeCalls = 0;
 
+  /// Settable so tests can drive [MonetizationController.proPrice] and
+  /// [MonetizationController.proPriceLoading] directly — defaults to a
+  /// price so most tests (which don't care about it) don't need to set
+  /// anything.
+  String? queryProPriceResult = r'$1.99';
+
+  /// Set by tests that need to control exactly when the price query
+  /// resolves (e.g. via a [Completer]), to assert on the loading state
+  /// in between. Takes priority over [queryProPriceResult] when set.
+  Future<String?> Function()? queryProPriceImpl;
+
   @override
   Stream<PurchaseUpdate> get updates => _controller.stream;
 
@@ -50,6 +61,10 @@ class _FakePurchaseGateway implements PurchaseGateway {
 
   @override
   Future<void> restorePurchases() async => restorePurchasesCalls++;
+
+  @override
+  Future<String?> queryProPrice() =>
+      queryProPriceImpl != null ? queryProPriceImpl!() : Future.value(queryProPriceResult);
 
   void emit(PurchaseUpdate update) => _controller.add(update);
 
@@ -176,6 +191,61 @@ void main() {
       await controller.initialize();
       await controller.openPrivacyOptionsForm();
       expect(consent.showPrivacyOptionsFormCalls, 1);
+    });
+  });
+
+  group('MonetizationController — Pro price (Play Billing ProductDetails)',
+      () {
+    test(
+        'starts in a loading state and resolves to the store\'s localized '
+        'price once the query completes, without delaying initialize() '
+        'itself', () async {
+      final priceCompleter = Completer<String?>();
+      purchases.queryProPriceImpl = () => priceCompleter.future;
+
+      await controller.initialize();
+      // initialize() must not hang waiting on the price query.
+      expect(controller.proPriceLoading, isTrue);
+      expect(controller.proPrice, isNull);
+
+      priceCompleter.complete(r'$1.99');
+      await pumpEventQueue();
+
+      expect(controller.proPriceLoading, isFalse);
+      expect(controller.proPrice, r'$1.99');
+    });
+
+    test(
+        'proPrice stays null (but no longer loading) when the store has no '
+        'price to offer', () async {
+      purchases.queryProPriceResult = null;
+      await controller.initialize();
+      await pumpEventQueue();
+
+      expect(controller.proPriceLoading, isFalse);
+      expect(controller.proPrice, isNull);
+    });
+
+    test('never queries the price for a user who already owns Pro',
+        () async {
+      SharedPreferences.setMockInitialValues({'is_pro': true});
+      var callCount = 0;
+      purchases.queryProPriceImpl = () async {
+        callCount++;
+        return r'$1.99';
+      };
+      final proController = MonetizationController(
+        ads: ads,
+        purchases: purchases,
+        proStatusStore: ProStatusStore(),
+        consent: consent,
+      );
+
+      await proController.initialize();
+
+      expect(proController.proPriceLoading, isFalse);
+      expect(callCount, 0);
+      proController.dispose();
     });
   });
 

@@ -47,6 +47,16 @@ class _ProDialogState extends State<ProDialog> {
     });
   }
 
+  /// The text to show for the price — the loading label while a query
+  /// is in flight, the real store-localized price once it arrives, or
+  /// `null` if the store came back with no price at all (in which case
+  /// no price line is shown; the buy button still works, and the OS
+  /// purchase sheet will show its own price at checkout).
+  String? _priceText(AppLocalizations l10n) {
+    if (widget.monetization.proPriceLoading) return l10n.proPriceLoading;
+    return widget.monetization.proPrice;
+  }
+
   String? _feedbackMessage(AppLocalizations l10n) {
     return switch (_feedback) {
       null => null,
@@ -74,6 +84,11 @@ class _ProDialogState extends State<ProDialog> {
       listenable: widget.monetization,
       builder: (context, _) {
         final isPro = widget.monetization.isPro;
+        // Recomputed on every ListenableBuilder rebuild (not just the
+        // outer build() above) so the async price query completing —
+        // which only calls monetization.notifyListeners(), not setState
+        // on this State — actually refreshes what's shown.
+        final priceText = _priceText(l10n);
         return Dialog(
           backgroundColor: palette.surface,
           shape:
@@ -106,7 +121,19 @@ class _ProDialogState extends State<ProDialog> {
                   style: TextStyle(color: palette.mutedText),
                 ),
                 if (!isPro) ...[
-                  const SizedBox(height: 24),
+                  if (priceText != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      priceText,
+                      key: const Key('proPriceText'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: palette.mutedText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(

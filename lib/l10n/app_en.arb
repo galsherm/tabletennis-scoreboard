@@ -193,7 +193,7 @@
   "@proDialogTitle": {
     "description": "Title of the Pro purchase dialog."
   },
-  "proDialogDescriptionFree": "A one-time purchase that removes ads and unlocks exporting your match results.",
+  "proDialogDescriptionFree": "A one-time purchase that removes ads.",
   "@proDialogDescriptionFree": {
     "description": "Body text shown in the Pro dialog when the user has not purchased Pro yet."
   },
@@ -201,13 +201,17 @@
   "@proDialogAlreadyProTitle": {
     "description": "Heading shown in the Pro dialog once the user already owns Pro."
   },
-  "proDialogAlreadyProBody": "Ads are removed and match export is unlocked. Thanks for your support!",
+  "proDialogAlreadyProBody": "Ads are removed. Thanks for your support!",
   "@proDialogAlreadyProBody": {
     "description": "Body text shown in the Pro dialog once the user already owns Pro."
   },
   "proBuyButton": "Remove Ads",
   "@proBuyButton": {
     "description": "Button that starts the Pro purchase flow. Deliberately short (a longer 'Remove Ads (One-Time Purchase)' overflowed the button, especially in German/French — the dialog's own body text right above already explains it's a one-time purchase) and has no price baked in — the OS purchase sheet shows the real, store-localized price; see PHASE5_MONETIZATION.md for the target ~€2.99 price to configure in Play Console."
+  },
+  "proPriceLoading": "Loading price…",
+  "@proPriceLoading": {
+    "description": "Shown in place of the price in the Pro dialog while the store's product details are still being fetched."
   },
   "proRestoreButton": "Restore purchases",
   "@proRestoreButton": {

@@ -50,6 +50,13 @@ abstract class PurchaseGateway {
   /// for how that's handled gracefully.
   Future<void> restorePurchases();
 
+  /// The store's own localized price string for [proProductId] (e.g.
+  /// "$1.99", already formatted for the user's currency/locale by Play
+  /// Billing/StoreKit), or `null` if the store is unavailable or the
+  /// product wasn't found. Never hardcode a price in the UI — this is
+  /// the only source of truth for it.
+  Future<String?> queryProPrice();
+
   void dispose();
 }
 
@@ -163,6 +170,18 @@ class InAppPurchaseGateway implements PurchaseGateway {
         outcome: PurchaseOutcome.error,
         errorMessage: e.toString(),
       ));
+    }
+  }
+
+  @override
+  Future<String?> queryProPrice() async {
+    try {
+      if (!await _iap.isAvailable()) return null;
+      final response = await _iap.queryProductDetails({proProductId});
+      if (response.productDetails.isEmpty) return null;
+      return response.productDetails.first.price;
+    } catch (_) {
+      return null;
     }
   }
 

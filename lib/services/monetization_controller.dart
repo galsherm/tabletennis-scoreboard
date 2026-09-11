@@ -46,6 +46,17 @@ class MonetizationController extends ChangeNotifier {
   bool _isPro = false;
   bool get isPro => _isPro;
 
+  /// The store's localized price for [proProductId] (e.g. "$1.99"), or
+  /// `null` while it's still loading or if the store couldn't provide
+  /// one. Check [proPriceLoading] to tell those two apart — the dialog
+  /// must never show blank/missing price text as if there simply were
+  /// no price, while a real query is still in flight.
+  String? _proPrice;
+  String? get proPrice => _proPrice;
+
+  bool _proPriceLoading = true;
+  bool get proPriceLoading => _proPriceLoading;
+
   /// Whether UMP requires a "Privacy options" entry point for this user
   /// (EEA/UK) — resolved once [initialize] has gathered consent; false
   /// (hidden) until then and on any failure to determine it. Drives
@@ -66,6 +77,12 @@ class MonetizationController extends ChangeNotifier {
     notifyListeners();
 
     _subscription = purchases.updates.listen(_onPurchaseUpdate);
+
+    if (!_isPro) {
+      unawaited(_loadProPrice());
+    } else {
+      _proPriceLoading = false;
+    }
 
     // GDPR/UK consent (Phase 6) must be gathered — and, outside the
     // EEA/UK, confirmed not required — before any ad request. This runs
@@ -103,6 +120,17 @@ class MonetizationController extends ChangeNotifier {
       case PurchaseOutcome.error:
         _feedbackController.add(PurchaseFeedback.error);
     }
+  }
+
+  /// Queries the store for [proProductId]'s localized price, run
+  /// fire-and-forget from [initialize] so it never delays ads/consent
+  /// startup — the buy button itself works with or without a price to
+  /// display, since the store shows its own price at checkout regardless.
+  Future<void> _loadProPrice() async {
+    final price = await purchases.queryProPrice();
+    _proPrice = price;
+    _proPriceLoading = false;
+    notifyListeners();
   }
 
   Future<void> buyPro() => purchases.buyPro();

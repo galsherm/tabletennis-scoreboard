@@ -140,17 +140,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get proDialogDescriptionFree =>
-      'A one-time purchase that removes ads and unlocks exporting your match results.';
+      'A one-time purchase that removes ads.';
 
   @override
   String get proDialogAlreadyProTitle => 'You\'re Pro!';
 
   @override
   String get proDialogAlreadyProBody =>
-      'Ads are removed and match export is unlocked. Thanks for your support!';
+      'Ads are removed. Thanks for your support!';
 
   @override
   String get proBuyButton => 'Remove Ads';
+
+  @override
+  String get proPriceLoading => 'Loading price…';
 
   @override
   String get proRestoreButton => 'Restore purchases';

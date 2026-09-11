@@ -28,6 +28,11 @@ load/retry/show logic) was never the problem. The physical-device
 failure is closed out as a known, environment-specific quirk to monitor
 post-release rather than a blocker — see §12.
 
+**Update (pre-launch Pro dialog review):** two issues found in the Pro
+purchase dialog while reviewing it before submitting to Play
+Console — an inaccurate benefit claim in the dialog copy, and a missing
+real price — both fixed. See §13.
+
 ---
 
 ## 1. Scope decisions (made with the user before building)
@@ -582,3 +587,90 @@ checklist already documented in the README (real AdMob App ID + ad unit
 IDs, real Play Console product ID, pricing, license testers, and a Play
 Store–track install for purchase testing — see README's "Phase 5 —
 Monetization" section and §10.4 above).
+
+## 13. Pre-launch Pro dialog review: an inaccurate benefit claim and a missing real price
+
+Reviewing the Pro dialog one more time before Play Console submission
+surfaced two issues — neither caught by the existing test suite, since
+both are about what the dialog *claims and displays*, not what it does
+mechanically.
+
+### 13.1 The dialog's benefit copy overstated what it advertises as included
+
+`proDialogDescriptionFree` and `proDialogAlreadyProBody` said the
+purchase "unlocks exporting your match results" / "match export is
+unlocked." **To be clear about what is and isn't true here:** match
+export itself is a real, working, tested, Pro-gated feature —
+`lib/services/match_export.dart`'s `buildMatchExportSummary()`,
+wired into `MatchCompleteDialog`'s "Export match result" button and
+covered by `test/match_export_test.dart` and the "Match export"
+group in `test/monetization_widget_test.dart` — none of that changed
+and none of it was removed. What changed is narrower: the purchase
+dialog's own *marketing copy* no longer lists export as a call-out
+benefit, so the dialog only promises what the product team wants
+advertised as the purchase's headline benefit (ad removal) rather than
+enumerating every Pro-gated feature. Fixed in all three ARB files
+(`app_en.arb`, `app_de.arb`, `app_fr.arb`):
+
+- `proDialogDescriptionFree`: "A one-time purchase that removes ads and
+  unlocks exporting your match results." → "A one-time purchase that
+  removes ads." (and the German/French equivalents)
+- `proDialogAlreadyProBody`: "Ads are removed and match export is
+  unlocked. Thanks for your support!" → "Ads are removed. Thanks for
+  your support!" (and the German/French equivalents)
+
+**Current actual Pro benefits** (what a purchase actually unlocks in
+the running app, regardless of dialog copy): ad removal, and the
+match-result clipboard export described above. A saved *history* of
+past matches (plural, across sessions) — as opposed to exporting the
+just-completed match's result — remains genuinely unbuilt and out of
+scope, per §1's original "minimal, single-match" decision.
+
+Regression test: `test/monetization_widget_test.dart`'s existing "shows
+buy/restore buttons" test now asserts the exact updated body text and
+adds `expect(find.textContaining('export'), findsNothing);` on the free
+dialog, so the copy can't silently regress back to overpromising.
+
+### 13.2 No real price was ever shown in the dialog
+
+The buy button (`proBuyButton`, "Remove Ads") was deliberately built
+with no price baked into its label — §8/§10.2 relied entirely on the
+OS purchase sheet to show Play Billing's real, store-localized price at
+checkout. That's correct as far as it goes, but it meant the dialog
+itself never told the user what they were about to pay before tapping
+"Remove Ads," which is worse pre-purchase transparency than most
+competitors offer.
+
+**Fix:** `PurchaseGateway` gained `queryProPrice()`, returning Play
+Billing/StoreKit's own localized `ProductDetails.price` string (e.g.
+`$1.99`, already formatted for the user's currency by the store — never
+hardcoded) or `null` if the store is unavailable or the product isn't
+found. `InAppPurchaseGateway.queryProPrice()` implements this via
+`InAppPurchase.queryProductDetails({proProductId})`, mirroring the same
+query `buyPro()` already made internally.
+
+`MonetizationController` now exposes `proPrice` (`String?`) and
+`proPriceLoading` (`bool`), kicking off the query fire-and-forget from
+`initialize()` (via `unawaited`) so it never delays ads/consent
+startup — skipped entirely for a user who already owns Pro, since the
+free-tier price line never shows for them anyway. `ProDialog` shows,
+directly above the buy button:
+
+- the localized `proPriceLoading` string ("Loading price…") while the
+  query is in flight — **never blank/missing text**, which is what the
+  dialog showed before this fix (nothing at all) and what a naive
+  "just show `proPrice`" implementation would show during the query's
+  async gap;
+- the real price once it resolves;
+- nothing at all (no empty line) if the store genuinely has no price to
+  offer — the buy button still works in that case, exactly as before
+  this fix, since the store's own purchase sheet shows its price
+  regardless.
+
+Tests: `test/monetization_controller_test.dart`'s new "Pro price" group
+covers the loading→resolved transition via a controllable `Completer`,
+the "no price available" case, and that a Pro user's session never
+issues the query at all.
+`test/monetization_widget_test.dart` adds the same loading→resolved
+assertions at the widget level (verifying `ProDialog` actually renders
+the transition) and a "no price line, buy button still works" case.

@@ -44,6 +44,16 @@ class _FakePurchaseGateway implements PurchaseGateway {
   int buyProCalls = 0;
   int restorePurchasesCalls = 0;
 
+  /// Settable so tests can drive what the Pro dialog shows for the price
+  /// — defaults to a price so tests that don't care about it see the
+  /// dialog settle into a normal, non-loading state.
+  String? queryProPriceResult = r'$1.99';
+
+  /// Set by tests that need to control exactly when the price query
+  /// resolves (e.g. via a [Completer]), to assert on the dialog's
+  /// loading state in between. Takes priority over [queryProPriceResult].
+  Future<String?> Function()? queryProPriceImpl;
+
   @override
   Stream<PurchaseUpdate> get updates => _controller.stream;
 
@@ -55,6 +65,10 @@ class _FakePurchaseGateway implements PurchaseGateway {
 
   @override
   Future<void> restorePurchases() async => restorePurchasesCalls++;
+
+  @override
+  Future<String?> queryProPrice() =>
+      queryProPriceImpl != null ? queryProPriceImpl!() : Future.value(queryProPriceResult);
 
   void emit(PurchaseUpdate update) => _controller.add(update);
 
@@ -159,11 +173,14 @@ void main() {
 
       expect(find.text('Remove Ads / Pro'), findsWidgets);
       expect(
-        find.text(
-            'A one-time purchase that removes ads and unlocks exporting '
-            'your match results.'),
+        find.text('A one-time purchase that removes ads.'),
         findsOneWidget,
       );
+      // Regression check (a real Play Console review caught this): match
+      // export is a real, Pro-gated feature (see the "Match export" group
+      // below), but the dialog must not advertise it as a purchase
+      // benefit — see PHASE5_MONETIZATION.md.
+      expect(find.textContaining('export'), findsNothing);
       expect(find.byKey(const Key('proBuyButton')), findsOneWidget);
       expect(find.byKey(const Key('proRestoreButton')), findsOneWidget);
     });
@@ -253,6 +270,83 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
 
       expect(find.text('No previous purchase found.'), findsOneWidget);
+    });
+
+    testWidgets(
+        'shows a loading state for the price while the store query is '
+        'still in flight, then the real localized price once it resolves',
+        (tester) async {
+      final priceCompleter = Completer<String?>();
+      final purchases = _FakePurchaseGateway()
+        ..queryProPriceImpl = () => priceCompleter.future;
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: purchases,
+        proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SetupScreen(
+          currentLocaleOverride: null,
+          onLocaleChanged: (_) {},
+          themeMode: ThemeMode.dark,
+          onThemeModeChanged: (_) {},
+          monetization: monetization,
+        ),
+      ));
+
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('proMenuButton')));
+      await tester.pumpAndSettle();
+
+      // Never blank/missing while the query is in flight.
+      expect(find.byKey(const Key('proPriceText')), findsOneWidget);
+      expect(find.text('Loading price…'), findsOneWidget);
+      expect(find.text(r'$1.99'), findsNothing);
+
+      priceCompleter.complete(r'$1.99');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Loading price…'), findsNothing);
+      expect(find.text(r'$1.99'), findsOneWidget);
+    });
+
+    testWidgets(
+        'shows no price line (but still a working buy button) when the '
+        'store has no price to offer', (tester) async {
+      final purchases = _FakePurchaseGateway()..queryProPriceResult = null;
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: purchases,
+        proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SetupScreen(
+          currentLocaleOverride: null,
+          onLocaleChanged: (_) {},
+          themeMode: ThemeMode.dark,
+          onThemeModeChanged: (_) {},
+          monetization: monetization,
+        ),
+      ));
+
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('proMenuButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('proPriceText')), findsNothing);
+      expect(find.byKey(const Key('proBuyButton')), findsOneWidget);
     });
   });
 
