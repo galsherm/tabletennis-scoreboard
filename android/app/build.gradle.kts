@@ -73,6 +73,16 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            // Explicit keep rules for WorkManager/Room — see
+            // proguard-rules.pro for why: without these, R8 stripped
+            // pieces of WorkManager's Room-generated database and every
+            // release APK crashed on launch (found while preparing Play
+            // Store screenshots, verified fixed by installing the
+            // resulting APK on a real device).
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
