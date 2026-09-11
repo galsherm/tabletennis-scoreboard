@@ -214,6 +214,29 @@ can never publish an update to the same app listing again.
    flutter build appbundle
    ```
 
+4. **Sanity-check that a release build actually launches, on a real
+   device, before uploading.** A real release APK (`flutter build apk
+   --release`) was once found crashing immediately on launch with
+   `Failed to create an instance of androidx.work.impl.WorkDatabase` —
+   R8 (only enabled for release builds, never debug/profile) was
+   stripping pieces of WorkManager's Room-generated database with no
+   ProGuard keep rule protecting it. **Already fixed** —
+   `android/app/proguard-rules.pro` now keeps `androidx.work.**`/Room
+   classes, wired into the release build type's `proguardFiles` — but
+   since `flutter test`/`flutter run` (debug) never exercise R8 at all,
+   any *future* release-only crash of this kind would go unnoticed the
+   same way until an actual release build is installed and opened.
+   Before every Play Console upload:
+
+   ```bash
+   flutter build apk --release
+   adb install -r build/app/outputs/flutter-apk/app-release.apk
+   ```
+
+   then actually open the app on the device and play a few points —
+   don't rely on `flutter build` succeeding alone, since a build that
+   compiles fine can still crash at runtime under R8.
+
 ### Privacy Policy hosting
 
 `lib/services/privacy_links.dart` currently points the in-app "Privacy
