@@ -32,12 +32,12 @@ abstract class AdsService {
   void dispose();
 }
 
-/// Google's own published sample/test ad unit IDs — verified against
-/// Google's official test-ad documentation, not placeholders. Always
-/// fill with a clearly-marked test ad, never real inventory, and are
-/// safe to ship during development. See PHASE5_MONETIZATION.md for what
-/// to replace these with before release.
-String get _testInterstitialAdUnitId {
+/// Android now uses the real interstitial ad unit created in the AdMob
+/// console (Phase 6); iOS still returns Google's published sample/test
+/// ad unit ID (verified against Google's official test-ad documentation,
+/// not a placeholder) since no iOS AdMob app exists yet — see
+/// README.md's Phase 5 release checklist for what's still pending there.
+String get _interstitialAdUnitId {
   try {
     if (Platform.isIOS) return 'ca-app-pub-3940256099942544/4411468910';
   } catch (_) {
@@ -45,7 +45,7 @@ String get _testInterstitialAdUnitId {
     // to the Android ID, which is also harmless there since AdMob simply
     // won't load on an unsupported platform.
   }
-  return 'ca-app-pub-3940256099942544/1033173712';
+  return 'ca-app-pub-6492606197522712/3632702751';
 }
 
 class AdMobAdsService implements AdsService {
@@ -79,7 +79,7 @@ class AdMobAdsService implements AdsService {
   @override
   Future<void> loadInterstitial() async {
     _retryTimer?.cancel();
-    final adUnitId = _testInterstitialAdUnitId;
+    final adUnitId = _interstitialAdUnitId;
     debugPrint('AdMobAdsService: requesting interstitial ($adUnitId)');
     try {
       await InterstitialAd.load(

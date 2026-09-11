@@ -91,23 +91,27 @@ development but must never ship to a real store listing.
 
 ### AdMob
 
-1. Create a real AdMob app (one for Android, one for iOS) in the
+1. ~~Create a real AdMob app (one for Android, one for iOS) in the
    [AdMob console](https://apps.admob.com/), linked to your Play Console /
-   App Store Connect listing.
+   App Store Connect listing.~~ **Done for Android** (Phase 6) — the iOS
+   app still needs to be created once there's an App Store Connect
+   listing to link it to.
 2. Replace the test **App ID** in:
-   - `android/app/src/main/AndroidManifest.xml` — the
-     `com.google.android.gms.ads.APPLICATION_ID` meta-data value (currently
-     `ca-app-pub-3940256099942544~3347511713`, Google's published Android
-     test App ID).
+   - ~~`android/app/src/main/AndroidManifest.xml` — the
+     `com.google.android.gms.ads.APPLICATION_ID` meta-data value~~ **Done**
+     — now the real Android App ID, `ca-app-pub-6492606197522712~9507845967`.
    - `ios/Runner/Info.plist` — the `GADApplicationIdentifier` value
      (currently `ca-app-pub-3940256099942544~1458002511`, Google's
-     published iOS test App ID).
+     published iOS test App ID) — **still pending**, no iOS AdMob app
+     exists yet.
 3. Create a real **interstitial ad unit** (one per platform) and replace the
    test ad unit IDs in `lib/services/ads_service.dart`
-   (`_testInterstitialAdUnitId`) — currently
-   `ca-app-pub-3940256099942544/1033173712` (Android) and
-   `ca-app-pub-3940256099942544/4411468910` (iOS), Google's published test
-   interstitial units.
+   (`_interstitialAdUnitId`):
+   - ~~Android: currently `ca-app-pub-3940256099942544/1033173712`,
+     Google's published test interstitial unit~~ **Done** — now the real
+     unit, `ca-app-pub-6492606197522712/3632702751`.
+   - iOS: currently `ca-app-pub-3940256099942544/4411468910`, Google's
+     published test interstitial unit — **still pending**.
 4. iOS only: before a real (non-test) ad unit can serve personalized ads,
    Apple requires `SKAdNetworkItems` entries in `Info.plist` (a list Google
    publishes and updates) and, if you want personalized ads at all, an App
