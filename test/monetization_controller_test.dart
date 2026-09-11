@@ -115,6 +115,11 @@ void main() {
       purchases: purchases,
       proStatusStore: ProStatusStore(),
       consent: consent,
+      // This whole file predates the Phase 7 "disable monetization for
+      // launch" flag and exercises the enabled path throughout — see
+      // the dedicated "monetization disabled" group at the bottom for
+      // Phase 7's own coverage.
+      monetizationEnabled: true,
     );
   });
 
@@ -143,6 +148,7 @@ void main() {
         purchases: purchases,
         proStatusStore: ProStatusStore(),
         consent: consent,
+        monetizationEnabled: true,
       );
       await proController.initialize();
       expect(proController.isPro, isTrue);
@@ -239,6 +245,7 @@ void main() {
         purchases: purchases,
         proStatusStore: ProStatusStore(),
         consent: consent,
+        monetizationEnabled: true,
       );
 
       await proController.initialize();
@@ -495,6 +502,92 @@ void main() {
       controller.dispose();
       expect(ads.disposeCalls, 1);
       expect(purchases.disposeCalls, 1);
+    });
+  });
+
+  group('MonetizationController — monetization disabled (Phase 7, launch)',
+      () {
+    late MonetizationController disabledController;
+
+    setUp(() {
+      disabledController = MonetizationController(
+        ads: ads,
+        purchases: purchases,
+        proStatusStore: ProStatusStore(),
+        consent: consent,
+        monetizationEnabled: false,
+      );
+    });
+
+    tearDown(() {
+      try {
+        disabledController.dispose();
+      } catch (_) {}
+    });
+
+    test('never initializes ads, never loads an interstitial, and never '
+        'gathers GDPR/UMP consent', () async {
+      await disabledController.initialize();
+
+      expect(ads.initializeCalls, 0);
+      expect(ads.loadInterstitialCalls, 0);
+      expect(consent.gatherConsentCalls, 0);
+    });
+
+    test('reports isPro as true unconditionally, regardless of any '
+        'persisted purchase state', () async {
+      await disabledController.initialize();
+      expect(disabledController.isPro, isTrue);
+
+      SharedPreferences.setMockInitialValues({'is_pro': false});
+      final freshDisabledController = MonetizationController(
+        ads: ads,
+        purchases: purchases,
+        proStatusStore: ProStatusStore(),
+        consent: consent,
+        monetizationEnabled: false,
+      );
+      await freshDisabledController.initialize();
+      expect(freshDisabledController.isPro, isTrue);
+      freshDisabledController.dispose();
+    });
+
+    test('privacyOptionsRequired stays false — there is nothing to review '
+        'when consent was never gathered', () async {
+      consent.privacyOptionsRequiredResult = true; // would be true if asked
+      await disabledController.initialize();
+      expect(disabledController.privacyOptionsRequired, isFalse);
+      expect(consent.gatherConsentCalls, 0);
+    });
+
+    test('never queries the store for a price, and reports not-loading',
+        () async {
+      var callCount = 0;
+      purchases.queryProPriceImpl = () async {
+        callCount++;
+        return r'$1.99';
+      };
+      await disabledController.initialize();
+      expect(disabledController.proPriceLoading, isFalse);
+      expect(disabledController.proPrice, isNull);
+      expect(callCount, 0);
+    });
+
+    test('maybeShowMatchEndAd never shows an ad', () async {
+      await disabledController.initialize();
+      await disabledController.maybeShowMatchEndAd();
+      expect(ads.showMatchEndInterstitialCalls, 0);
+    });
+
+    test('shouldOfferUpsell is always false, no matter how many matches '
+        'complete', () async {
+      await disabledController.initialize();
+      for (var i = 0;
+          i < MonetizationController.upsellIntervalMatches * 3;
+          i++) {
+        disabledController.recordMatchCompleted();
+        expect(disabledController.shouldOfferUpsell, isFalse);
+      }
     });
   });
 }

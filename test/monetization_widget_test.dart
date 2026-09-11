@@ -85,9 +85,10 @@ class _FakeConsentService implements ConsentService {
   /// else (false, the default).
   bool privacyOptionsRequired = false;
   int showPrivacyOptionsFormCalls = 0;
+  int gatherConsentCalls = 0;
 
   @override
-  Future<void> gatherConsent() async {}
+  Future<void> gatherConsent() async => gatherConsentCalls++;
 
   @override
   Future<bool> canRequestAds() async => true;
@@ -147,6 +148,7 @@ void main() {
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -195,6 +197,7 @@ void main() {
         purchases: purchases,
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -240,6 +243,7 @@ void main() {
         purchases: purchases,
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -284,6 +288,7 @@ void main() {
         purchases: purchases,
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -325,6 +330,7 @@ void main() {
         purchases: purchases,
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -360,6 +366,7 @@ void main() {
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -394,6 +401,7 @@ void main() {
         purchases: purchases,
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
       purchases.emit(const PurchaseUpdate(
@@ -474,6 +482,7 @@ void main() {
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -518,6 +527,7 @@ void main() {
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -563,6 +573,7 @@ void main() {
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
         consent: _FakeConsentService(),
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -598,6 +609,7 @@ void main() {
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
         consent: consent,
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -638,6 +650,7 @@ void main() {
         purchases: _FakePurchaseGateway(),
         proStatusStore: ProStatusStore(),
         consent: consent,
+        monetizationEnabled: true,
       );
       await monetization.initialize();
 
@@ -661,6 +674,115 @@ void main() {
       await tester.tap(find.byKey(const Key('privacyOptionsMenuButton')));
       await tester.pumpAndSettle();
       expect(consent.showPrivacyOptionsFormCalls, 1);
+    });
+  });
+
+  group('Monetization disabled for launch (Phase 7)', () {
+    testWidgets(
+        'no AdMob initialization, no ad request, and no GDPR/UMP consent '
+        'gathering ever happen', (tester) async {
+      final fakeAds = _FakeAdsService();
+      final consent = _FakeConsentService();
+      final monetization = MonetizationController(
+        ads: fakeAds,
+        purchases: _FakePurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+        consent: consent,
+        monetizationEnabled: false,
+      );
+      await monetization.initialize();
+
+      expect(monetization.isPro, isTrue);
+      expect(consent.gatherConsentCalls, 0);
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 3,
+          firstServer: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          monetization: monetization,
+        ),
+      ));
+
+      await _playMatchToCompletion(tester);
+
+      // Full feature access (export shown, no ad), but never touching
+      // AdMob/UMP at all to get there — see PHASE7_MONETIZATION_DISABLED_
+      // FOR_LAUNCH.md.
+      expect(find.byKey(const Key('matchCompleteDialog')), findsOneWidget);
+      expect(find.byKey(const Key('exportMatchButton')), findsOneWidget);
+      expect(fakeAds.showMatchEndInterstitialCalls, 0);
+    });
+
+    testWidgets(
+        'the "Remove Ads / Pro" menu entry is hidden entirely from the '
+        'setup screen\'s overflow menu', (tester) async {
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: _FakePurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
+        monetizationEnabled: false,
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SetupScreen(
+          currentLocaleOverride: null,
+          onLocaleChanged: (_) {},
+          themeMode: ThemeMode.dark,
+          onThemeModeChanged: (_) {},
+          monetization: monetization,
+        ),
+      ));
+
+      await tester.tap(find.byKey(const Key('overflowMenuButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('proMenuButton')), findsNothing);
+      // "Privacy options" never appears either — there is no consent
+      // decision to review when consent was never gathered.
+      expect(find.byKey(const Key('privacyOptionsMenuButton')), findsNothing);
+      // The Privacy Policy link stays — it's purely informational and
+      // unrelated to ads/consent.
+      expect(find.byKey(const Key('privacyPolicyMenuButton')), findsOneWidget);
+    });
+
+    testWidgets(
+        'the automatic "Remove Ads" upsell never appears, no matter how '
+        'many matches complete', (tester) async {
+      final monetization = MonetizationController(
+        ads: _FakeAdsService(),
+        purchases: _FakePurchaseGateway(),
+        proStatusStore: ProStatusStore(),
+        consent: _FakeConsentService(),
+        monetizationEnabled: false,
+      );
+      await monetization.initialize();
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ScoreboardScreen(
+          bestOf: 3,
+          firstServer: Player.one,
+          voiceAnnouncer: _silentVoice(),
+          monetization: monetization,
+        ),
+      ));
+
+      for (var match = 0;
+          match < MonetizationController.upsellIntervalMatches * 2;
+          match++) {
+        await _playMatchToCompletion(tester);
+        await tester.tap(find.byKey(const Key('newMatchButton')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('proDialogTitleText')), findsNothing);
+      }
     });
   });
 }

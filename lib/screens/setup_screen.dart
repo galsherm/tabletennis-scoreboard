@@ -417,19 +417,25 @@ class _SetupScreenState extends State<SetupScreen> {
           child: Text(l10n.languageMenuTooltip),
         ),
         Divider(height: 1, color: context.palette.divider),
+        // Hidden entirely while monetization is switched off (Phase
+        // 7) — there is nothing left for it to do: no ads to remove,
+        // and every feature it would unlock is already unrestricted.
+        // See PHASE7_MONETIZATION_DISABLED_FOR_LAUNCH.md.
+        //
         // Flat — a single tap to one purchase flow doesn't need (or
         // benefit from) a submenu the way Theme/Language's multi-choice
         // pickers do.
-        MenuItemButton(
-          key: const Key('proMenuButton'),
-          style: itemStyle,
-          leadingIcon: Icon(
-            _monetization.isPro ? Icons.verified : Icons.workspace_premium,
-            size: 20,
+        if (_monetization.monetizationEnabled)
+          MenuItemButton(
+            key: const Key('proMenuButton'),
+            style: itemStyle,
+            leadingIcon: Icon(
+              _monetization.isPro ? Icons.verified : Icons.workspace_premium,
+              size: 20,
+            ),
+            onPressed: _openProDialog,
+            child: Text(l10n.proMenuTooltip),
           ),
-          onPressed: _openProDialog,
-          child: Text(l10n.proMenuTooltip),
-        ),
         // GDPR/UK-only (Phase 6): hidden entirely outside the EEA/UK,
         // where UMP determined no consent decision — and therefore
         // nothing to review or change — ever existed. See

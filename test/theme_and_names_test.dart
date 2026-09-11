@@ -7,7 +7,12 @@ import 'package:tabletennis_scoreboard/l10n/gen/app_localizations.dart';
 import 'package:tabletennis_scoreboard/main.dart';
 import 'package:tabletennis_scoreboard/models/player.dart';
 import 'package:tabletennis_scoreboard/screens/doubles_scoreboard_screen.dart';
+import 'package:tabletennis_scoreboard/services/ads_service.dart';
 import 'package:tabletennis_scoreboard/services/clip_player.dart';
+import 'package:tabletennis_scoreboard/services/consent_service.dart';
+import 'package:tabletennis_scoreboard/services/monetization_controller.dart';
+import 'package:tabletennis_scoreboard/services/pro_status_store.dart';
+import 'package:tabletennis_scoreboard/services/purchase_gateway.dart';
 import 'package:tabletennis_scoreboard/services/tts_engine.dart';
 import 'package:tabletennis_scoreboard/services/voice_announcer.dart';
 import 'package:tabletennis_scoreboard/theme/app_theme.dart';
@@ -33,6 +38,21 @@ class _NoopClipPlayer implements ClipPlayer {
 
 VoiceAnnouncer _silentVoice() => VoiceAnnouncer(
     ttsEngine: _RecordingTtsEngine(), clipPlayer: _NoopClipPlayer());
+
+/// This file's menu-styling tests below predate the Phase 7 "disable
+/// monetization for launch" flag and specifically exercise the Pro menu
+/// item's appearance — so, unlike every other test in this file (which
+/// doesn't care either way and is unaffected by the app-wide default),
+/// they need monetization explicitly forced on rather than inheriting
+/// whatever `feature_flags.monetizationEnabled` currently is. See
+/// PHASE7_MONETIZATION_DISABLED_FOR_LAUNCH.md.
+MonetizationController _enabledMonetization() => MonetizationController(
+      ads: AdMobAdsService(),
+      purchases: InAppPurchaseGateway(),
+      proStatusStore: ProStatusStore(),
+      consent: UmpConsentService(),
+      monetizationEnabled: true,
+    );
 
 /// WCAG relative luminance / contrast ratio, used to check the light and
 /// dark palettes both hit a real accessible-contrast bar rather than
@@ -134,7 +154,8 @@ void main() {
         'them, revealing a chevron), while Remove Ads / Pro stays a '
         'single flat action', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpWidget(
+          TableTennisScoreboardApp(monetization: _enabledMonetization()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('overflowMenuButton')));
@@ -161,7 +182,8 @@ void main() {
         'app\'s orange-accented theme, visibly wrong pink/brown-tinted) '
         'surfaceTintColor default', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      await tester.pumpWidget(const TableTennisScoreboardApp());
+      await tester.pumpWidget(
+          TableTennisScoreboardApp(monetization: _enabledMonetization()));
       await tester.pumpAndSettle();
 
       final scaffoldContext = tester.element(find.byType(Scaffold).first);

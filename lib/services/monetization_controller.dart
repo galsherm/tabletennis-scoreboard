@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../config/feature_flags.dart' as feature_flags;
 import 'ads_service.dart';
 import 'consent_service.dart';
 import 'pro_status_store.dart';
@@ -36,15 +37,32 @@ class MonetizationController extends ChangeNotifier {
   final ProStatusStore proStatusStore;
   final ConsentService consent;
 
+  /// Whether the monetization stack (ads, consent, purchases) is
+  /// active for this instance — defaults to the app-wide
+  /// `feature_flags.monetizationEnabled` switch. Overridable only so
+  /// tests can exercise both the enabled and disabled paths side by
+  /// side; every real call site (`main.dart` and each screen's
+  /// self-constructed fallback instance) leaves this unset, so the
+  /// single top-level constant remains the one place to flip for a
+  /// real build. See PHASE7_MONETIZATION_DISABLED_FOR_LAUNCH.md.
+  final bool monetizationEnabled;
+
   MonetizationController({
     required this.ads,
     required this.purchases,
     required this.proStatusStore,
     required this.consent,
-  });
+    bool? monetizationEnabled,
+  }) : monetizationEnabled =
+            monetizationEnabled ?? feature_flags.monetizationEnabled;
 
   bool _isPro = false;
-  bool get isPro => _isPro;
+
+  /// Whether the user should see full, unlocked access — either a real
+  /// purchase/restore has unlocked it, or monetization is switched off
+  /// entirely for this build, in which case every user gets full
+  /// access for free by design (see [monetizationEnabled]).
+  bool get isPro => !monetizationEnabled || _isPro;
 
   /// The store's localized price for [proProductId] (e.g. "$1.99"), or
   /// `null` while it's still loading or if the store couldn't provide
@@ -77,6 +95,19 @@ class MonetizationController extends ChangeNotifier {
     notifyListeners();
 
     _subscription = purchases.updates.listen(_onPurchaseUpdate);
+
+    if (!monetizationEnabled) {
+      // Monetization is switched off for this build (see
+      // PHASE7_MONETIZATION_DISABLED_FOR_LAUNCH.md): no price to show
+      // (the Pro dialog is hidden entirely), no GDPR/UMP consent to
+      // gather (nothing to consent to with no ads ever requested), and
+      // no AdMob initialization/ad request of any kind. `isPro` already
+      // reads `true` unconditionally regardless of `_isPro` above, so
+      // every Pro-gated feature behaves as already unlocked.
+      _proPriceLoading = false;
+      notifyListeners();
+      return;
+    }
 
     if (!_isPro) {
       unawaited(_loadProPrice());
@@ -149,10 +180,12 @@ class MonetizationController extends ChangeNotifier {
     }
   }
 
-  /// Shows the match-end interstitial, unless Pro has removed ads. Safe
-  /// to call unconditionally from a match-complete handler.
+  /// Shows the match-end interstitial, unless Pro has removed ads (or
+  /// monetization is switched off entirely — see [monetizationEnabled],
+  /// which [isPro] already folds in). Safe to call unconditionally from
+  /// a match-complete handler.
   Future<void> maybeShowMatchEndAd() async {
-    if (_isPro) return;
+    if (isPro) return;
     await ads.showMatchEndInterstitial();
   }
 
@@ -168,12 +201,14 @@ class MonetizationController extends ChangeNotifier {
   bool _upsellDismissedThisSession = false;
 
   /// Whether the automatic post-match "Remove Ads" upsell should be
-  /// shown right now — never while Pro is already owned, never more than
-  /// once per [upsellIntervalMatches] completed matches, and never again
-  /// this session once the user has closed it without buying (see
-  /// [dismissUpsell]). Only ever checked at match-end, never mid-match.
+  /// shown right now — never while Pro is already owned (or
+  /// monetization is switched off entirely, which [isPro] already folds
+  /// in), never more than once per [upsellIntervalMatches] completed
+  /// matches, and never again this session once the user has closed it
+  /// without buying (see [dismissUpsell]). Only ever checked at
+  /// match-end, never mid-match.
   bool get shouldOfferUpsell =>
-      !_isPro &&
+      !isPro &&
       !_upsellDismissedThisSession &&
       _matchesSinceLastUpsell >= upsellIntervalMatches;
 

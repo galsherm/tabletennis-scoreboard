@@ -15,7 +15,17 @@ void main() {
 }
 
 class TableTennisScoreboardApp extends StatefulWidget {
-  const TableTennisScoreboardApp({super.key});
+  /// Optional, matching the `voiceAnnouncer`/`initialNames` convention
+  /// already used by `SetupScreen` and the scoreboard screens (see
+  /// PHASE5_MONETIZATION.md): when omitted (every real call site,
+  /// including `main()`), this widget builds and owns its own real
+  /// instance. Exists so tests can inject one with a specific
+  /// `monetizationEnabled` override rather than being stuck with
+  /// whatever the app-wide `feature_flags.monetizationEnabled` constant
+  /// currently is.
+  final MonetizationController? monetization;
+
+  const TableTennisScoreboardApp({super.key, this.monetization});
 
   @override
   State<TableTennisScoreboardApp> createState() =>
@@ -51,16 +61,20 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
   /// through [SetupScreen] into whichever scoreboard screen is active, so
   /// Pro status and a preloaded ad survive navigating between them. See
   /// PHASE5_MONETIZATION.md.
-  final _monetization = MonetizationController(
-    ads: AdMobAdsService(),
-    purchases: InAppPurchaseGateway(),
-    proStatusStore: ProStatusStore(),
-    consent: UmpConsentService(),
-  );
+  late final MonetizationController _monetization;
+  late final bool _ownsMonetization;
 
   @override
   void initState() {
     super.initState();
+    _monetization = widget.monetization ??
+        MonetizationController(
+          ads: AdMobAdsService(),
+          purchases: InAppPurchaseGateway(),
+          proStatusStore: ProStatusStore(),
+          consent: UmpConsentService(),
+        );
+    _ownsMonetization = widget.monetization == null;
     _themePreference.load().then((mode) {
       if (mounted) setState(() => _themeMode = mode);
     });
@@ -69,7 +83,7 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
 
   @override
   void dispose() {
-    _monetization.dispose();
+    if (_ownsMonetization) _monetization.dispose();
     super.dispose();
   }
 
