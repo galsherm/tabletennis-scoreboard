@@ -60,10 +60,9 @@ The whole app — scoring, voice announcements, and menus — is fully
 localized in English, German, and French, auto-detected from your
 device language.
 
-FREE, WITH AN OPTIONAL ONE-TIME UPGRADE
-The app is free to use, with an occasional ad. A single one-time
-in-app purchase removes ads for good and unlocks exporting your match
-results as text — no subscriptions, ever.
+100% FREE
+No ads, no in-app purchases — every feature is available from the
+start.
 
 Whether you're keeping score at a club night, a school PE class, or a
 casual match with friends, Table Tennis Scoreboard is a fast, focused
@@ -126,10 +125,9 @@ Die gesamte App — Zählung, Sprachansagen und Menüs — ist vollständig auf
 Deutsch, Englisch und Französisch lokalisiert und erkennt automatisch
 Ihre Gerätesprache.
 
-KOSTENLOS, MIT OPTIONALEM EINMAL-UPGRADE
-Die App ist kostenlos nutzbar, mit gelegentlicher Werbung. Ein
-einmaliger In-App-Kauf entfernt Werbung dauerhaft und schaltet den
-Export Ihrer Spielergebnisse als Text frei — kein Abo, nie.
+100 % KOSTENLOS
+Keine Werbung, keine In-App-Käufe — alle Funktionen stehen von Anfang
+an zur Verfügung.
 
 Ob beim Vereinsabend, im Schulsport oder beim lockeren Spiel mit
 Freunden: Tischtennis Anzeigetafel ist eine schnelle, fokussierte
@@ -191,10 +189,9 @@ Toute l'application — comptage, annonces vocales et menus — est
 entièrement traduite en français, anglais et allemand, avec détection
 automatique de la langue de votre appareil.
 
-GRATUIT, AVEC UNE MISE À NIVEAU OPTIONNELLE UNIQUE
-L'application est gratuite, avec de la publicité occasionnelle. Un
-achat intégré unique supprime définitivement la publicité et débloque
-l'export de vos résultats de match en texte — jamais d'abonnement.
+100 % GRATUIT
+Aucune publicité, aucun achat intégré — toutes les fonctionnalités sont
+disponibles dès le départ.
 
 Que ce soit lors d'une soirée club, d'un cours d'EPS ou d'un match
 amical entre amis, Compteur Tennis de Table est un tableau de score
