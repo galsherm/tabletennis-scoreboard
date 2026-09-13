@@ -463,52 +463,72 @@ class _SetupScreenState extends State<SetupScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        leading: _buildOverflowMenu(l10n),
-        title: Text(l10n.newMatchScreenTitle),
-      ),
-      // A real bug found via real-device testing (Phase 4J): tapping a
-      // non-interactive area of the screen (e.g. the "BEST OF" heading)
-      // while a name field is being edited does *not*, by itself, move
-      // Flutter's focus away from that field — nothing else claims the
-      // tap, so the `TextField`'s own focus-loss commit (see
-      // `EditableNameLabel._onFocusChange`) never fires, and the typed
-      // name is left stuck in an uncommitted edit. Tapping an actual
-      // button/control elsewhere already worked correctly (Material
-      // widgets request focus for themselves on tap), so this only
-      // affected "dead space" taps — but that's exactly what "tap away
-      // to save" means to a user. Wrapping the whole body in a tap
-      // handler that explicitly unfocuses closes that gap for every
-      // dead-space tap, without changing how any other tappable widget
-      // behaves. See PHASE4J_MENU_AUDIO_AND_NAME_SAVE.md.
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SegmentedButton<bool>(
-                  key: const Key('modeSelector'),
-                  segments: [
-                    ButtonSegment(
-                        value: false, label: Text(l10n.modeSinglesOption)),
-                    ButtonSegment(
-                        value: true, label: Text(l10n.modeDoublesOption)),
-                  ],
-                  selected: {_isDoubles},
-                  onSelectionChanged: (selection) {
-                    setState(() => _isDoubles = selection.first);
-                  },
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  alignment: Alignment.topCenter,
-                  child: !_isDoubles
-                      ? Padding(
+      // Phase 4P: the standard Material AppBar was replaced with a
+      // custom hero band — a large bold bottom-left title and a
+      // bottom-left-positioned hamburger don't fit a normal 56dp
+      // toolbar's layout at all, and the band's fixed dark+orange brand
+      // treatment (matching the app icon/feature graphic, deliberately
+      // NOT theme-adaptive) isn't something AppBar's theming supports
+      // either. See PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
+      body: Column(
+        children: [
+          _SetupHeroBand(
+            overflowMenu: _buildOverflowMenu(l10n),
+            title: l10n.newMatchScreenTitle,
+          ),
+          Expanded(
+            // A real bug found via real-device testing (Phase 4J): tapping
+            // a non-interactive area of the screen (e.g. the "BEST OF"
+            // heading) while a name field is being edited does *not*, by
+            // itself, move Flutter's focus away from that field — nothing
+            // else claims the tap, so the `TextField`'s own focus-loss
+            // commit (see `EditableNameLabel._onFocusChange`) never fires,
+            // and the typed name is left stuck in an uncommitted edit.
+            // Tapping an actual button/control elsewhere already worked
+            // correctly (Material widgets request focus for themselves on
+            // tap), so this only affected "dead space" taps — but that's
+            // exactly what "tap away to save" means to a user. Wrapping
+            // the whole body in a tap handler that explicitly unfocuses
+            // closes that gap for every dead-space tap, without changing
+            // how any other tappable widget behaves. See
+            // PHASE4J_MENU_AUDIO_AND_NAME_SAVE.md.
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: SafeArea(
+                // The hero band above already handles the top inset —
+                // see its own SafeArea(bottom: false).
+                top: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _SectionGroup(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SegmentedButton<bool>(
+                              key: const Key('modeSelector'),
+                              segments: [
+                                ButtonSegment(
+                                    value: false,
+                                    label: Text(l10n.modeSinglesOption)),
+                                ButtonSegment(
+                                    value: true,
+                                    label: Text(l10n.modeDoublesOption)),
+                              ],
+                              selected: {_isDoubles},
+                              onSelectionChanged: (selection) {
+                                setState(() => _isDoubles = selection.first);
+                              },
+                            ),
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              alignment: Alignment.topCenter,
+                              child: !_isDoubles
+                                  ? Padding(
                           padding: const EdgeInsets.only(top: 20),
                           // The same tap-to-rename preview doubles already
                           // had — singles previously had no equivalent
@@ -584,34 +604,46 @@ class _SetupScreenState extends State<SetupScreen> {
                             ],
                           ),
                         ),
-                ),
-                const SizedBox(height: 28),
-                _eyebrow(l10n.bestOfLabel),
-                SegmentedButton<int>(
-                  key: const Key('bestOfSelector'),
-                  segments: [3, 5, 7]
-                      .map((bestOf) => ButtonSegment(
-                            value: bestOf,
-                            // Every language shows a bare number here — the
-                            // explanatory word lives once, in the eyebrow
-                            // heading above ("Best of" / "Gewinnsätze" /
-                            // "Au meilleur de"), never inside the segment
-                            // itself. German used to embed "Gewinnsätze" in
-                            // each segment, tripling its text versus
-                            // English/French and overflowing the segment —
-                            // see PHASE4B_UI_POLISH.md.
-                            label: Text(l10n.bestOfSegmentLabel(
-                              bestOf,
-                              (bestOf ~/ 2) + 1,
-                            )),
-                          ))
-                      .toList(),
-                  selected: {_bestOf},
-                  onSelectionChanged: (selection) {
-                    setState(() => _bestOf = selection.first);
-                  },
-                ),
-                const SizedBox(height: 36),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _SectionGroup(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _eyebrow(l10n.bestOfLabel),
+                            SegmentedButton<int>(
+                              key: const Key('bestOfSelector'),
+                              segments: [3, 5, 7]
+                                  .map((bestOf) => ButtonSegment(
+                                        value: bestOf,
+                                        // Every language shows a bare number
+                                        // here — the explanatory word lives
+                                        // once, in the eyebrow heading above
+                                        // ("Best of" / "Gewinnsätze" / "Au
+                                        // meilleur de"), never inside the
+                                        // segment itself. German used to
+                                        // embed "Gewinnsätze" in each
+                                        // segment, tripling its text versus
+                                        // English/French and overflowing the
+                                        // segment — see PHASE4B_UI_POLISH.md.
+                                        label: Text(l10n.bestOfSegmentLabel(
+                                          bestOf,
+                                          (bestOf ~/ 2) + 1,
+                                        )),
+                                      ))
+                                  .toList(),
+                              selected: {_bestOf},
+                              onSelectionChanged: (selection) {
+                                setState(() => _bestOf = selection.first);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 36),
                 // Not height-constrained: the toss prompt wraps to two
                 // lines in German/French (it's noticeably longer than
                 // English), so a fixed-height box here would clip it. Only
@@ -645,19 +677,177 @@ class _SetupScreenState extends State<SetupScreen> {
                     onTap: _tossCoin,
                     onComplete: _onCoinFlipComplete,
                     muted: widget.muted,
+                    idleLabel: l10n.tapToTossLabel,
                   ),
                 ),
                 const SizedBox(height: 28),
                 ElevatedButton(
                   key: const Key('startMatchButton'),
                   onPressed: _firstServer == null ? null : _start,
-                  child: Text(l10n.startMatchButton),
+                  // ALL-CAPS + letter-spacing + a trailing arrow (Phase
+                  // 4P) — a bolder, more deliberate call-to-action than
+                  // plain sentence-case text. `.toUpperCase()` at display
+                  // time only (matching `_eyebrow`'s existing approach),
+                  // so the underlying `l10n.startMatchButton` string
+                  // itself, and everything keyed off it, is unchanged.
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        l10n.startMatchButton.toUpperCase(),
+                        style: const TextStyle(
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward, size: 20),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The setup screen's hero header (Phase 4P), replacing the previous
+/// plain Material `AppBar` — a large bold title sitting at the
+/// *bottom*-left of a tall band, with the hamburger menu at its
+/// top-left, doesn't fit a standard 56dp toolbar's layout at all. A
+/// fixed dark near-black background with a large orange diagonal shape
+/// in the upper-right corner echoes the app icon/feature graphic's own
+/// visual language — deliberately NOT theme-adaptive (it stays this
+/// same dark+orange brand treatment in both light and dark app themes,
+/// the same way the icon itself doesn't change), so [AppPalette.dark]
+/// is used directly here rather than `context.palette`. Deliberately
+/// minimal: just the menu and the title, no extra icons or subtitle.
+class _SetupHeroBand extends StatelessWidget {
+  final Widget overflowMenu;
+  final String title;
+
+  const _SetupHeroBand({required this.overflowMenu, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppPalette.dark.background,
+      child: SafeArea(
+        // The scrollable body below has its own SafeArea(top: false) —
+        // together they cover the full screen exactly once, with this
+        // band owning the top inset (status bar/notch) since it's the
+        // one that actually sits under it.
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 24, 20),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter:
+                      _HeroDiagonalPainter(color: AppPalette.dark.accent),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Forces the hamburger's own icon color to white,
+                  // regardless of the app's light/dark theme — this
+                  // button sits on the always-dark hero band, not on
+                  // AppPalette.surface the way it used to (on an
+                  // AppBar), so the theme's usual scoreText-based
+                  // foreground (near-black in light mode) would be
+                  // invisible here. Only affects this button's own
+                  // theme-derived default; the flyout menu it opens
+                  // still uses the app's real light/dark
+                  // AppPalette.surface (baked into `_menuStyle`/
+                  // `_menuItemStyle` explicitly, before this widget
+                  // ever sees it), unaffected by this override.
+                  Theme(
+                    data: Theme.of(context).copyWith(
+                      iconButtonTheme: IconButtonThemeData(
+                        style:
+                            IconButton.styleFrom(foregroundColor: Colors.white),
+                      ),
+                    ),
+                    child: overflowMenu,
+                  ),
+                  const SizedBox(height: 32),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Roboto',
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Paints the hero band's orange diagonal — a slanted wedge occupying
+/// the band's upper-right corner, the same "dark near-black split by an
+/// orange diagonal" motif as the app icon and Play Store feature
+/// graphic. A `CustomPainter` (rather than a `ClipPath`/`Container`
+/// pair) so the shape always fills exactly this band's actual size,
+/// whatever that ends up being, without hand-tuning pixel offsets.
+class _HeroDiagonalPainter extends CustomPainter {
+  final Color color;
+
+  const _HeroDiagonalPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width * 0.55, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width * 0.40, size.height)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _HeroDiagonalPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+/// Wraps a control group (the singles/doubles mode toggle + name
+/// previews; the best-of selector) with a thin orange accent line along
+/// its top edge — Phase 4P's replacement for a full bordered card, so
+/// each group reads as its own distinct unit within the setup screen's
+/// otherwise flat list without the heavier boxed-in look a full border
+/// on every side would give.
+class _SectionGroup extends StatelessWidget {
+  final Widget child;
+
+  const _SectionGroup({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(top: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: context.palette.accent, width: 2),
+        ),
+      ),
+      child: child,
     );
   }
 }

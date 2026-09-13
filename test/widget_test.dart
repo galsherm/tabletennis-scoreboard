@@ -12,6 +12,13 @@ import 'package:tabletennis_scoreboard/main.dart';
 Future<void> _tossAndStart(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('tossButton')));
   await tester.pumpAndSettle();
+  // Phase 4P's hero band + grouped sections push "Start match" low
+  // enough that it can sit outside the visible viewport on the default
+  // test surface size (and, for the same reason, on a genuinely short
+  // real phone screen) — scroll it into view first, same as
+  // doubles_widget_test.dart already needed to for doubles' taller
+  // content.
+  await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
   await tester.tap(find.byKey(const Key('startMatchButton')));
   await tester.pumpAndSettle();
 }
@@ -121,6 +128,7 @@ void main() {
     // switch from the default best-of-5 to best-of-3 for a shorter test
     await tester.tap(find.text('3'));
     await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
     await tester.tap(find.byKey(const Key('startMatchButton')));
     await tester.pumpAndSettle();
 
@@ -145,6 +153,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('3'));
     await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
     await tester.tap(find.byKey(const Key('startMatchButton')));
     await tester.pumpAndSettle();
 

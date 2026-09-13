@@ -9,7 +9,7 @@
   "bestOfSegmentLabel": "{gamesToWin}",
   "tossPrompt": "Münzwurf, um zu entscheiden, wer zuerst aufschlägt",
   "firstServerLabel": "Zuerst am Aufschlag: {player}",
-  "tossButton": "Münze werfen",
+  "tapToTossLabel": "ANTIPPEN",
   "startMatchButton": "Spiel starten",
   "scoreboardTitle": "Tischtennis",
   "muteTooltip": "Sprachausgabe stummschalten",

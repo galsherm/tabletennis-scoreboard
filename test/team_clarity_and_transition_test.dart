@@ -316,6 +316,7 @@ void main() {
 
         await tester.tap(find.byKey(const Key('tossButton')));
         await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
         await tester.tap(find.byKey(const Key('startMatchButton')));
         await tester.pump();
         await tester.pump(); // route attaches (see notes below)
@@ -342,6 +343,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
       await tester.tap(find.byKey(const Key('startMatchButton')));
       // Two frames: the first applies the tap's Navigator.push, the
       // second actually builds the newly pushed route's widget subtree

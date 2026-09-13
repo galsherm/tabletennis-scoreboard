@@ -131,11 +131,12 @@ void main() {
     });
   });
 
-  group('Setup screen: app-bar menu icon (Phase 4J)', () {
+  group('Setup screen: app-bar menu icon (Phase 4J, restructured Phase 4P)',
+      () {
     testWidgets(
-        'the overflow menu is a hamburger icon in the app bar\'s leading '
-        '(left) position, not the vertical-dots overflow glyph it '
-        'replaced', (tester) async {
+        'the overflow menu is a hamburger icon in the setup screen\'s '
+        'custom hero band (not a vertical-dots overflow glyph), and the '
+        'screen no longer uses a plain Material AppBar at all', (tester) async {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
@@ -144,9 +145,24 @@ void main() {
           .widget<IconButton>(find.byKey(const Key('overflowMenuButton')));
       expect((iconButton.icon as Icon).icon, Icons.menu);
 
-      final appBar = tester.widget<AppBar>(find.byType(AppBar));
-      expect(appBar.leading, isA<MenuAnchor>(),
-          reason: 'the menu anchor lives in the leading slot, not actions');
+      // Phase 4P replaced the plain Material AppBar with a custom hero
+      // band — a large bold title sitting at the *bottom* of the band,
+      // with the hamburger at its top, doesn't fit a standard 56dp
+      // toolbar's layout at all. This is a direct regression guard that
+      // the redesign is actually in place, not just that the hamburger
+      // still exists somewhere.
+      expect(find.byType(AppBar), findsNothing);
+
+      // The hamburger sits above the large title within that same hero
+      // band (top-left menu, bottom-left title), not beside it in a
+      // conventional toolbar row.
+      final menuButtonTop =
+          tester.getTopLeft(find.byKey(const Key('overflowMenuButton'))).dy;
+      final titleTop =
+          tester.getTopLeft(find.text('New match')).dy;
+      expect(menuButtonTop, lessThan(titleTop),
+          reason: 'the hamburger should sit above the title in the hero '
+              'band, not beside it in a toolbar row');
     });
 
     testWidgets(
@@ -330,6 +346,7 @@ void main() {
       await tester.pump();
       expect(find.text('Alex'), findsOneWidget);
 
+      await tester.ensureVisible(find.byKey(const Key('tossButton')));
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('startMatchButton')));

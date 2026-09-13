@@ -16,6 +16,17 @@ import 'package:audioplayers/audioplayers.dart';
 /// platform call that starts playback.
 abstract class SoundEffectPlayer {
   Future<void> play(String assetPath);
+
+  /// Best-effort: fetches/buffers [assetPath] ahead of time, without
+  /// playing it, so a later [play] call starts audibly sooner. Added
+  /// for the coin-flip landing clink (Phase 4P): the very first
+  /// `play()` call on a freshly-constructed platform player can carry
+  /// real decoder/buffering startup latency, which is what actually
+  /// made the clink read as "noticeably after" the visual landing on a
+  /// real device — the trigger itself was already tied to the
+  /// animation controller's own frame callback, not a guessed delay.
+  /// See PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
+  Future<void> preload(String assetPath);
 }
 
 /// Real [SoundEffectPlayer] backed by `audioplayers`.
@@ -25,5 +36,10 @@ class AudioPlayersSoundEffectPlayer implements SoundEffectPlayer {
   @override
   Future<void> play(String assetPath) async {
     await _player.play(AssetSource(assetPath));
+  }
+
+  @override
+  Future<void> preload(String assetPath) async {
+    await _player.setSource(AssetSource(assetPath));
   }
 }

@@ -154,11 +154,11 @@ abstract class AppLocalizations {
   /// **'First server: {player}'**
   String firstServerLabel(String player);
 
-  /// Button that randomly picks the first server.
+  /// Shown in small caps on the coin's idle face, inviting the first tap — the coin itself is the only toss control, there is no separate button. Must always fit on a single line at the coin's actual rendered size (enforced by a FittedBox, verified by a dedicated test) — see PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
   ///
   /// In en, this message translates to:
-  /// **'Toss coin'**
-  String get tossButton;
+  /// **'TAP TO TOSS'**
+  String get tapToTossLabel;
 
   /// Button that begins the match with the chosen settings.
   ///

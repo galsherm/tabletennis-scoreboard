@@ -40,7 +40,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get tossButton => 'Tirer à pile ou face';
+  String get tapToTossLabel => 'APPUYEZ';
 
   @override
   String get startMatchButton => 'Démarrer le match';

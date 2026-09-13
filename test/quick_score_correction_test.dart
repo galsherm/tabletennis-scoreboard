@@ -8,6 +8,9 @@ import 'package:tabletennis_scoreboard/main.dart';
 Future<void> _tossAndStart(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('tossButton')));
   await tester.pumpAndSettle();
+  // See test/widget_test.dart's identically-named helper for why this is
+  // needed post-Phase-4P.
+  await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
   await tester.tap(find.byKey(const Key('startMatchButton')));
   await tester.pumpAndSettle();
 }

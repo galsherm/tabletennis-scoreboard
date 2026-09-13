@@ -40,7 +40,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get tossButton => 'Münze werfen';
+  String get tapToTossLabel => 'ANTIPPEN';
 
   @override
   String get startMatchButton => 'Spiel starten';

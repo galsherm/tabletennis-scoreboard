@@ -12,9 +12,15 @@ import 'package:tabletennis_scoreboard/widgets/coin_flip_indicator.dart';
 
 class _FakeSoundEffectPlayer implements SoundEffectPlayer {
   final List<String> played = [];
+  final List<String> preloaded = [];
   @override
   Future<void> play(String assetPath) async {
     played.add(assetPath);
+  }
+
+  @override
+  Future<void> preload(String assetPath) async {
+    preloaded.add(assetPath);
   }
 }
 
@@ -95,12 +101,12 @@ String _coinFaceText(WidgetTester tester) =>
 void main() {
   group('coin flip animation', () {
     testWidgets(
-        'before any toss, the coin shows its idle tap-affordance icon, '
+        'before any toss, the coin shows its idle tap-affordance label, '
         'not a face', (tester) async {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('coinIdleIcon')), findsOneWidget);
+      expect(find.byKey(const Key('coinIdleLabel')), findsOneWidget);
       expect(find.byKey(const Key('coinFaceLabel')), findsNothing);
     });
 
@@ -263,7 +269,7 @@ void main() {
     });
 
     testWidgets(
-        'with no winner yet, shows the idle icon regardless of '
+        'with no winner yet, shows the idle label regardless of '
         'tossSequence', (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
@@ -279,7 +285,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('coinIdleIcon')), findsOneWidget);
+      expect(find.byKey(const Key('coinIdleLabel')), findsOneWidget);
       expect(find.byKey(const Key('coinFaceLabel')), findsNothing);
     });
 
@@ -415,6 +421,7 @@ void main() {
       for (var attempt = 0;
           attempt < 20 && label != 'Thunderbolts';
           attempt++) {
+        await tester.ensureVisible(find.byKey(const Key('tossButton')));
         await tester.tap(find.byKey(const Key('tossButton')));
         await tester.pumpAndSettle();
         label = _coinFaceText(tester);

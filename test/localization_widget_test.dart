@@ -297,6 +297,7 @@ void main() {
       await tester.tap(find.text('3'));
       await tester.pump();
 
+      await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
       await tester.tap(find.byKey(const Key('startMatchButton')));
       await tester.pumpAndSettle();
 

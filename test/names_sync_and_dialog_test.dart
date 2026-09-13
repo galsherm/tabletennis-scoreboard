@@ -198,6 +198,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('startMatchButton')));
       await tester.tap(find.byKey(const Key('startMatchButton')));
       await tester.pumpAndSettle();
 
@@ -622,6 +623,7 @@ void main() {
           const Key('team1PreviewHeadingField'), 'The Smashers');
       expect(find.text('The Smashers'), findsOneWidget);
 
+      await tester.ensureVisible(find.byKey(const Key('tossButton')));
       await tester.tap(find.byKey(const Key('tossButton')));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('startMatchButton')));

@@ -52,9 +52,9 @@
       }
     }
   },
-  "tossButton": "Toss coin",
-  "@tossButton": {
-    "description": "Button that randomly picks the first server."
+  "tapToTossLabel": "TAP TO TOSS",
+  "@tapToTossLabel": {
+    "description": "Shown in small caps on the coin's idle face, inviting the first tap — the coin itself is the only toss control, there is no separate button. Must always fit on a single line at the coin's actual rendered size (enforced by a FittedBox, verified by a dedicated test) — see PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md."
   },
   "startMatchButton": "Start match",
   "@startMatchButton": {

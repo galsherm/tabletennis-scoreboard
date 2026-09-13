@@ -17,9 +17,12 @@ import '../services/purchase_gateway.dart';
 import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
+import '../widgets/center_divider_accent.dart';
+import '../widgets/chip_icon_button.dart';
 import '../widgets/match_complete_dialog.dart';
 import '../widgets/pro_dialog.dart';
 import '../widgets/score_corrector_dialog.dart';
+import '../widgets/score_edit_hint.dart';
 
 /// Doubles scoreboard: reuses [TableTennisScoringEngine] exactly as
 /// singles does (it only ever knows about two *sides* scoring points —
@@ -343,23 +346,23 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
       appBar: AppBar(
         title: Text(l10n.scoreboardTitle),
         actions: [
-          IconButton(
-            key: const Key('muteButton'),
-            icon: Icon(_voice.isMuted ? Icons.volume_off : Icons.volume_up),
+          ChipIconButton(
+            buttonKey: const Key('muteButton'),
+            icon: _voice.isMuted ? Icons.volume_off : Icons.volume_up,
             iconSize: AppMetrics.iconButtonSize,
             tooltip: _voice.isMuted ? l10n.unmuteTooltip : l10n.muteTooltip,
             onPressed: _toggleMute,
           ),
-          IconButton(
-            key: const Key('undoButton'),
-            icon: const Icon(Icons.undo),
+          ChipIconButton(
+            buttonKey: const Key('undoButton'),
+            icon: Icons.undo,
             iconSize: AppMetrics.iconButtonSize,
             tooltip: l10n.undoTooltip,
             onPressed: _engine.canUndo ? _undo : null,
           ),
-          IconButton(
-            key: const Key('resetButton'),
-            icon: const Icon(Icons.refresh),
+          ChipIconButton(
+            buttonKey: const Key('resetButton'),
+            icon: Icons.refresh,
             iconSize: AppMetrics.iconButtonSize,
             tooltip: l10n.resetTooltip,
             onPressed: _resetMatch,
@@ -397,7 +400,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
               correctScoreHint: l10n.correctScoreHint,
             ),
           ),
-          VerticalDivider(width: 1, color: context.palette.divider),
+          const CenterDividerAccent(),
           Expanded(
             child: _DoublesTeamZone(
               key: const Key('team2Zone'),
@@ -551,8 +554,10 @@ class _DoublesTeamZone extends StatelessWidget {
                     child: GestureDetector(
                       key: correctorTriggerKey,
                       onLongPress: onLongPressScore,
-                      child: AnimatedScoreText(
-                          points: points, scoreKey: pointsKey),
+                      child: ScoreEditHint(
+                        child: AnimatedScoreText(
+                            points: points, scoreKey: pointsKey),
+                      ),
                     ),
                   ),
                 ),

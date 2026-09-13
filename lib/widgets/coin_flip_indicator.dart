@@ -29,14 +29,29 @@ import '../theme/app_theme.dart';
 /// like a real coin — never a cross-fade), so there's never a moment with
 /// two same-keyed widgets mounted together.
 ///
-/// Phase 4I also added physical weight to the motion: the flip now
-/// front-loads its spin (a steep `easeOutExpo` deceleration, rather than
-/// the gentler `easeOutCubic` before) so it reads as "thrown hard, then
-/// settling," an arcing lift-and-fall synced to that spin to suggest the
-/// coin actually leaving and returning to the table, a brief decaying
-/// bounce once it lands, and a soft shadow beneath it that shrinks and
-/// fades as the coin rises and grows and darkens as it comes back down —
-/// the standard "object leaving the ground" visual cue.
+/// Phase 4I added physical weight to the motion: the flip front-loads
+/// its spin (a steep `easeOutExpo` deceleration, rather than the
+/// gentler `easeOutCubic` before) so it reads as "thrown hard, then
+/// settling," an arcing lift-and-fall synced to that spin, and a soft
+/// shadow beneath it that shrinks and fades as the coin rises and grows
+/// and darkens as it comes back down — the standard "object leaving the
+/// ground" visual cue.
+///
+/// Phase 4P ("full flight path") pushed that arc much further: the
+/// coin now lifts high enough, and shrinks enough at the peak, to read
+/// as launched up and away rather than a small in-place hop, spins
+/// through more full rotations while airborne, and — once the arc
+/// brings it back down to the table (still the exact instant
+/// [_spinFraction] marks, unchanged) — the landing itself is a genuine
+/// `Curves.easeOutBack` scale overshoot (a brief pop past 1.0 that eases
+/// back to rest), not a small residual height bounce. Deliberately kept
+/// on the *same* two-phase [_flipController] timeline and total
+/// duration as before (nothing here changes [_totalDuration] or
+/// [_spinFraction]'s meaning) — only the amplitude/curve of what each
+/// phase draws changed, which is why every pre-existing timing-based
+/// test (the sound-sync boundary, "settles well under 1 second," the
+/// mid-flip assertions) kept passing unmodified through this redesign.
+/// See PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
 class CoinFlipIndicator extends StatefulWidget {
   /// Shown on the coin's "heads" face.
   final String player1Label;
@@ -78,6 +93,17 @@ class CoinFlipIndicator extends StatefulWidget {
   /// pattern. Defaults to a real [AudioPlayersSoundEffectPlayer].
   final SoundEffectPlayer? soundEffectPlayer;
 
+  /// Shown on the coin's idle, not-yet-tossed face (Phase 4P) — "TAP TO
+  /// TOSS" or its localized equivalent. Resolved by the caller via
+  /// `AppLocalizations` (see `SetupScreen`), the same way
+  /// [player1Label]/[player2Label] already are, rather than this widget
+  /// reaching for `AppLocalizations.of(context)` itself — that keeps
+  /// [CoinFlipIndicator] usable from a bare `MaterialApp` with no
+  /// `AppLocalizations` delegate at all, which is exactly how most of
+  /// this widget's own tests construct it. Defaults to the English copy
+  /// so none of those existing tests needed to start passing it.
+  final String idleLabel;
+
   const CoinFlipIndicator({
     super.key,
     required this.player1Label,
@@ -88,6 +114,7 @@ class CoinFlipIndicator extends StatefulWidget {
     required this.onComplete,
     this.muted = false,
     this.soundEffectPlayer,
+    this.idleLabel = 'TAP TO TOSS',
   });
 
   /// Total flip duration, spin-plus-bounce combined — comfortably under a
@@ -101,13 +128,33 @@ class CoinFlipIndicator extends StatefulWidget {
   static const _totalDuration = Duration(milliseconds: _totalMs);
   static const _spinFraction = _spinMs / _totalMs;
 
-  /// Enlarged from Phase 4C's original 40 — a two-word label needs more
+  /// Enlarged from Phase 4C's original 40, then again in Phase 4P to
+  /// give the idle "TAP TO TOSS" label (see [_CoinFace]) comfortable
+  /// room — a two-word result label or a short caps hint both need more
   /// room to read clearly than the plain disc did.
-  static const _diameter = 88.0;
+  static const _diameter = 104.0;
+
+  /// How far down-and-right the darker rim circle sits behind the main
+  /// face (Phase 4P's "simpler, more physically convincing" redesign —
+  /// see [_CoinFace]) — a flat offset silhouette standing in for
+  /// thickness/a cast shadow, deliberately not a blurred drop-shadow or
+  /// gradient.
+  static const _rimOffset = 5.0;
 
   /// How high (in logical pixels) the coin appears to lift mid-flip —
-  /// purely a visual arc, not a real physics simulation.
-  static const _liftHeight = 26.0;
+  /// a purely visual arc, not a real physics simulation. Phase 4P
+  /// enlarged this substantially (from Phase 4I's 26) specifically so
+  /// the flip reads as "launched up and away," not a small in-place
+  /// hop — paired with [_peakShrink] below, which shrinks the coin as
+  /// it approaches this height, the same "gets smaller as it gets
+  /// farther away" cue a real thrown object gives.
+  static const _liftHeight = 150.0;
+
+  /// How much smaller (as a fraction of full size) the coin gets at the
+  /// very peak of its arc — e.g. 0.35 means it shrinks to 65% size at
+  /// the top of the flight before growing back to full size on the way
+  /// down. Part of Phase 4P's flight redesign; see [_liftHeight].
+  static const _peakShrink = 0.35;
 
   /// Language-independent — a coin clink isn't speech, so unlike the
   /// bundled announcement clips it doesn't live under a per-language
@@ -134,6 +181,16 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
   void initState() {
     super.initState();
     _sound = widget.soundEffectPlayer ?? AudioPlayersSoundEffectPlayer();
+    // Best-effort, fire-and-forget: buffers the landing clink well ahead
+    // of the first real toss so that later `play()` call doesn't carry a
+    // fresh player's own decoder/buffering startup latency — see
+    // [SoundEffectPlayer.preload] and PHASE4P_PREMIUM_VISUAL_AND_MOTION_
+    // PASS.md for why this, not the trigger mechanism (already tied to
+    // the animation controller's own frame callback), was the real
+    // source of a perceptible landing/sound gap on a real device.
+    _sound
+        .preload(CoinFlipIndicator._landingSoundAsset)
+        .catchError((_) {});
     _flipController = AnimationController(
       vsync: this,
       duration: CoinFlipIndicator._totalDuration,
@@ -163,7 +220,8 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
   /// Plays the landing clink at the exact instant the coin actually
   /// touches down — the spin phase's own arc math (see [build]'s
   /// `height` calculation) returns to 0 exactly when [_flipController]
-  /// crosses `_spinFraction`, before the brief decaying bounce begins.
+  /// crosses `_spinFraction`, before the brief `easeOutBack` scale-pop
+  /// landing bounce begins.
   /// That's the true "landing" beat, not the moment the whole animation
   /// (spin *and* bounce) finishes — which is what [CoinFlipIndicator.
   /// onComplete] fires on instead, since it's used to unlock "Start
@@ -225,7 +283,11 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
           String? label;
           var mirrored = false;
           if (!isIdle) {
-            final turns = widget.winner == Player.one ? 3.0 : 3.5;
+            // Phase 4P: more full rotations than Phase 4I's 3/3.5 — the
+            // coin now has real airtime (see `height`/`_liftHeight`
+            // below) to actually spin through them, rather than mostly
+            // just flipping in place.
+            final turns = widget.winner == Player.one ? 5.0 : 5.5;
             final spinT = (t / CoinFlipIndicator._spinFraction).clamp(0.0, 1.0);
             angle = Curves.easeOutExpo.transform(spinT) * turns * 2 * pi;
             final showHeads = cos(angle) >= 0;
@@ -233,19 +295,37 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
             mirrored = !showHeads;
           }
 
-          // height: 0 = resting on the table, 1 = fully lifted. An arc
-          // during the spin (linear-time sine, independent of the spin's
-          // own easing, for a natural lift-and-fall) followed by one
-          // small decaying bounce once landed.
-          double height;
+          // height: 0 = resting on the table, 1 = fully lifted (the peak
+          // of the flight). A linear-time sine arc, independent of the
+          // spin's own easing, for a natural launch-and-return — the
+          // coin is back at height 0 (landed) exactly when `t` crosses
+          // `_spinFraction`, which is also the instant
+          // `_maybePlayLandingSound` fires the clink and is now where
+          // the *entire* landing bounce lives (see `scale` below) —
+          // height itself just stays at 0 through the whole bounce
+          // phase; it never leaves the table again once landed.
+          double height = 0;
           if (t <= CoinFlipIndicator._spinFraction) {
             final p = (t / CoinFlipIndicator._spinFraction).clamp(0.0, 1.0);
             height = sin(p * pi);
-          } else {
+          }
+
+          // scale: shrinks toward `_peakShrink` as height approaches its
+          // peak (the "getting farther away" cue for the upward launch,
+          // paired with `height`/`_liftHeight` above), grows back to 1.0
+          // as it returns — then, once landed, a genuine
+          // `Curves.easeOutBack` overshoot (briefly > 1.0, easing back to
+          // exactly 1.0 by the time the whole animation finishes) stands
+          // in for the "slight overshoot/bounce before settling" landing
+          // Phase 4P asked for, replacing Phase 4I's small residual
+          // height bounce.
+          double scale = 1.0 - CoinFlipIndicator._peakShrink * height;
+          if (t > CoinFlipIndicator._spinFraction) {
             final bp = ((t - CoinFlipIndicator._spinFraction) /
                     (1 - CoinFlipIndicator._spinFraction))
                 .clamp(0.0, 1.0);
-            height = 0.28 * (1 - bp) * sin(bp * pi).abs();
+            final overshoot = Curves.easeOutBack.transform(bp) - 1.0;
+            scale = 1.0 + 0.16 * overshoot;
           }
           // A subtle idle bob (a few pixels) invites a first tap without
           // being distracting — only while nothing has happened yet. A
@@ -253,7 +333,7 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
           // forward run, not a repeating ping-pong — see initState.
           final idleBob = isIdle ? sin(_idleController.value * pi) : 0.0;
           final lift = height * CoinFlipIndicator._liftHeight + idleBob * 4.0;
-          final scale = 1.0 + 0.16 * height + idleBob * 0.02;
+          scale += idleBob * 0.02;
           final shadowScale = 1.0 - 0.45 * height - idleBob * 0.08;
           final shadowOpacity = 0.30 - 0.18 * height - idleBob * 0.05;
 
@@ -261,12 +341,20 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
           const shadowBaseHeight = CoinFlipIndicator._diameter * 0.22;
 
           return SizedBox(
+            // Deliberately NOT diameter + liftHeight: the coin's actual
+            // flight (see `lift` above) paints well outside this box
+            // (via the `Clip.none` Stack below) rather than this
+            // reserving that much permanent layout space around an
+            // otherwise-resting coin — the setup screen is a
+            // `SingleChildScrollView`, but "Start match" ending up
+            // pushed far enough down to sit outside a test's (or a
+            // small phone's) viewport is a real, not just theoretical,
+            // failure mode this specifically avoids.
             width: CoinFlipIndicator._diameter + 32,
-            height: CoinFlipIndicator._diameter +
-                CoinFlipIndicator._liftHeight +
-                24,
+            height: CoinFlipIndicator._diameter + 32,
             child: Stack(
               alignment: Alignment.bottomCenter,
+              clipBehavior: Clip.none,
               children: [
                 Positioned(
                   bottom: 6,
@@ -290,7 +378,11 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
                       ..setEntry(3, 2, 0.0018)
                       ..rotateY(angle)
                       ..scaleByDouble(scale, scale, scale, 1),
-                    child: _CoinFace(label: label, mirrored: mirrored),
+                    child: _CoinFace(
+                      label: label,
+                      idleLabel: widget.idleLabel,
+                      mirrored: mirrored,
+                    ),
                   ),
                 ),
               ],
@@ -302,16 +394,34 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
   }
 }
 
+/// The coin's visible face — Phase 4P replaced the earlier
+/// gradient-plus-blurred-shadow disc with a simpler, more physically
+/// convincing pair of flat concentric shapes: a darker rim circle
+/// offset slightly down-and-right behind the main face (standing in for
+/// thickness/a cast shadow, live review found a real gradient/shine
+/// overlay here read as *less* convincing, not more) and the face
+/// itself as a single flat brand-orange circle with a thin darker-orange
+/// edge stroke for definition. No highlight/shine circle — reviewed and
+/// deliberately left out.
 class _CoinFace extends StatelessWidget {
-  /// `null` means idle/untossed — shown as a hint icon instead of text.
+  /// `null` means idle/untossed — shown as [idleLabel] instead of a
+  /// result.
   final String? label;
+  final String idleLabel;
   final bool mirrored;
 
-  const _CoinFace({required this.label, required this.mirrored});
+  const _CoinFace({
+    required this.label,
+    required this.idleLabel,
+    required this.mirrored,
+  });
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    const diameter = CoinFlipIndicator._diameter;
+    const boundsSize = diameter + CoinFlipIndicator._rimOffset;
+
     final content = label != null
         ? FittedBox(
             fit: BoxFit.scaleDown,
@@ -328,49 +438,68 @@ class _CoinFace extends StatelessWidget {
               ),
             ),
           )
-        : Icon(
-            Icons.sports_tennis,
-            key: const Key('coinIdleIcon'),
-            size: 32,
-            color: palette.onAccent.withValues(alpha: 0.75),
+        : FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              idleLabel,
+              key: const Key('coinIdleLabel'),
+              textAlign: TextAlign.center,
+              // Must always render on a single line — the FittedBox
+              // above shrinks it as needed to guarantee that regardless
+              // of how long a given language's translation is, rather
+              // than relying on any one hand-picked font size actually
+              // fitting; see test/coin_visual_test.dart, which verifies
+              // this explicitly (not just by eye) for every shipped
+              // language at the coin's real diameter. See
+              // PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.0,
+                color: palette.onAccent.withValues(alpha: 0.85),
+              ),
+            ),
           );
-    final face = Container(
-      width: CoinFlipIndicator._diameter,
-      height: CoinFlipIndicator._diameter,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        // A radial gradient plus a darker rim gives the coin real
-        // dimensionality (a light "catch" near the top-left, deepening
-        // toward the edge) instead of the flat single-color disc from
-        // earlier phases — see PHASE4I_POLISH_ROUND2.md.
-        gradient: RadialGradient(
-          center: const Alignment(-0.3, -0.3),
-          radius: 1.1,
-          colors: [
-            Color.lerp(palette.accent, Colors.white, 0.25)!,
-            palette.accent,
-            palette.accentDim,
-          ],
-          stops: const [0.0, 0.55, 1.0],
-        ),
-        border: Border.all(color: palette.accentDim, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+
+    final face = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // The darker rim — a flat offset silhouette, not a blur, so it
+        // reads as a distinct edge of thickness rather than a soft glow.
+        Positioned(
+          left: CoinFlipIndicator._rimOffset,
+          top: CoinFlipIndicator._rimOffset,
+          child: Container(
+            width: diameter,
+            height: diameter,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: palette.accentDim,
+            ),
           ),
-        ],
-      ),
-      child: content,
+        ),
+        Container(
+          width: diameter,
+          height: diameter,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: palette.accent,
+            border: Border.all(color: palette.accentDim, width: 2.5),
+          ),
+          child: content,
+        ),
+      ],
     );
-    if (!mirrored) return face;
+    final sized = SizedBox(width: boundsSize, height: boundsSize, child: face);
+    if (!mirrored) return sized;
     return Transform(
       alignment: Alignment.center,
       transform: Matrix4.identity()..scaleByDouble(-1, 1, 1, 1),
-      child: face,
+      child: sized,
     );
   }
 }
