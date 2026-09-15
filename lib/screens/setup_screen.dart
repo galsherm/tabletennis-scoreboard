@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/gen/app_localizations.dart';
@@ -529,81 +530,95 @@ class _SetupScreenState extends State<SetupScreen> {
                               alignment: Alignment.topCenter,
                               child: !_isDoubles
                                   ? Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          // The same tap-to-rename preview doubles already
-                          // had — singles previously had no equivalent
-                          // step at all. See
-                          // PHASE4H_NAME_EDITING_REFINEMENT.md.
-                          child: Row(
-                            key: const Key('singlesPlayerNames'),
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              EditableNameLabel(
-                                displayName:
-                                    _names.resolve(1, l10n.player1Label),
-                                defaultLabel: l10n.player1Label,
-                                style: AppTypography.playerLabel(context),
-                                editHint: l10n.editNameHint,
-                                textKey: const Key('player1PreviewNameText'),
-                                fieldKey: const Key('player1PreviewNameField'),
-                                onChanged: (name) =>
-                                    setState(() => _names.set(1, name)),
-                              ),
-                              EditableNameLabel(
-                                displayName:
-                                    _names.resolve(2, l10n.player2Label),
-                                defaultLabel: l10n.player2Label,
-                                style: AppTypography.playerLabel(context),
-                                editHint: l10n.editNameHint,
-                                textKey: const Key('player2PreviewNameText'),
-                                fieldKey: const Key('player2PreviewNameField'),
-                                onChanged: (name) =>
-                                    setState(() => _names.set(2, name)),
-                              ),
-                            ],
-                          ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Row(
-                            key: const Key('doublesPlayerSlots'),
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _TeamSlotPreview(
-                                teamNumber: 1,
-                                defaultTeamLabel: l10n.team1Label,
-                                teamLabelKey: const Key('team1PreviewHeading'),
-                                slots: const [1, 2],
-                                defaultLabels: [
-                                  l10n.player1Label,
-                                  l10n.player2Label
-                                ],
-                                names: _names,
-                                editHint: l10n.editNameHint,
-                                onNameChanged: (slot, name) =>
-                                    setState(() => _names.set(slot, name)),
-                                onTeamNameChanged: (name) =>
-                                    setState(() => _names.setTeam(1, name)),
-                              ),
-                              _TeamSlotPreview(
-                                teamNumber: 2,
-                                defaultTeamLabel: l10n.team2Label,
-                                teamLabelKey: const Key('team2PreviewHeading'),
-                                slots: const [3, 4],
-                                defaultLabels: [
-                                  l10n.player3Label,
-                                  l10n.player4Label
-                                ],
-                                names: _names,
-                                editHint: l10n.editNameHint,
-                                onNameChanged: (slot, name) =>
-                                    setState(() => _names.set(slot, name)),
-                                onTeamNameChanged: (name) =>
-                                    setState(() => _names.setTeam(2, name)),
-                              ),
-                            ],
-                          ),
-                        ),
+                                      padding: const EdgeInsets.only(top: 20),
+                                      // The same tap-to-rename preview doubles already
+                                      // had — singles previously had no equivalent
+                                      // step at all. See
+                                      // PHASE4H_NAME_EDITING_REFINEMENT.md.
+                                      child: Row(
+                                        key: const Key('singlesPlayerNames'),
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          EditableNameLabel(
+                                            displayName: _names.resolve(
+                                                1, l10n.player1Label),
+                                            defaultLabel: l10n.player1Label,
+                                            style: AppTypography.playerLabel(
+                                                context),
+                                            editHint: l10n.editNameHint,
+                                            textKey: const Key(
+                                                'player1PreviewNameText'),
+                                            fieldKey: const Key(
+                                                'player1PreviewNameField'),
+                                            onChanged: (name) => setState(
+                                                () => _names.set(1, name)),
+                                          ),
+                                          EditableNameLabel(
+                                            displayName: _names.resolve(
+                                                2, l10n.player2Label),
+                                            defaultLabel: l10n.player2Label,
+                                            style: AppTypography.playerLabel(
+                                                context),
+                                            editHint: l10n.editNameHint,
+                                            textKey: const Key(
+                                                'player2PreviewNameText'),
+                                            fieldKey: const Key(
+                                                'player2PreviewNameField'),
+                                            onChanged: (name) => setState(
+                                                () => _names.set(2, name)),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Padding(
+                                      padding: const EdgeInsets.only(top: 20),
+                                      child: Row(
+                                        key: const Key('doublesPlayerSlots'),
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          _TeamSlotPreview(
+                                            teamNumber: 1,
+                                            defaultTeamLabel: l10n.team1Label,
+                                            teamLabelKey: const Key(
+                                                'team1PreviewHeading'),
+                                            slots: const [1, 2],
+                                            defaultLabels: [
+                                              l10n.player1Label,
+                                              l10n.player2Label
+                                            ],
+                                            names: _names,
+                                            editHint: l10n.editNameHint,
+                                            onNameChanged: (slot, name) =>
+                                                setState(() =>
+                                                    _names.set(slot, name)),
+                                            onTeamNameChanged: (name) =>
+                                                setState(() =>
+                                                    _names.setTeam(1, name)),
+                                          ),
+                                          _TeamSlotPreview(
+                                            teamNumber: 2,
+                                            defaultTeamLabel: l10n.team2Label,
+                                            teamLabelKey: const Key(
+                                                'team2PreviewHeading'),
+                                            slots: const [3, 4],
+                                            defaultLabels: [
+                                              l10n.player3Label,
+                                              l10n.player4Label
+                                            ],
+                                            names: _names,
+                                            editHint: l10n.editNameHint,
+                                            onNameChanged: (slot, name) =>
+                                                setState(() =>
+                                                    _names.set(slot, name)),
+                                            onTeamNameChanged: (name) =>
+                                                setState(() =>
+                                                    _names.setTeam(2, name)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                             ),
                           ],
                         ),
@@ -644,70 +659,70 @@ class _SetupScreenState extends State<SetupScreen> {
                         ),
                       ),
                       const SizedBox(height: 36),
-                // Not height-constrained: the toss prompt wraps to two
-                // lines in German/French (it's noticeably longer than
-                // English), so a fixed-height box here would clip it. Only
-                // shown before the first toss — once a result exists, the
-                // coin's own settled face communicates that clearly enough.
-                if (_pendingResult == null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      l10n.tossPrompt,
-                      key: const Key('tossPromptText'),
-                      textAlign: TextAlign.center,
-                      style: AppTypography.playerLabel(context),
-                    ),
-                  ),
-                // The coin is the toss control itself (Phase 4I) — there is
-                // no separate "Toss coin" button. It's always mounted (not
-                // rebuilt fresh per toss via a keyed remount, unlike Phase
-                // 4C) so it can sit idle and tappable before the first
-                // toss; CoinFlipIndicator notices `_tossSequence` changing
-                // and plays the flip itself. The result is read directly
-                // off the coin's face once it lands — no separate result
-                // text. See PHASE4C_TOSS_AND_TEAM_LABELS.md and
-                // PHASE4I_POLISH_ROUND2.md.
-                Center(
-                  child: CoinFlipIndicator(
-                    player1Label: _sideLabel(l10n, Player.one),
-                    player2Label: _sideLabel(l10n, Player.two),
-                    winner: _pendingResult,
-                    tossSequence: _tossSequence,
-                    onTap: _tossCoin,
-                    onComplete: _onCoinFlipComplete,
-                    muted: widget.muted,
-                    idleLabel: l10n.tapToTossLabel,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                ElevatedButton(
-                  key: const Key('startMatchButton'),
-                  onPressed: _firstServer == null ? null : _start,
-                  // ALL-CAPS + letter-spacing + a trailing arrow (Phase
-                  // 4P) — a bolder, more deliberate call-to-action than
-                  // plain sentence-case text. `.toUpperCase()` at display
-                  // time only (matching `_eyebrow`'s existing approach),
-                  // so the underlying `l10n.startMatchButton` string
-                  // itself, and everything keyed off it, is unchanged.
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        l10n.startMatchButton.toUpperCase(),
-                        style: const TextStyle(
-                          letterSpacing: 1.2,
-                          fontWeight: FontWeight.w800,
+                      // Not height-constrained: the toss prompt wraps to two
+                      // lines in German/French (it's noticeably longer than
+                      // English), so a fixed-height box here would clip it. Only
+                      // shown before the first toss — once a result exists, the
+                      // coin's own settled face communicates that clearly enough.
+                      if (_pendingResult == null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            l10n.tossPrompt,
+                            key: const Key('tossPromptText'),
+                            textAlign: TextAlign.center,
+                            style: AppTypography.playerLabel(context),
+                          ),
+                        ),
+                      // The coin is the toss control itself (Phase 4I) — there is
+                      // no separate "Toss coin" button. It's always mounted (not
+                      // rebuilt fresh per toss via a keyed remount, unlike Phase
+                      // 4C) so it can sit idle and tappable before the first
+                      // toss; CoinFlipIndicator notices `_tossSequence` changing
+                      // and plays the flip itself. The result is read directly
+                      // off the coin's face once it lands — no separate result
+                      // text. See PHASE4C_TOSS_AND_TEAM_LABELS.md and
+                      // PHASE4I_POLISH_ROUND2.md.
+                      Center(
+                        child: CoinFlipIndicator(
+                          player1Label: _sideLabel(l10n, Player.one),
+                          player2Label: _sideLabel(l10n, Player.two),
+                          winner: _pendingResult,
+                          tossSequence: _tossSequence,
+                          onTap: _tossCoin,
+                          onComplete: _onCoinFlipComplete,
+                          muted: widget.muted,
+                          idleLabel: l10n.tapToTossLabel,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward, size: 20),
+                      const SizedBox(height: 28),
+                      ElevatedButton(
+                        key: const Key('startMatchButton'),
+                        onPressed: _firstServer == null ? null : _start,
+                        // ALL-CAPS + letter-spacing + a trailing arrow (Phase
+                        // 4P) — a bolder, more deliberate call-to-action than
+                        // plain sentence-case text. `.toUpperCase()` at display
+                        // time only (matching `_eyebrow`'s existing approach),
+                        // so the underlying `l10n.startMatchButton` string
+                        // itself, and everything keyed off it, is unchanged.
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              l10n.startMatchButton.toUpperCase(),
+                              style: const TextStyle(
+                                letterSpacing: 1.2,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.arrow_forward, size: 20),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
               ),
             ),
           ),
@@ -734,65 +749,143 @@ class _SetupHeroBand extends StatelessWidget {
 
   const _SetupHeroBand({required this.overflowMenu, required this.title});
 
+  static const _titleStyle = TextStyle(
+    fontFamily: 'Roboto',
+    fontSize: 32,
+    fontWeight: FontWeight.w900,
+    color: Colors.white,
+  );
+
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: AppPalette.dark.background,
-      child: SafeArea(
-        // The scrollable body below has its own SafeArea(top: false) —
-        // together they cover the full screen exactly once, with this
-        // band owning the top inset (status bar/notch) since it's the
-        // one that actually sits under it.
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 24, 20),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter:
-                      _HeroDiagonalPainter(color: AppPalette.dark.accent),
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Forces the hamburger's own icon color to white,
-                  // regardless of the app's light/dark theme — this
-                  // button sits on the always-dark hero band, not on
-                  // AppPalette.surface the way it used to (on an
-                  // AppBar), so the theme's usual scoreText-based
-                  // foreground (near-black in light mode) would be
-                  // invisible here. Only affects this button's own
-                  // theme-derived default; the flyout menu it opens
-                  // still uses the app's real light/dark
-                  // AppPalette.surface (baked into `_menuStyle`/
-                  // `_menuItemStyle` explicitly, before this widget
-                  // ever sees it), unaffected by this override.
-                  Theme(
-                    data: Theme.of(context).copyWith(
-                      iconButtonTheme: IconButtonThemeData(
-                        style:
-                            IconButton.styleFrom(foregroundColor: Colors.white),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // The app-wide default (set in main.dart) picks status bar icon
+      // color from the active app theme, but this band's own background
+      // is deliberately NOT theme-adaptive — it's always this same
+      // near-black, even in Light mode (see the class doc above). So it
+      // needs its own fixed override here rather than inheriting the
+      // theme-driven default, or a Light-mode user would get dark
+      // (invisible) status bar icons sitting on this always-dark band.
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: ColoredBox(
+        color: AppPalette.dark.background,
+        child: SafeArea(
+          // The scrollable body below has its own SafeArea(top: false) —
+          // together they cover the full screen exactly once, with this
+          // band owning the top inset (status bar/notch) since it's the
+          // one that actually sits under it. Edge-to-edge (main.dart)
+          // means this ColoredBox's background now genuinely extends up
+          // underneath the status bar instead of stopping below an
+          // opaque OS-drawn strip — SafeArea only pushes the *content*
+          // (menu icon, title) down to clear it.
+          bottom: false,
+          child: Padding(
+            // Only vertical padding here — the horizontal insets for the
+            // menu/title live on the inner `contentPadding` below instead,
+            // so `constraints.maxWidth` reflects the band's true full
+            // width (edge to edge) rather than a width already shrunk by
+            // a right-side inset. The diagonal is sized from this
+            // `constraints.maxWidth` (see the `SizedBox`/`Positioned.fill`
+            // below), so if this outer `Padding` ever grows a horizontal
+            // component again, the wedge's right edge will stop short of
+            // the actual screen edge by that amount instead of touching it.
+            padding: const EdgeInsets.fromLTRB(0, 4, 0, 20),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // The menu/title content's own horizontal inset, kept
+                // separate from the band's overall width so the diagonal
+                // (painted at the band's full `constraints.maxWidth`) can
+                // still reach the true right edge of the screen.
+                const contentPadding = EdgeInsets.fromLTRB(4, 0, 24, 0);
+
+                // Measured directly (rather than reading the rendered
+                // Text's own size after layout) so the diagonal's
+                // clearance is known in the very same build/paint pass —
+                // no post-frame callback or extra rebuild needed. This is
+                // what lets the wedge stay clear of the title in every
+                // shipped language: a longer translation (e.g. "Nouveau
+                // match") simply pushes the wedge further right instead
+                // of running underneath it, which a fixed 55%/40% split
+                // could not account for. See the "hero band" section of
+                // PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
+                final titlePainter = TextPainter(
+                  text: TextSpan(text: title, style: _titleStyle),
+                  textDirection: Directionality.of(context),
+                  maxLines: 1,
+                )..layout(
+                    maxWidth: constraints.maxWidth - contentPadding.horizontal);
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _HeroDiagonalPainter(
+                          color: AppPalette.dark.accent,
+                          // The text's own left inset offsets where it
+                          // actually ends, in the same left-edge-of-band
+                          // coordinate space the wedge is painted in.
+                          titleRight: contentPadding.left + titlePainter.width,
+                        ),
                       ),
                     ),
-                    child: overflowMenu,
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                    // Without this explicit width, a `Stack` sizes itself
+                    // to fit only its non-positioned children when (as
+                    // here, inside a `Column`) its own height constraint
+                    // is unbounded — so it would shrink-wrap to whichever
+                    // of the menu icon or the title text is wider,
+                    // nowhere near the band's actual full width. That
+                    // starved the `Positioned.fill` diagonal above of
+                    // most of its canvas: it was never actually painting
+                    // across the true upper-right corner of the screen,
+                    // only a corner of this much narrower box — which is
+                    // exactly why the diagonal used to visibly cut
+                    // through the title's own text (the box was barely
+                    // wider than the text itself).
+                    SizedBox(
+                      width: constraints.maxWidth,
+                      child: Padding(
+                        padding: contentPadding,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Forces the hamburger's own icon color to
+                            // white, regardless of the app's light/dark
+                            // theme — this button sits on the always-dark
+                            // hero band, not on AppPalette.surface the way
+                            // it used to (on an AppBar), so the theme's
+                            // usual scoreText-based foreground (near-black
+                            // in light mode) would be invisible here. Only
+                            // affects this button's own theme-derived
+                            // default; the flyout menu it opens still uses
+                            // the app's real light/dark AppPalette.surface
+                            // (baked into `_menuStyle`/`_menuItemStyle`
+                            // explicitly, before this widget ever sees it),
+                            // unaffected by this override.
+                            Theme(
+                              data: Theme.of(context).copyWith(
+                                iconButtonTheme: IconButtonThemeData(
+                                  style: IconButton.styleFrom(
+                                      foregroundColor: Colors.white),
+                                ),
+                              ),
+                              child: overflowMenu,
+                            ),
+                            const SizedBox(height: 32),
+                            Text(title, style: _titleStyle),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -808,23 +901,62 @@ class _SetupHeroBand extends StatelessWidget {
 /// whatever that ends up being, without hand-tuning pixel offsets.
 class _HeroDiagonalPainter extends CustomPainter {
   final Color color;
+  final double titleRight;
 
-  const _HeroDiagonalPainter({required this.color});
+  const _HeroDiagonalPainter({required this.color, required this.titleRight});
 
   @override
   void paint(Canvas canvas, Size size) {
+    final bottomX =
+        heroDiagonalBottomX(bandWidth: size.width, titleRight: titleRight);
+    // The top edge trails the bottom edge by a fixed offset so the wedge
+    // keeps the same slanted look as before when there's no title to
+    // dodge, but never crosses to the *left* of the (now possibly
+    // pushed-right) bottom edge.
+    final topLower = size.width * 0.55;
+    final topUpper = max(topLower, size.width - 16.0);
+    final topX = (bottomX + size.width * 0.15).clamp(topLower, topUpper);
+
     final path = Path()
-      ..moveTo(size.width * 0.55, 0)
+      ..moveTo(topX, 0)
       ..lineTo(size.width, 0)
       ..lineTo(size.width, size.height)
-      ..lineTo(size.width * 0.40, size.height)
+      ..lineTo(bottomX, size.height)
       ..close();
     canvas.drawPath(path, Paint()..color = color);
   }
 
   @override
   bool shouldRepaint(covariant _HeroDiagonalPainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color || oldDelegate.titleRight != titleRight;
+}
+
+/// The hero band diagonal's bottom-edge x-coordinate: how far right the
+/// wedge's lower corner sits, given the band's own width and how far
+/// right the title text actually extends (`titleRight`, measured from
+/// the same left edge the wedge and the title share).
+///
+/// Kept clamped between two bounds so the fix for one problem doesn't
+/// create another: it never sits left of the title text plus a small
+/// clearance (that was the original overlap bug — see the "hero band"
+/// section of PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md), but it also
+/// never crosses all the way to the band's right edge, so even a title
+/// that fills almost the entire band width still leaves a visible sliver
+/// of the wedge — the brand motif never fully disappears.
+///
+/// A plain top-level function (rather than folded into
+/// [_HeroDiagonalPainter]'s paint method) so this clearance invariant is
+/// directly unit-testable without pumping a widget or rendering a frame.
+double heroDiagonalBottomX({
+  required double bandWidth,
+  required double titleRight,
+}) {
+  const clearance = 16.0;
+  const minWedgeWidth = 32.0;
+  final lowerBound = bandWidth * 0.40;
+  final upperBound = max(0.0, bandWidth - minWedgeWidth);
+  if (lowerBound >= upperBound) return upperBound;
+  return (titleRight + clearance).clamp(lowerBound, upperBound);
 }
 
 /// Wraps a control group (the singles/doubles mode toggle + name
