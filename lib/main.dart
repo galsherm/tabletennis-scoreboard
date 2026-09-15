@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'l10n/gen/app_localizations.dart';
 import 'screens/setup_screen.dart';
@@ -11,6 +12,16 @@ import 'services/theme_preference.dart';
 import 'theme/app_theme.dart';
 
 void main() {
+  // Edge-to-edge: the app draws its own background underneath the status
+  // bar and navigation bar, rather than the OS reserving an opaque strip
+  // above/below the app's content. Without this, Flutter's Android
+  // embedding leaves the platform's own (usually opaque, theme-agnostic)
+  // system bar backgrounds in place, which is exactly the "hard
+  // boundary" this app no longer wants. Must run before `runApp` — it's
+  // a one-time window-mode switch, not something any widget sets per
+  // frame.
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const TableTennisScoreboardApp());
 }
 
@@ -125,28 +136,65 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
     return const Locale('en');
   }
 
+  /// Resolves [_themeMode] to the actual [Brightness] currently on
+  /// screen, following the platform's own setting for [ThemeMode.system]
+  /// — same rule [MaterialApp] itself uses to pick between [theme] and
+  /// [darkTheme].
+  Brightness get _effectiveBrightness => switch (_themeMode) {
+        ThemeMode.light => Brightness.light,
+        ThemeMode.dark => Brightness.dark,
+        ThemeMode.system =>
+          WidgetsBinding.instance.platformDispatcher.platformBrightness,
+      };
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-      locale: _localeOverride,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      localeListResolutionCallback: _resolveDeviceLocale,
-      // Dark remains the recommended default (see PHASE4B_UI_POLISH.md's
-      // courtside-legibility reasoning), but Phase 4F adds a genuine
-      // Light/Dark/System choice, persisted via [_themePreference].
-      themeMode: _themeMode,
-      darkTheme: buildAppTheme(Brightness.dark),
-      theme: buildAppTheme(Brightness.light),
-      home: SetupScreen(
-        currentLocaleOverride: _localeOverride,
-        onLocaleChanged: _setLocaleOverride,
+    // App-wide edge-to-edge default: transparent system bars (so the
+    // screen's own background shows through, rather than an opaque OS
+    // strip) with icon/text brightness that reads against whichever
+    // theme is actually active. This is a *default* — it covers every
+    // screen that doesn't specify its own (e.g. the scoreboard screens'
+    // AppBar already computes its own overlay style from its real
+    // background), and is overridden specifically by the setup screen's
+    // hero band, which stays dark regardless of app theme and so needs
+    // light icons even in Light mode.
+    final isDark = _effectiveBrightness == Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+      child: MaterialApp(
+        // Store screenshots are taken from real device builds, not just
+        // release builds where this defaults to false anyway — belt and
+        // suspenders so a debug-mode capture never leaks the red "DEBUG"
+        // ribbon into a listing asset.
+        debugShowCheckedModeBanner: false,
+        onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+        locale: _localeOverride,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localeListResolutionCallback: _resolveDeviceLocale,
+        // Dark remains the recommended default (see PHASE4B_UI_POLISH.md's
+        // courtside-legibility reasoning), but Phase 4F adds a genuine
+        // Light/Dark/System choice, persisted via [_themePreference].
         themeMode: _themeMode,
-        onThemeModeChanged: _setThemeMode,
-        monetization: _monetization,
-        muted: _muted,
-        onMutedChanged: _setMuted,
+        darkTheme: buildAppTheme(Brightness.dark),
+        theme: buildAppTheme(Brightness.light),
+        home: SetupScreen(
+          currentLocaleOverride: _localeOverride,
+          onLocaleChanged: _setLocaleOverride,
+          themeMode: _themeMode,
+          onThemeModeChanged: _setThemeMode,
+          monetization: _monetization,
+          muted: _muted,
+          onMutedChanged: _setMuted,
+        ),
       ),
     );
   }

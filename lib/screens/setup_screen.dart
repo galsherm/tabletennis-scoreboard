@@ -501,7 +501,13 @@ class _SetupScreenState extends State<SetupScreen> {
                 // see its own SafeArea(bottom: false).
                 top: false,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                  // Vertical insets tightened from (24, 32) to (16, 20)
+                  // (Phase 4Q), alongside the SizedBox gaps between
+                  // sections below, to fit the whole setup screen (now
+                  // with a taller edge-to-edge hero band above it) on a
+                  // typical screen height without scrolling. See
+                  // PHASE4Q_FINAL_STORE_SCREENSHOTS.md.
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -530,7 +536,7 @@ class _SetupScreenState extends State<SetupScreen> {
                               alignment: Alignment.topCenter,
                               child: !_isDoubles
                                   ? Padding(
-                                      padding: const EdgeInsets.only(top: 20),
+                                      padding: const EdgeInsets.only(top: 12),
                                       // The same tap-to-rename preview doubles already
                                       // had — singles previously had no equivalent
                                       // step at all. See
@@ -572,7 +578,7 @@ class _SetupScreenState extends State<SetupScreen> {
                                       ),
                                     )
                                   : Padding(
-                                      padding: const EdgeInsets.only(top: 20),
+                                      padding: const EdgeInsets.only(top: 12),
                                       child: Row(
                                         key: const Key('doublesPlayerSlots'),
                                         mainAxisAlignment:
@@ -623,7 +629,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       _SectionGroup(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -658,7 +664,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 36),
+                      const SizedBox(height: 20),
                       // Not height-constrained: the toss prompt wraps to two
                       // lines in German/French (it's noticeably longer than
                       // English), so a fixed-height box here would clip it. Only
@@ -695,7 +701,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           idleLabel: l10n.tapToTossLabel,
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 16),
                       ElevatedButton(
                         key: const Key('startMatchButton'),
                         onPressed: _firstServer == null ? null : _start,
@@ -793,7 +799,13 @@ class _SetupHeroBand extends StatelessWidget {
             // below), so if this outer `Padding` ever grows a horizontal
             // component again, the wedge's right edge will stop short of
             // the actual screen edge by that amount instead of touching it.
-            padding: const EdgeInsets.fromLTRB(0, 4, 0, 20),
+            // Bottom inset trimmed from 20->12 (Phase 4Q): together with
+            // the menu-to-title gap below, this is one of the two biggest
+            // levers on the band's overall height. Edge-to-edge painting
+            // under the status bar (main.dart) made the band noticeably
+            // taller, which on shorter screens pushed "Start match" below
+            // the fold — see PHASE4Q_FINAL_STORE_SCREENSHOTS.md.
+            padding: const EdgeInsets.fromLTRB(0, 4, 0, 12),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 // The menu/title content's own horizontal inset, kept
@@ -876,7 +888,10 @@ class _SetupHeroBand extends StatelessWidget {
                               ),
                               child: overflowMenu,
                             ),
-                            const SizedBox(height: 32),
+                            // Trimmed from 32->18 (Phase 4Q) to keep the
+                            // hero band's overall height in check — see
+                            // the outer `Padding`'s comment above.
+                            const SizedBox(height: 18),
                             Text(title, style: _titleStyle),
                           ],
                         ),
@@ -973,7 +988,7 @@ class _SectionGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: context.palette.accent, width: 2),
