@@ -225,7 +225,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get helpCorrectTitle => 'Corriger le score';
 
   @override
-  String get helpCorrectBody => 'Maintenez un score appuyé pour le corriger.';
+  String get helpCorrectBody =>
+      'Appuyez longuement sur un score pour le corriger.';
 
   @override
   String get helpUndoTitle => 'Annuler';
@@ -252,7 +253,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get helpDoublesBody =>
-      'Le tirage désigne la paire qui sert en premier ; son premier joueur commence. Une raquette estompée indique le relanceur, qui servira ensuite.';
+      'Le tirage au sort désigne la paire qui sert en premier ; son premier joueur commence. Une raquette estompée indique le relanceur, qui servira ensuite.';
 
   @override
   String get helpSetupTitle => 'Noms, thème, langue';
@@ -266,5 +267,5 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get helpVoiceBody =>
-      'Le bouton haut-parleur du tableau de score coupe les annonces.';
+      'Le bouton haut-parleur de l\'écran de match coupe les annonces.';
 }

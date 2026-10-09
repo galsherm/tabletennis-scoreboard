@@ -66,7 +66,7 @@
   "helpScoreTitle": "Marquer un point",
   "helpScoreBody": "Touchez un côté pour ajouter un point.",
   "helpCorrectTitle": "Corriger le score",
-  "helpCorrectBody": "Maintenez un score appuyé pour le corriger.",
+  "helpCorrectBody": "Appuyez longuement sur un score pour le corriger.",
   "helpUndoTitle": "Annuler",
   "helpUndoBody": "Le bouton Annuler retire le dernier point.",
   "helpServeTitle": "Service",
@@ -74,9 +74,9 @@
   "helpChangeEndsTitle": "Changement de côté",
   "helpChangeEndsBody": "L'appli le signale : après chaque manche, et à 5 points dans la manche décisive.",
   "helpDoublesTitle": "Double",
-  "helpDoublesBody": "Le tirage désigne la paire qui sert en premier ; son premier joueur commence. Une raquette estompée indique le relanceur, qui servira ensuite.",
+  "helpDoublesBody": "Le tirage au sort désigne la paire qui sert en premier ; son premier joueur commence. Une raquette estompée indique le relanceur, qui servira ensuite.",
   "helpSetupTitle": "Noms, thème, langue",
   "helpSetupBody": "Avant le match, touchez un nom pour le renommer. Thème et langue sont dans le menu.",
   "helpVoiceTitle": "Voix",
-  "helpVoiceBody": "Le bouton haut-parleur du tableau de score coupe les annonces."
+  "helpVoiceBody": "Le bouton haut-parleur de l'écran de match coupe les annonces."
 }
