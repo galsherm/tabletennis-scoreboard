@@ -465,6 +465,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Privacy Policy'**
   String get privacyPolicyMenuItem;
+
+  /// Overflow-menu entry that opens the app's store listing so the user can rate it.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate this app'**
+  String get rateAppMenuItem;
 }
 
 class _AppLocalizationsDelegate

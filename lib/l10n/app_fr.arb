@@ -60,5 +60,6 @@
   "correctScoreCancelButton": "Annuler",
   "correctScoreConfirmButton": "Valider",
   "privacyOptionsMenuItem": "Options de confidentialité",
-  "privacyPolicyMenuItem": "Politique de confidentialité"
+  "privacyPolicyMenuItem": "Politique de confidentialité",
+  "rateAppMenuItem": "Noter l'application"
 }

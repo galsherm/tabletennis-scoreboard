@@ -293,5 +293,9 @@
   "privacyPolicyMenuItem": "Privacy Policy",
   "@privacyPolicyMenuItem": {
     "description": "Overflow-menu entry (Phase 6) that opens the app's hosted Privacy Policy in the device's browser."
+  },
+  "rateAppMenuItem": "Rate this app",
+  "@rateAppMenuItem": {
+    "description": "Overflow-menu entry that opens the app's store listing so the user can rate it."
   }
 }

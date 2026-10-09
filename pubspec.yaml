@@ -1,7 +1,8 @@
 name: tabletennis_scoreboard
 description: >
-  Phase 1 of the table tennis scoreboard app — a courtside scoring utility
-  for real physical matches (singles). Core scoring engine + basic UI.
+  Courtside table tennis scoreboard for real physical matches — singles
+  and doubles, voice announcements, English/German/French. Published on
+  Google Play as com.kozmokramer.tabletennisscoreboard.
 publish_to: 'none'
 version: 0.1.0
 
@@ -21,6 +22,7 @@ dependencies:
   google_mobile_ads: ^9.1.0
   in_app_purchase: ^3.3.0
   url_launcher: ^6.3.2
+  in_app_review: ^2.0.12
 
 dev_dependencies:
   flutter_test:

@@ -207,4 +207,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyPolicyMenuItem => 'Privacy Policy';
+
+  @override
+  String get rateAppMenuItem => 'Rate this app';
 }

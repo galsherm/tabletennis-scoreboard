@@ -208,4 +208,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyPolicyMenuItem => 'Politique de confidentialité';
+
+  @override
+  String get rateAppMenuItem => 'Noter l\'application';
 }

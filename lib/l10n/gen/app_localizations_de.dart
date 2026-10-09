@@ -206,4 +206,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get privacyPolicyMenuItem => 'Datenschutzerklärung';
+
+  @override
+  String get rateAppMenuItem => 'App bewerten';
 }

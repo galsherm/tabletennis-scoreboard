@@ -60,5 +60,6 @@
   "correctScoreCancelButton": "Abbrechen",
   "correctScoreConfirmButton": "Übernehmen",
   "privacyOptionsMenuItem": "Datenschutzoptionen",
-  "privacyPolicyMenuItem": "Datenschutzerklärung"
+  "privacyPolicyMenuItem": "Datenschutzerklärung",
+  "rateAppMenuItem": "App bewerten"
 }

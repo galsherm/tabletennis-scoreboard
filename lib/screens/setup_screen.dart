@@ -12,6 +12,7 @@ import '../services/monetization_controller.dart';
 import '../services/pro_status_store.dart';
 import '../services/privacy_links.dart';
 import '../services/purchase_gateway.dart';
+import '../services/review_prompter.dart';
 import '../theme/app_theme.dart';
 import '../widgets/coin_flip_indicator.dart';
 import '../widgets/editable_name_label.dart';
@@ -61,6 +62,12 @@ class SetupScreen extends StatefulWidget {
   /// staying local to that match's own [VoiceAnnouncer].
   final ValueChanged<bool>? onMutedChanged;
 
+  /// Backs the "Rate this app" menu entry, and is passed on to
+  /// whichever scoreboard screen this one starts for its automatic
+  /// post-match prompt. Overridable for tests to inject a fake
+  /// [ReviewService]; defaults to a real one otherwise.
+  final ReviewPrompter? reviewPrompter;
+
   const SetupScreen({
     super.key,
     required this.currentLocaleOverride,
@@ -70,6 +77,7 @@ class SetupScreen extends StatefulWidget {
     this.monetization,
     this.muted = false,
     this.onMutedChanged,
+    this.reviewPrompter,
   });
 
   @override
@@ -103,10 +111,12 @@ class _SetupScreenState extends State<SetupScreen> {
 
   late final MonetizationController _monetization;
   late final bool _ownsMonetization;
+  late final ReviewPrompter _reviews;
 
   @override
   void initState() {
     super.initState();
+    _reviews = widget.reviewPrompter ?? ReviewPrompter();
     final injected = widget.monetization;
     if (injected != null) {
       _monetization = injected;
@@ -155,6 +165,11 @@ class _SetupScreenState extends State<SetupScreen> {
     } catch (e) {
       debugPrint('SetupScreen: failed to open privacy policy URL: $e');
     }
+  }
+
+  /// Opens this app's store listing — see [ReviewPrompter.rateManually].
+  void _rateApp() {
+    _reviews.rateManually();
   }
 
   void _tossCoin() {
@@ -210,6 +225,7 @@ class _SetupScreenState extends State<SetupScreen> {
             monetization: _monetization,
             initialMuted: widget.muted,
             onMutedChanged: widget.onMutedChanged,
+            reviewPrompter: _reviews,
           )
         : ScoreboardScreen(
             bestOf: _bestOf,
@@ -218,6 +234,7 @@ class _SetupScreenState extends State<SetupScreen> {
             monetization: _monetization,
             initialMuted: widget.muted,
             onMutedChanged: widget.onMutedChanged,
+            reviewPrompter: _reviews,
           );
     // A brief ball-flyby transition plays first, then replaces itself
     // with `destination` — see MatchTransitionScreen and
@@ -454,6 +471,13 @@ class _SetupScreenState extends State<SetupScreen> {
           leadingIcon: const Icon(Icons.description_outlined, size: 20),
           onPressed: _openPrivacyPolicy,
           child: Text(l10n.privacyPolicyMenuItem),
+        ),
+        MenuItemButton(
+          key: const Key('rateAppMenuButton'),
+          style: itemStyle,
+          leadingIcon: const Icon(Icons.star_outline, size: 20),
+          onPressed: _rateApp,
+          child: Text(l10n.rateAppMenuItem),
         ),
       ],
     );

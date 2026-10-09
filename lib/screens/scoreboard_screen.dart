@@ -12,6 +12,7 @@ import '../services/match_export.dart';
 import '../services/monetization_controller.dart';
 import '../services/pro_status_store.dart';
 import '../services/purchase_gateway.dart';
+import '../services/review_prompter.dart';
 import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
@@ -56,6 +57,12 @@ class ScoreboardScreen extends StatefulWidget {
   /// staying local to this match's [VoiceAnnouncer].
   final ValueChanged<bool>? onMutedChanged;
 
+  /// Drives the one-time automatic "rate this app" prompt after a
+  /// completed match — overridable for tests to inject a fake
+  /// [ReviewService]; defaults to a real one otherwise, matching
+  /// [voiceAnnouncer]'s optional-with-safe-default pattern.
+  final ReviewPrompter? reviewPrompter;
+
   const ScoreboardScreen({
     super.key,
     required this.bestOf,
@@ -65,6 +72,7 @@ class ScoreboardScreen extends StatefulWidget {
     this.monetization,
     this.initialMuted = false,
     this.onMutedChanged,
+    this.reviewPrompter,
   });
 
   @override
@@ -86,6 +94,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   late final MonetizationController _monetization;
   late final bool _ownsMonetization;
+  late final ReviewPrompter _reviews;
 
   @override
   void initState() {
@@ -95,6 +104,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       firstServer: widget.firstServer,
     );
     _names = widget.initialNames ?? PlayerNames();
+    _reviews = widget.reviewPrompter ?? ReviewPrompter();
     final injected = widget.monetization;
     if (injected != null) {
       _monetization = injected;
@@ -257,6 +267,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     // no-op and the dialog shows immediately, exactly as before Phase 5.
     _monetization.maybeShowMatchEndAd();
     _monetization.recordMatchCompleted();
+    _reviews.recordMatchCompleted();
     final isPro = _monetization.isPro;
     showDialog(
       context: context,
@@ -273,7 +284,30 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           _resetMatch();
         },
       ),
-    ).then((_) => _maybeShowUpsell());
+    ).then((_) {
+      // One prompt at a time: when the upsell takes this slot, the
+      // review request simply waits for the next completed match.
+      final upsellDue = mounted && _monetization.shouldOfferUpsell;
+      _maybeShowUpsell();
+      if (!upsellDue) _maybePromptReview();
+    });
+  }
+
+  /// The one-time automatic "rate this app" request. Like
+  /// [_maybeShowUpsell], this only ever runs once the match-complete
+  /// dialog has closed — never during play, never over the result —
+  /// and [ReviewPrompter] limits it to a single request per install,
+  /// after the third completed match. "In progress" covers the case
+  /// where the result was dismissed without starting a new match and
+  /// the last point then undone, which puts the match back in play.
+  void _maybePromptReview() {
+    if (!mounted) return;
+    final played = _engine.player1Points +
+        _engine.player2Points +
+        _engine.completedGames.length;
+    _reviews.maybePromptAfterMatch(
+      matchInProgress: !_engine.isMatchOver && played > 0,
+    );
   }
 
   /// An occasional, unprompted "Remove Ads" nudge — never mid-match (this

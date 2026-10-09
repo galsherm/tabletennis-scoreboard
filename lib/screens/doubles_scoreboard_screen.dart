@@ -14,6 +14,7 @@ import '../services/match_export.dart';
 import '../services/monetization_controller.dart';
 import '../services/pro_status_store.dart';
 import '../services/purchase_gateway.dart';
+import '../services/review_prompter.dart';
 import '../services/voice_announcer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_score_text.dart';
@@ -76,6 +77,9 @@ class DoublesScoreboardScreen extends StatefulWidget {
   /// See [ScoreboardScreen.onMutedChanged].
   final ValueChanged<bool>? onMutedChanged;
 
+  /// See [ScoreboardScreen.reviewPrompter].
+  final ReviewPrompter? reviewPrompter;
+
   const DoublesScoreboardScreen({
     super.key,
     required this.bestOf,
@@ -85,6 +89,7 @@ class DoublesScoreboardScreen extends StatefulWidget {
     this.monetization,
     this.initialMuted = false,
     this.onMutedChanged,
+    this.reviewPrompter,
   });
 
   @override
@@ -100,6 +105,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
 
   late final MonetizationController _monetization;
   late final bool _ownsMonetization;
+  late final ReviewPrompter _reviews;
 
   @override
   void initState() {
@@ -109,6 +115,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
       firstServer: widget.firstServingTeam,
     );
     _names = widget.initialNames ?? PlayerNames();
+    _reviews = widget.reviewPrompter ?? ReviewPrompter();
     final injected = widget.monetization;
     if (injected != null) {
       _monetization = injected;
@@ -278,6 +285,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
     // why this doesn't block/gate the dialog.
     _monetization.maybeShowMatchEndAd();
     _monetization.recordMatchCompleted();
+    _reviews.recordMatchCompleted();
     final isPro = _monetization.isPro;
     showDialog(
       context: context,
@@ -294,7 +302,25 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
           _resetMatch();
         },
       ),
-    ).then((_) => _maybeShowUpsell());
+    ).then((_) {
+      // One prompt at a time: when the upsell takes this slot, the
+      // review request simply waits for the next completed match.
+      final upsellDue = mounted && _monetization.shouldOfferUpsell;
+      _maybeShowUpsell();
+      if (!upsellDue) _maybePromptReview();
+    });
+  }
+
+  /// The one-time automatic "rate this app" request — see
+  /// ScoreboardScreen._maybePromptReview for the full reasoning.
+  void _maybePromptReview() {
+    if (!mounted) return;
+    final played = _engine.player1Points +
+        _engine.player2Points +
+        _engine.completedGames.length;
+    _reviews.maybePromptAfterMatch(
+      matchInProgress: !_engine.isMatchOver && played > 0,
+    );
   }
 
   /// An occasional, unprompted "Remove Ads" nudge — see
