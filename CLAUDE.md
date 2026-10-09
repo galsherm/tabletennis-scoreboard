@@ -90,7 +90,7 @@ Colours are semantic roles on `AppPalette` (a `ThemeExtension`), read as `contex
 
 - Write and update README.md in English. App UI strings are localized (EN/DE/FR) via the `.arb` files.
 - Every task ends with a written verification report: files changed, full test-run summary, and `git log --oneline -5`. Never say "committed" without showing the git log.
-- All existing tests (currently 308) must keep passing. Add tests for any new logic.
+- All existing tests must keep passing. Add tests for any new logic.
 - Do not change the scoring engine, voice, or unrelated screens unless the task says so.
 - Do not build, sign, or upload release bundles, and never touch the keystore or `key.properties`, unless asked.
 - Do not flip `monetizationEnabled` or re-enable ads/purchases.
