@@ -19,14 +19,26 @@ class AnimatedScoreText extends StatelessWidget {
   final int points;
   final Key scoreKey;
 
+  /// Adds a soft accent halo behind the digits — set for the serving
+  /// side. A shadow only, so the digits' own color and size are the same
+  /// on both sides.
+  final bool glow;
+
   const AnimatedScoreText({
     super.key,
     required this.points,
     required this.scoreKey,
+    this.glow = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final base = AppTypography.scoreDisplay(context);
+    final style = glow
+        ? base.copyWith(shadows: [
+            Shadow(color: context.palette.scoreGlow, blurRadius: 48),
+          ])
+        : base;
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: TweenAnimationBuilder<double>(
@@ -45,7 +57,7 @@ class AnimatedScoreText extends StatelessWidget {
         child: Text(
           '$points',
           key: scoreKey,
-          style: AppTypography.scoreDisplay(context),
+          style: style,
         ),
       ),
     );

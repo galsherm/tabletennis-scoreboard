@@ -24,6 +24,7 @@ import '../widgets/match_complete_dialog.dart';
 import '../widgets/pro_dialog.dart';
 import '../widgets/score_corrector_dialog.dart';
 import '../widgets/score_edit_hint.dart';
+import '../widgets/scoreboard_decor.dart';
 
 /// Doubles scoreboard: reuses [TableTennisScoringEngine] exactly as
 /// singles does (it only ever knows about two *sides* scoring points —
@@ -367,6 +368,7 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
 
     bool isServing(DoublesSeat seat) => serving.server == seat;
     bool isReceiving(DoublesSeat seat) => serving.receiver == seat;
+    final gamesToWin = widget.bestOf ~/ 2 + 1;
 
     return Scaffold(
       appBar: AppBar(
@@ -411,6 +413,8 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
               slot1Receiving: isReceiving(const DoublesSeat(Player.one, 1)),
               points: _engine.player1Points,
               gamesLabel: l10n.gamesCountLabel(_engine.player1Games),
+              gamesWon: _engine.player1Games,
+              gamesToWin: gamesToWin,
               servingTooltip: l10n.servingTooltip,
               receivingTooltip: l10n.receivingTooltip,
               pointsKey: const Key('team1PointsText'),
@@ -440,6 +444,8 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
               slot1Receiving: isReceiving(const DoublesSeat(Player.two, 1)),
               points: _engine.player2Points,
               gamesLabel: l10n.gamesCountLabel(_engine.player2Games),
+              gamesWon: _engine.player2Games,
+              gamesToWin: gamesToWin,
               servingTooltip: l10n.servingTooltip,
               receivingTooltip: l10n.receivingTooltip,
               pointsKey: const Key('team2PointsText'),
@@ -476,6 +482,8 @@ class _DoublesTeamZone extends StatelessWidget {
   final bool slot1Receiving;
   final int points;
   final String gamesLabel;
+  final int gamesWon;
+  final int gamesToWin;
   final String servingTooltip;
   final String receivingTooltip;
   final Key pointsKey;
@@ -507,6 +515,8 @@ class _DoublesTeamZone extends StatelessWidget {
     required this.slot1Receiving,
     required this.points,
     required this.gamesLabel,
+    required this.gamesWon,
+    required this.gamesToWin,
     required this.servingTooltip,
     required this.receivingTooltip,
     required this.pointsKey,
@@ -524,73 +534,91 @@ class _DoublesTeamZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        highlightColor: context.palette.accent.withValues(alpha: 0.12),
-        splashColor: context.palette.accent.withValues(alpha: 0.18),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: context.palette.surface,
-                  borderRadius: BorderRadius.circular(20),
+    // The whole half is marked, as in singles; which of the two
+    // partners is serving is still shown by that player's own icon.
+    final teamServing = slot0Serving || slot1Serving;
+    return ServingSideBackdrop(
+      serving: teamServing,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          highlightColor: context.palette.accent.withValues(alpha: 0.12),
+          splashColor: context.palette.accent.withValues(alpha: 0.18),
+          child: Padding(
+            // The bottom inset keeps the games count clear of the
+            // system navigation bar (the app draws edge to edge)
+            // while the half's own backdrop still runs under it.
+            padding: EdgeInsets.fromLTRB(
+                8, 16, 8, 16 + MediaQuery.viewPaddingOf(context).bottom),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: context.palette.surface,
+                    border: Border.all(color: context.palette.divider),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  // A custom team name (if set on the setup screen) or the
+                  // generic "Team 1"/"Team 2" default — plain, uneditable
+                  // text here (Phase 4H locks editing to the setup screen).
+                  child: Text(
+                    teamHeading,
+                    key: teamHeadingKey,
+                    style: AppTypography.eyebrow(context),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
-                // A custom team name (if set on the setup screen) or the
-                // generic "Team 1"/"Team 2" default — plain, uneditable
-                // text here (Phase 4H locks editing to the setup screen).
-                child: Text(
-                  teamHeading,
-                  key: teamHeadingKey,
-                  style: AppTypography.eyebrow(context),
+                const SizedBox(height: 8),
+                _DoublesPlayerRow(
+                  label: slot0Label,
+                  serving: slot0Serving,
+                  receiving: slot0Receiving,
+                  servingTooltip: servingTooltip,
+                  receivingTooltip: receivingTooltip,
+                  serverIconKey: slot0ServerIconKey,
+                  receiverIconKey: slot0ReceiverIconKey,
+                  nameTextKey: slot0NameTextKey,
                 ),
-              ),
-              const SizedBox(height: 8),
-              _DoublesPlayerRow(
-                label: slot0Label,
-                serving: slot0Serving,
-                receiving: slot0Receiving,
-                servingTooltip: servingTooltip,
-                receivingTooltip: receivingTooltip,
-                serverIconKey: slot0ServerIconKey,
-                receiverIconKey: slot0ReceiverIconKey,
-                nameTextKey: slot0NameTextKey,
-              ),
-              const SizedBox(height: 6),
-              _DoublesPlayerRow(
-                label: slot1Label,
-                serving: slot1Serving,
-                receiving: slot1Receiving,
-                servingTooltip: servingTooltip,
-                receivingTooltip: receivingTooltip,
-                serverIconKey: slot1ServerIconKey,
-                receiverIconKey: slot1ReceiverIconKey,
-                nameTextKey: slot1NameTextKey,
-              ),
-              Expanded(
-                child: Center(
-                  child: Semantics(
-                    hint: correctScoreHint,
-                    child: GestureDetector(
-                      key: correctorTriggerKey,
-                      onLongPress: onLongPressScore,
-                      child: ScoreEditHint(
-                        child: AnimatedScoreText(
-                            points: points, scoreKey: pointsKey),
+                const SizedBox(height: 6),
+                _DoublesPlayerRow(
+                  label: slot1Label,
+                  serving: slot1Serving,
+                  receiving: slot1Receiving,
+                  servingTooltip: servingTooltip,
+                  receivingTooltip: receivingTooltip,
+                  serverIconKey: slot1ServerIconKey,
+                  receiverIconKey: slot1ReceiverIconKey,
+                  nameTextKey: slot1NameTextKey,
+                ),
+                Expanded(
+                  child: Center(
+                    child: Semantics(
+                      hint: correctScoreHint,
+                      child: GestureDetector(
+                        key: correctorTriggerKey,
+                        onLongPress: onLongPressScore,
+                        child: ScoreEditHint(
+                          child: AnimatedScoreText(
+                            points: points,
+                            scoreKey: pointsKey,
+                            glow: teamServing,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(gamesLabel, style: AppTypography.gamesLabel(context)),
-            ],
+                const SizedBox(height: 6),
+                GamePips(won: gamesWon, toWin: gamesToWin),
+                const SizedBox(height: 8),
+                Text(gamesLabel, style: AppTypography.gamesLabel(context)),
+              ],
+            ),
           ),
         ),
       ),
@@ -621,6 +649,7 @@ class _DoublesPlayerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final nameStyle = AppTypography.compactPlayerLabel(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -660,12 +689,18 @@ class _DoublesPlayerRow extends StatelessWidget {
         const SizedBox(width: 6),
         // Plain, uneditable text — Phase 4H locks name editing to the
         // setup screen only.
-        Text(
-          label,
-          key: nameTextKey,
-          style: AppTypography.compactPlayerLabel(context),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
+        // Flexible so a long name (or a large system font) ellipsizes
+        // inside its half instead of overflowing it.
+        Flexible(
+          child: Text(
+            label,
+            key: nameTextKey,
+            style: serving
+                ? nameStyle.copyWith(color: context.palette.accentSoft)
+                : nameStyle,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
         ),
       ],
     );

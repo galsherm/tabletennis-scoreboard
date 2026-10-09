@@ -22,6 +22,7 @@ import '../widgets/match_complete_dialog.dart';
 import '../widgets/pro_dialog.dart';
 import '../widgets/score_corrector_dialog.dart';
 import '../widgets/score_edit_hint.dart';
+import '../widgets/scoreboard_decor.dart';
 
 class ScoreboardScreen extends StatefulWidget {
   final int bestOf;
@@ -355,6 +356,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final server = _engine.currentServer;
+    final gamesToWin = widget.bestOf ~/ 2 + 1;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.scoreboardTitle),
@@ -391,6 +393,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               label: _playerLabel(Player.one),
               points: _engine.player1Points,
               gamesLabel: l10n.gamesCountLabel(_engine.player1Games),
+              gamesWon: _engine.player1Games,
+              gamesToWin: gamesToWin,
               isServer: server == Player.one,
               servingTooltip: l10n.servingTooltip,
               pointsKey: const Key('player1PointsText'),
@@ -409,6 +413,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               label: _playerLabel(Player.two),
               points: _engine.player2Points,
               gamesLabel: l10n.gamesCountLabel(_engine.player2Games),
+              gamesWon: _engine.player2Games,
+              gamesToWin: gamesToWin,
               isServer: server == Player.two,
               servingTooltip: l10n.servingTooltip,
               pointsKey: const Key('player2PointsText'),
@@ -429,11 +435,15 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 /// A large, tap-anywhere half of the scoreboard. Layout defers entirely
 /// to the score digit at its center — the player label above and the
 /// games count below are deliberately small and muted (see
-/// [AppTypography]) so the eye lands on the number first.
+/// [AppTypography]) so the eye lands on the number first. The serving
+/// half carries an accent wash and top bar (see [ServingSideBackdrop])
+/// behind the serve icon, name and digits.
 class _PlayerZone extends StatelessWidget {
   final String label;
   final int points;
   final String gamesLabel;
+  final int gamesWon;
+  final int gamesToWin;
   final bool isServer;
   final String servingTooltip;
   final Key pointsKey;
@@ -461,6 +471,8 @@ class _PlayerZone extends StatelessWidget {
     required this.label,
     required this.points,
     required this.gamesLabel,
+    required this.gamesWon,
+    required this.gamesToWin,
     required this.isServer,
     required this.servingTooltip,
     required this.pointsKey,
@@ -474,63 +486,78 @@ class _PlayerZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        // A visible highlight while held, on top of the ripple — courtside
-        // taps are quick and imprecise, so the press feedback needs to be
-        // obvious, not subtle.
-        highlightColor: context.palette.accent.withValues(alpha: 0.12),
-        splashColor: context.palette.accent.withValues(alpha: 0.18),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                height: 30,
-                child: isServer
-                    ? Tooltip(
-                        message: servingTooltip,
-                        child: Icon(
-                          Icons.sports_tennis,
-                          key: serverIconKey,
-                          color: context.palette.accent,
-                          size: 26,
+    final nameStyle = AppTypography.playerLabel(context);
+    return ServingSideBackdrop(
+      serving: isServer,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          // A visible highlight while held, on top of the ripple — courtside
+          // taps are quick and imprecise, so the press feedback needs to be
+          // obvious, not subtle.
+          highlightColor: context.palette.accent.withValues(alpha: 0.12),
+          splashColor: context.palette.accent.withValues(alpha: 0.18),
+          child: Padding(
+            // The bottom inset keeps the games count clear of the
+            // system navigation bar (the app draws edge to edge)
+            // while the half's own backdrop still runs under it.
+            padding: EdgeInsets.fromLTRB(
+                8, 16, 8, 16 + MediaQuery.viewPaddingOf(context).bottom),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  height: 30,
+                  child: isServer
+                      ? Tooltip(
+                          message: servingTooltip,
+                          child: Icon(
+                            Icons.sports_tennis,
+                            key: serverIconKey,
+                            color: context.palette.accent,
+                            size: 26,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 6),
+                // Plain, uneditable text — names can only be set on the
+                // setup screen (Phase 4H); the in-match screen stays
+                // focused purely on score, with no edit affordance at all.
+                Text(
+                  label,
+                  key: nameTextKey,
+                  style: isServer
+                      ? nameStyle.copyWith(color: context.palette.accentSoft)
+                      : nameStyle,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                Expanded(
+                  child: Center(
+                    child: Semantics(
+                      hint: correctScoreHint,
+                      child: GestureDetector(
+                        key: correctorTriggerKey,
+                        onLongPress: onLongPressScore,
+                        child: ScoreEditHint(
+                          child: AnimatedScoreText(
+                            points: points,
+                            scoreKey: pointsKey,
+                            glow: isServer,
+                          ),
                         ),
-                      )
-                    : null,
-              ),
-              const SizedBox(height: 6),
-              // Plain, uneditable text — names can only be set on the
-              // setup screen (Phase 4H); the in-match screen stays
-              // focused purely on score, with no edit affordance at all.
-              Text(
-                label,
-                key: nameTextKey,
-                style: AppTypography.playerLabel(context),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-              Expanded(
-                child: Center(
-                  child: Semantics(
-                    hint: correctScoreHint,
-                    child: GestureDetector(
-                      key: correctorTriggerKey,
-                      onLongPress: onLongPressScore,
-                      child: ScoreEditHint(
-                        child: AnimatedScoreText(
-                            points: points, scoreKey: pointsKey),
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(gamesLabel, style: AppTypography.gamesLabel(context)),
-            ],
+                const SizedBox(height: 6),
+                GamePips(won: gamesWon, toWin: gamesToWin),
+                const SizedBox(height: 8),
+                Text(gamesLabel, style: AppTypography.gamesLabel(context)),
+              ],
+            ),
           ),
         ),
       ),

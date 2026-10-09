@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// An [IconButton] on a subtle translucent circular "chip" background —
-/// Phase 4P's replacement for the scoreboard app bar's bare mute/undo/
-/// reset icons, which previously floated on empty app-bar space with no
-/// visual grouping of their own. Purely decorative: [buttonKey],
+/// One of the scoreboard app bar's mute/undo/reset icons, on a 44px hit
+/// target (see [AppMetrics.toolbarTouchTarget]). It used to sit on a
+/// translucent circular "chip" (Phase 4P, hence the name); the Arena
+/// pass dropped the fill for a plain icon. A thin wrapper: [buttonKey],
 /// [onPressed], [tooltip] etc. behave exactly like a plain [IconButton]
 /// with the same parameters — existing tests that find the inner button
 /// by key and cast it to `IconButton` are unaffected by this wrapper.
@@ -31,18 +31,16 @@ class ChipIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: context.palette.scoreText.withValues(alpha: 0.08),
-        ),
-        child: IconButton(
-          key: buttonKey,
-          icon: Icon(icon),
-          iconSize: iconSize,
-          tooltip: tooltip,
-          onPressed: onPressed,
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: IconButton(
+        key: buttonKey,
+        icon: Icon(icon),
+        iconSize: iconSize,
+        tooltip: tooltip,
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          minimumSize: const Size.square(AppMetrics.toolbarTouchTarget),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ),
     );
