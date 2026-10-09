@@ -359,7 +359,14 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     final gamesToWin = widget.bestOf ~/ 2 + 1;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.scoreboardTitle),
+        // Shrinks to the space left beside the three action icons
+        // instead of being cut off with an ellipsis — the French title
+        // ("Tennis de table") does not fit a 360dp-wide bar at full size.
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(l10n.scoreboardTitle),
+        ),
         actions: [
           ChipIconButton(
             buttonKey: const Key('muteButton'),

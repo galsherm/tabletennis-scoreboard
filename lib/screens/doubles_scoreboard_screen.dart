@@ -372,7 +372,12 @@ class _DoublesScoreboardScreenState extends State<DoublesScoreboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.scoreboardTitle),
+        // Shrinks rather than truncates — see ScoreboardScreen.
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(l10n.scoreboardTitle),
+        ),
         actions: [
           ChipIconButton(
             buttonKey: const Key('muteButton'),
