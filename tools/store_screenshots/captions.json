@@ -1,0 +1,26 @@
+{
+  "en-US": [
+    {"file": "01_setup", "caption": "Set up a match in seconds"},
+    {"file": "02_singles", "caption": "Big score, readable from across the table"},
+    {"file": "03_serve", "caption": "Never lose track of the serve"},
+    {"file": "04_doubles", "caption": "Singles and doubles"},
+    {"file": "05_language", "caption": "English, Deutsch, Français"},
+    {"file": "06_help", "caption": "Learn the app in a minute"}
+  ],
+  "de-DE": [
+    {"file": "01_setup", "caption": "Spiel in Sekunden einrichten"},
+    {"file": "02_singles", "caption": "Große Anzeige, vom Tischende aus lesbar"},
+    {"file": "03_serve", "caption": "Immer wissen, wer aufschlägt"},
+    {"file": "04_doubles", "caption": "Einzel und Doppel"},
+    {"file": "05_language", "caption": "English, Deutsch, Français"},
+    {"file": "06_help", "caption": "In einer Minute verstanden"}
+  ],
+  "fr-FR": [
+    {"file": "01_setup", "caption": "Lancez un match en quelques secondes"},
+    {"file": "02_singles", "caption": "Un score géant, lisible de loin"},
+    {"file": "03_serve", "caption": "Sachez toujours qui sert"},
+    {"file": "04_doubles", "caption": "Simple et double"},
+    {"file": "05_language", "caption": "English, Deutsch, Français"},
+    {"file": "06_help", "caption": "Prise en main en une minute"}
+  ]
+}
