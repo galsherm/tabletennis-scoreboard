@@ -61,5 +61,22 @@
   "correctScoreConfirmButton": "Übernehmen",
   "privacyOptionsMenuItem": "Datenschutzoptionen",
   "privacyPolicyMenuItem": "Datenschutzerklärung",
-  "rateAppMenuItem": "App bewerten"
+  "rateAppMenuItem": "App bewerten",
+  "helpTitle": "Anleitung",
+  "helpScoreTitle": "Punkt zählen",
+  "helpScoreBody": "Tippe auf eine Seite, um einen Punkt zu vergeben.",
+  "helpCorrectTitle": "Punktestand korrigieren",
+  "helpCorrectBody": "Halte eine Punktzahl gedrückt, um sie zu korrigieren.",
+  "helpUndoTitle": "Rückgängig",
+  "helpUndoBody": "Die Rückgängig-Taste nimmt den letzten Punkt zurück.",
+  "helpServeTitle": "Aufschlag",
+  "helpServeBody": "Der orange Schläger zeigt, wer aufschlägt. Wechsel alle 2 Punkte, bei Gleichstand (ab 10:10) nach jedem Punkt.",
+  "helpChangeEndsTitle": "Seitenwechsel",
+  "helpChangeEndsBody": "Die App meldet ihn: nach jedem Satz und im Entscheidungssatz bei 5 Punkten.",
+  "helpDoublesTitle": "Doppel",
+  "helpDoublesBody": "Der Münzwurf bestimmt das aufschlagende Team; dessen erster Spieler beginnt. Ein blasser Schläger zeigt den Rückschläger, der als Nächster aufschlägt.",
+  "helpSetupTitle": "Namen, Design, Sprache",
+  "helpSetupBody": "Vor dem Spiel: Namen antippen zum Umbenennen. Design und Sprache findest du im Menü.",
+  "helpVoiceTitle": "Sprachausgabe",
+  "helpVoiceBody": "Die Lautsprecher-Taste auf der Anzeigetafel schaltet die Ansagen stumm."
 }

@@ -471,6 +471,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rate this app'**
   String get rateAppMenuItem;
+
+  /// Label of the overflow-menu entry that opens the "How to use" help page, and that page's own title.
+  ///
+  /// In en, this message translates to:
+  /// **'How to use'**
+  String get helpTitle;
+
+  /// Help page card title: scoring a point.
+  ///
+  /// In en, this message translates to:
+  /// **'Score a point'**
+  String get helpScoreTitle;
+
+  /// Help page card text: tapping either half of the scoreboard adds a point for that side.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a side to add a point.'**
+  String get helpScoreBody;
+
+  /// Help page card title: correcting a score by long-pressing it.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct the score'**
+  String get helpCorrectTitle;
+
+  /// Help page card text: a long-press on a score digit opens the score corrector.
+  ///
+  /// In en, this message translates to:
+  /// **'Press and hold a score to correct it.'**
+  String get helpCorrectBody;
+
+  /// Help page card title: the undo button.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get helpUndoTitle;
+
+  /// Help page card text: the undo button in the scoreboard's top bar reverts the last point.
+  ///
+  /// In en, this message translates to:
+  /// **'The undo button takes back the last point.'**
+  String get helpUndoBody;
+
+  /// Help page card title: the server marker and serve rotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Serve'**
+  String get helpServeTitle;
+
+  /// Help page card text: the accent-coloured racket icon marks the server; service changes every 2 points, and every point once both sides have 10.
+  ///
+  /// In en, this message translates to:
+  /// **'The orange racket shows who serves. Serve changes every 2 points, at deuce (from 10–10) every point.'**
+  String get helpServeBody;
+
+  /// Help page card title: change of ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Change ends'**
+  String get helpChangeEndsTitle;
+
+  /// Help page card text: the app signals a change of ends after every game, and in the deciding game as soon as one side reaches 5 points.
+  ///
+  /// In en, this message translates to:
+  /// **'The app tells you when: after each game, and at 5 points in the deciding game.'**
+  String get helpChangeEndsBody;
+
+  /// Help page card title: doubles.
+  ///
+  /// In en, this message translates to:
+  /// **'Doubles'**
+  String get helpDoublesTitle;
+
+  /// Help page card text: in doubles the coin toss picks the first-serving pair, whose first-listed player serves first; a dimmed racket icon marks the receiver, who is the next server.
+  ///
+  /// In en, this message translates to:
+  /// **'The toss picks the pair that serves first; its first player starts. A dimmed racket marks the receiver, who serves next.'**
+  String get helpDoublesBody;
+
+  /// Help page card title: names, theme and language, all set before a match.
+  ///
+  /// In en, this message translates to:
+  /// **'Names, theme, language'**
+  String get helpSetupTitle;
+
+  /// Help page card text: names are renamed by tapping them on the setup screen; theme and language are in the menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Before the match, tap a name to rename it. Theme and language are in the menu.'**
+  String get helpSetupBody;
+
+  /// Help page card title: voice announcements and muting them.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice'**
+  String get helpVoiceTitle;
+
+  /// Help page card text: the speaker button in the scoreboard's top bar mutes the voice announcements.
+  ///
+  /// In en, this message translates to:
+  /// **'The speaker button on the scoreboard mutes the announcements.'**
+  String get helpVoiceBody;
 }
 
 class _AppLocalizationsDelegate

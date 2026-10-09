@@ -210,4 +210,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rateAppMenuItem => 'Rate this app';
+
+  @override
+  String get helpTitle => 'How to use';
+
+  @override
+  String get helpScoreTitle => 'Score a point';
+
+  @override
+  String get helpScoreBody => 'Tap a side to add a point.';
+
+  @override
+  String get helpCorrectTitle => 'Correct the score';
+
+  @override
+  String get helpCorrectBody => 'Press and hold a score to correct it.';
+
+  @override
+  String get helpUndoTitle => 'Undo';
+
+  @override
+  String get helpUndoBody => 'The undo button takes back the last point.';
+
+  @override
+  String get helpServeTitle => 'Serve';
+
+  @override
+  String get helpServeBody =>
+      'The orange racket shows who serves. Serve changes every 2 points, at deuce (from 10–10) every point.';
+
+  @override
+  String get helpChangeEndsTitle => 'Change ends';
+
+  @override
+  String get helpChangeEndsBody =>
+      'The app tells you when: after each game, and at 5 points in the deciding game.';
+
+  @override
+  String get helpDoublesTitle => 'Doubles';
+
+  @override
+  String get helpDoublesBody =>
+      'The toss picks the pair that serves first; its first player starts. A dimmed racket marks the receiver, who serves next.';
+
+  @override
+  String get helpSetupTitle => 'Names, theme, language';
+
+  @override
+  String get helpSetupBody =>
+      'Before the match, tap a name to rename it. Theme and language are in the menu.';
+
+  @override
+  String get helpVoiceTitle => 'Voice';
+
+  @override
+  String get helpVoiceBody =>
+      'The speaker button on the scoreboard mutes the announcements.';
 }

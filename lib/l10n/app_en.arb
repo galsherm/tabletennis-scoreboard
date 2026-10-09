@@ -297,5 +297,73 @@
   "rateAppMenuItem": "Rate this app",
   "@rateAppMenuItem": {
     "description": "Overflow-menu entry that opens the app's store listing so the user can rate it."
+  },
+  "helpTitle": "How to use",
+  "@helpTitle": {
+    "description": "Label of the overflow-menu entry that opens the \"How to use\" help page, and that page's own title."
+  },
+  "helpScoreTitle": "Score a point",
+  "@helpScoreTitle": {
+    "description": "Help page card title: scoring a point."
+  },
+  "helpScoreBody": "Tap a side to add a point.",
+  "@helpScoreBody": {
+    "description": "Help page card text: tapping either half of the scoreboard adds a point for that side."
+  },
+  "helpCorrectTitle": "Correct the score",
+  "@helpCorrectTitle": {
+    "description": "Help page card title: correcting a score by long-pressing it."
+  },
+  "helpCorrectBody": "Press and hold a score to correct it.",
+  "@helpCorrectBody": {
+    "description": "Help page card text: a long-press on a score digit opens the score corrector."
+  },
+  "helpUndoTitle": "Undo",
+  "@helpUndoTitle": {
+    "description": "Help page card title: the undo button."
+  },
+  "helpUndoBody": "The undo button takes back the last point.",
+  "@helpUndoBody": {
+    "description": "Help page card text: the undo button in the scoreboard's top bar reverts the last point."
+  },
+  "helpServeTitle": "Serve",
+  "@helpServeTitle": {
+    "description": "Help page card title: the server marker and serve rotation."
+  },
+  "helpServeBody": "The orange racket shows who serves. Serve changes every 2 points, at deuce (from 10–10) every point.",
+  "@helpServeBody": {
+    "description": "Help page card text: the accent-coloured racket icon marks the server; service changes every 2 points, and every point once both sides have 10."
+  },
+  "helpChangeEndsTitle": "Change ends",
+  "@helpChangeEndsTitle": {
+    "description": "Help page card title: change of ends."
+  },
+  "helpChangeEndsBody": "The app tells you when: after each game, and at 5 points in the deciding game.",
+  "@helpChangeEndsBody": {
+    "description": "Help page card text: the app signals a change of ends after every game, and in the deciding game as soon as one side reaches 5 points."
+  },
+  "helpDoublesTitle": "Doubles",
+  "@helpDoublesTitle": {
+    "description": "Help page card title: doubles."
+  },
+  "helpDoublesBody": "The toss picks the pair that serves first; its first player starts. A dimmed racket marks the receiver, who serves next.",
+  "@helpDoublesBody": {
+    "description": "Help page card text: in doubles the coin toss picks the first-serving pair, whose first-listed player serves first; a dimmed racket icon marks the receiver, who is the next server."
+  },
+  "helpSetupTitle": "Names, theme, language",
+  "@helpSetupTitle": {
+    "description": "Help page card title: names, theme and language, all set before a match."
+  },
+  "helpSetupBody": "Before the match, tap a name to rename it. Theme and language are in the menu.",
+  "@helpSetupBody": {
+    "description": "Help page card text: names are renamed by tapping them on the setup screen; theme and language are in the menu."
+  },
+  "helpVoiceTitle": "Voice",
+  "@helpVoiceTitle": {
+    "description": "Help page card title: voice announcements and muting them."
+  },
+  "helpVoiceBody": "The speaker button on the scoreboard mutes the announcements.",
+  "@helpVoiceBody": {
+    "description": "Help page card text: the speaker button in the scoreboard's top bar mutes the voice announcements."
   }
 }

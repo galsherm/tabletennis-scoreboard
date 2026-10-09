@@ -211,4 +211,60 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get rateAppMenuItem => 'Noter l\'application';
+
+  @override
+  String get helpTitle => 'Aide';
+
+  @override
+  String get helpScoreTitle => 'Marquer un point';
+
+  @override
+  String get helpScoreBody => 'Touchez un côté pour ajouter un point.';
+
+  @override
+  String get helpCorrectTitle => 'Corriger le score';
+
+  @override
+  String get helpCorrectBody => 'Maintenez un score appuyé pour le corriger.';
+
+  @override
+  String get helpUndoTitle => 'Annuler';
+
+  @override
+  String get helpUndoBody => 'Le bouton Annuler retire le dernier point.';
+
+  @override
+  String get helpServeTitle => 'Service';
+
+  @override
+  String get helpServeBody =>
+      'La raquette orange indique le serveur. Le service change tous les 2 points, à égalité (dès 10-10) à chaque point.';
+
+  @override
+  String get helpChangeEndsTitle => 'Changement de côté';
+
+  @override
+  String get helpChangeEndsBody =>
+      'L\'appli le signale : après chaque manche, et à 5 points dans la manche décisive.';
+
+  @override
+  String get helpDoublesTitle => 'Double';
+
+  @override
+  String get helpDoublesBody =>
+      'Le tirage désigne la paire qui sert en premier ; son premier joueur commence. Une raquette estompée indique le relanceur, qui servira ensuite.';
+
+  @override
+  String get helpSetupTitle => 'Noms, thème, langue';
+
+  @override
+  String get helpSetupBody =>
+      'Avant le match, touchez un nom pour le renommer. Thème et langue sont dans le menu.';
+
+  @override
+  String get helpVoiceTitle => 'Voix';
+
+  @override
+  String get helpVoiceBody =>
+      'Le bouton haut-parleur du tableau de score coupe les annonces.';
 }

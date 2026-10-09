@@ -209,4 +209,63 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get rateAppMenuItem => 'App bewerten';
+
+  @override
+  String get helpTitle => 'Anleitung';
+
+  @override
+  String get helpScoreTitle => 'Punkt zählen';
+
+  @override
+  String get helpScoreBody =>
+      'Tippe auf eine Seite, um einen Punkt zu vergeben.';
+
+  @override
+  String get helpCorrectTitle => 'Punktestand korrigieren';
+
+  @override
+  String get helpCorrectBody =>
+      'Halte eine Punktzahl gedrückt, um sie zu korrigieren.';
+
+  @override
+  String get helpUndoTitle => 'Rückgängig';
+
+  @override
+  String get helpUndoBody =>
+      'Die Rückgängig-Taste nimmt den letzten Punkt zurück.';
+
+  @override
+  String get helpServeTitle => 'Aufschlag';
+
+  @override
+  String get helpServeBody =>
+      'Der orange Schläger zeigt, wer aufschlägt. Wechsel alle 2 Punkte, bei Gleichstand (ab 10:10) nach jedem Punkt.';
+
+  @override
+  String get helpChangeEndsTitle => 'Seitenwechsel';
+
+  @override
+  String get helpChangeEndsBody =>
+      'Die App meldet ihn: nach jedem Satz und im Entscheidungssatz bei 5 Punkten.';
+
+  @override
+  String get helpDoublesTitle => 'Doppel';
+
+  @override
+  String get helpDoublesBody =>
+      'Der Münzwurf bestimmt das aufschlagende Team; dessen erster Spieler beginnt. Ein blasser Schläger zeigt den Rückschläger, der als Nächster aufschlägt.';
+
+  @override
+  String get helpSetupTitle => 'Namen, Design, Sprache';
+
+  @override
+  String get helpSetupBody =>
+      'Vor dem Spiel: Namen antippen zum Umbenennen. Design und Sprache findest du im Menü.';
+
+  @override
+  String get helpVoiceTitle => 'Sprachausgabe';
+
+  @override
+  String get helpVoiceBody =>
+      'Die Lautsprecher-Taste auf der Anzeigetafel schaltet die Ansagen stumm.';
 }

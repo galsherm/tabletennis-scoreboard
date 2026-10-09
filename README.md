@@ -14,6 +14,8 @@ Flutter and published on Google Play as
   clip set, with a mute toggle.
 - **English, German and French**, auto-detected from the device and
   switchable in the menu. Light, dark and system themes.
+- **"How to use"** help page in the menu: one scrolling page of short
+  illustrated cards (`lib/screens/help_screen.dart`).
 - **"Rate this app"** in the menu, plus a one-time review request after
   the third completed match (see below).
 
