@@ -5,6 +5,7 @@ import 'l10n/gen/app_localizations.dart';
 import 'screens/setup_screen.dart';
 import 'services/ads_service.dart';
 import 'services/consent_service.dart';
+import 'services/locale_resolution.dart';
 import 'services/monetization_controller.dart';
 import 'services/pro_status_store.dart';
 import 'services/purchase_gateway.dart';
@@ -111,31 +112,6 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
     setState(() => _muted = muted);
   }
 
-  /// Matches the device's preferred locales against the languages this
-  /// app actually ships (by language code, ignoring region), defaulting
-  /// to English for anything else.
-  ///
-  /// This is deliberately explicit rather than relying on Flutter's
-  /// default fallback (`supportedLocales.first`): `AppLocalizations.
-  /// supportedLocales` is generated in alphabetical order (de, en, fr), so
-  /// that default would silently fall back to German — not English, the
-  /// app's original/home language — for any unsupported device locale.
-  Locale _resolveDeviceLocale(
-    List<Locale>? deviceLocales,
-    Iterable<Locale> supportedLocales,
-  ) {
-    if (deviceLocales != null) {
-      for (final deviceLocale in deviceLocales) {
-        for (final supported in supportedLocales) {
-          if (supported.languageCode == deviceLocale.languageCode) {
-            return supported;
-          }
-        }
-      }
-    }
-    return const Locale('en');
-  }
-
   /// Resolves [_themeMode] to the actual [Brightness] currently on
   /// screen, following the platform's own setting for [ThemeMode.system]
   /// — same rule [MaterialApp] itself uses to pick between [theme] and
@@ -179,7 +155,7 @@ class _TableTennisScoreboardAppState extends State<TableTennisScoreboardApp> {
         locale: _localeOverride,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        localeListResolutionCallback: _resolveDeviceLocale,
+        localeListResolutionCallback: resolveDeviceLocale,
         // Dark remains the recommended default (see PHASE4B_UI_POLISH.md's
         // courtside-legibility reasoning), but Phase 4F adds a genuine
         // Light/Dark/System choice, persisted via [_themePreference].

@@ -124,11 +124,11 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get languageMenuTooltip;
 
-  /// Language-picker option that follows the device's own language setting rather than overriding it.
+  /// Language-picker option that follows the device's own language setting rather than overriding it. The placeholder is the language that setting currently resolves to, written in that language itself (English, Deutsch, Français) — only the word "Automatic" is translated.
   ///
   /// In en, this message translates to:
-  /// **'System default'**
-  String get languageSystemOption;
+  /// **'Automatic ({language})'**
+  String languageAutomatic(String language);
 
   /// Label above the best-of-N game-count selector.
   ///
@@ -154,10 +154,10 @@ abstract class AppLocalizations {
   /// **'First server: {player}'**
   String firstServerLabel(String player);
 
-  /// Shown in small caps on the coin's idle face, inviting the first tap — the coin itself is the only toss control, there is no separate button. Must always fit on a single line at the coin's actual rendered size (enforced by a FittedBox, verified by a dedicated test) — see PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
+  /// Shown on the coin's idle face, inviting the first tap — the coin itself is the only toss control, there is no separate button. Must always fit on a single line at the coin's actual rendered size (enforced by a FittedBox, verified by a dedicated test) — see PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
   ///
   /// In en, this message translates to:
-  /// **'TAP TO TOSS'**
+  /// **'Tap to toss'**
   String get tapToTossLabel;
 
   /// Button that begins the match with the chosen settings.

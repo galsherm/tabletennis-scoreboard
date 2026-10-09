@@ -238,7 +238,7 @@ void main() {
       // The heading is rendered as an uppercase "eyebrow" label (a
       // styling choice — see PHASE4B_UI_POLISH.md — not a wording
       // change: the underlying string is still "Best of").
-      expect(find.text('BEST OF'), findsOneWidget);
+      expect(find.text('Best of'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
       expect(find.text('5'), findsOneWidget);
       expect(find.text('7'), findsOneWidget);
@@ -251,7 +251,7 @@ void main() {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('AU MEILLEUR DE'), findsOneWidget);
+      expect(find.text('Au meilleur de'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
       expect(find.text('5'), findsOneWidget);
       expect(find.text('7'), findsOneWidget);
@@ -265,7 +265,7 @@ void main() {
       await tester.pumpWidget(const TableTennisScoreboardApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('GEWINNSÄTZE'), findsOneWidget);
+      expect(find.text('Gewinnsätze'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
       expect(find.text('4'), findsOneWidget);

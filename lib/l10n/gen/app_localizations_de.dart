@@ -21,7 +21,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get languageMenuTooltip => 'Sprache';
 
   @override
-  String get languageSystemOption => 'Systemstandard';
+  String languageAutomatic(String language) {
+    return 'Automatisch ($language)';
+  }
 
   @override
   String get bestOfLabel => 'Gewinnsätze';
@@ -40,7 +42,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get tapToTossLabel => 'ANTIPPEN';
+  String get tapToTossLabel => 'Antippen';
 
   @override
   String get startMatchButton => 'Spiel starten';

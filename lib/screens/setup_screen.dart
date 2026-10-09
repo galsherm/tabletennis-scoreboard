@@ -8,6 +8,7 @@ import '../models/player.dart';
 import '../models/player_names.dart';
 import '../services/ads_service.dart';
 import '../services/consent_service.dart';
+import '../services/locale_resolution.dart';
 import '../services/monetization_controller.dart';
 import '../services/pro_status_store.dart';
 import '../services/privacy_links.dart';
@@ -17,6 +18,7 @@ import '../theme/app_theme.dart';
 import '../widgets/coin_flip_indicator.dart';
 import '../widgets/editable_name_label.dart';
 import '../widgets/hero_band.dart';
+import '../widgets/option_tiles.dart';
 import '../widgets/pro_dialog.dart';
 import 'doubles_scoreboard_screen.dart';
 import 'help_screen.dart';
@@ -259,7 +261,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Widget _eyebrow(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text(text.toUpperCase(), style: AppTypography.eyebrow(context)),
+        child: Text(text, style: AppTypography.eyebrow(context)),
       );
 
   /// A language option's row: a small flag/globe glyph beside the label
@@ -348,6 +350,13 @@ class _SetupScreenState extends State<SetupScreen> {
   Widget _buildOverflowMenu(AppLocalizations l10n) {
     final menuStyle = _menuStyle(context);
     final itemStyle = _menuItemStyle(context);
+    // What "Automatic" currently means: the same resolution
+    // `MaterialApp` applies to the device's locale list, so an
+    // unsupported device language reads "Automatic (English)".
+    final detectedLanguage = nativeLanguageName(resolveDeviceLocale(
+      WidgetsBinding.instance.platformDispatcher.locales,
+      AppLocalizations.supportedLocales,
+    ));
     return MenuAnchor(
       key: const Key('overflowMenuAnchor'),
       style: menuStyle,
@@ -407,9 +416,12 @@ class _SetupScreenState extends State<SetupScreen> {
               leadingIcon: _leadingCheck(widget.currentLocaleOverride == null,
                   const Key('languageOptionSystem_check')),
               onPressed: () => widget.onLocaleChanged(null),
-              // A globe rather than a specific flag — "system default"
-              // isn't any one country/language.
-              child: _flagOption('🌐', l10n.languageSystemOption),
+              // A globe rather than a specific flag — following the
+              // device isn't any one country/language. The detected
+              // language is named in its own language, like the rows
+              // below; only the word "Automatic" follows the UI.
+              child:
+                  _flagOption('🌐', l10n.languageAutomatic(detectedLanguage)),
             ),
             MenuItemButton(
               key: const Key('languageOptionEn'),
@@ -421,7 +433,8 @@ class _SetupScreenState extends State<SetupScreen> {
               // Language names are always shown in their own language,
               // not translated, so a reader can find their language
               // regardless of what the UI currently displays.
-              child: _flagOption('🇬🇧', 'English'),
+              child:
+                  _flagOption('🇬🇧', nativeLanguageName(const Locale('en'))),
             ),
             MenuItemButton(
               key: const Key('languageOptionDe'),
@@ -430,7 +443,8 @@ class _SetupScreenState extends State<SetupScreen> {
                   widget.currentLocaleOverride == const Locale('de'),
                   const Key('languageOptionDe_check')),
               onPressed: () => widget.onLocaleChanged(const Locale('de')),
-              child: _flagOption('🇩🇪', 'Deutsch'),
+              child:
+                  _flagOption('🇩🇪', nativeLanguageName(const Locale('de'))),
             ),
             MenuItemButton(
               key: const Key('languageOptionFr'),
@@ -439,7 +453,8 @@ class _SetupScreenState extends State<SetupScreen> {
                   widget.currentLocaleOverride == const Locale('fr'),
                   const Key('languageOptionFr_check')),
               onPressed: () => widget.onLocaleChanged(const Locale('fr')),
-              child: _flagOption('🇫🇷', 'Français'),
+              child:
+                  _flagOption('🇫🇷', nativeLanguageName(const Locale('fr'))),
             ),
           ],
           child: Text(l10n.languageMenuTooltip),
@@ -548,164 +563,142 @@ class _SetupScreenState extends State<SetupScreen> {
                   // with a taller edge-to-edge hero band above it) on a
                   // typical screen height without scrolling. See
                   // PHASE4Q_FINAL_STORE_SCREENSHOTS.md.
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                  // The bottom inset leaves room for the "Start match"
+                  // button's soft shadow, which would otherwise be
+                  // clipped at the scroll view's edge.
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _SectionGroup(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SegmentedButton<bool>(
-                              key: const Key('modeSelector'),
-                              segments: [
-                                ButtonSegment(
-                                    value: false,
-                                    label: Text(l10n.modeSinglesOption)),
-                                ButtonSegment(
-                                    value: true,
-                                    label: Text(l10n.modeDoublesOption)),
-                              ],
-                              selected: {_isDoubles},
-                              onSelectionChanged: (selection) {
-                                setState(() => _isDoubles = selection.first);
-                              },
-                            ),
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOutCubic,
-                              alignment: Alignment.topCenter,
-                              child: !_isDoubles
-                                  ? Padding(
-                                      padding: const EdgeInsets.only(top: 12),
-                                      // The same tap-to-rename preview doubles already
-                                      // had — singles previously had no equivalent
-                                      // step at all. See
-                                      // PHASE4H_NAME_EDITING_REFINEMENT.md.
-                                      child: Row(
-                                        key: const Key('singlesPlayerNames'),
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          EditableNameLabel(
+                      OptionTiles<bool>(
+                        key: const Key('modeSelector'),
+                        options: [
+                          (false, l10n.modeSinglesOption),
+                          (true, l10n.modeDoublesOption),
+                        ],
+                        selected: _isDoubles,
+                        onSelected: (isDoubles) =>
+                            setState(() => _isDoubles = isDoubles),
+                      ),
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutCubic,
+                        alignment: Alignment.topCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: !_isDoubles
+                              // The same tap-to-rename preview doubles
+                              // already had — singles previously had no
+                              // equivalent step at all. See
+                              // PHASE4H_NAME_EDITING_REFINEMENT.md.
+                              ? Row(
+                                  key: const Key('singlesPlayerNames'),
+                                  children: [
+                                    for (final slot in const [1, 2]) ...[
+                                      if (slot == 2) const SizedBox(width: 8),
+                                      Expanded(
+                                        child: _FieldTile(
+                                          barColor: slot == 1
+                                              ? context.palette.neutralBar
+                                              : context.palette.accent,
+                                          child: EditableNameLabel(
                                             displayName: _names.resolve(
-                                                1, l10n.player1Label),
-                                            defaultLabel: l10n.player1Label,
-                                            style: AppTypography.playerLabel(
+                                                slot,
+                                                slot == 1
+                                                    ? l10n.player1Label
+                                                    : l10n.player2Label),
+                                            defaultLabel: slot == 1
+                                                ? l10n.player1Label
+                                                : l10n.player2Label,
+                                            style: AppTypography.fieldName(
                                                 context),
                                             editHint: l10n.editNameHint,
-                                            textKey: const Key(
-                                                'player1PreviewNameText'),
-                                            fieldKey: const Key(
-                                                'player1PreviewNameField'),
+                                            textKey: Key(
+                                                'player${slot}PreviewNameText'),
+                                            fieldKey: Key(
+                                                'player${slot}PreviewNameField'),
+                                            fillPadding:
+                                                _FieldTile.contentPadding,
                                             onChanged: (name) => setState(
-                                                () => _names.set(1, name)),
+                                                () => _names.set(slot, name)),
                                           ),
-                                          EditableNameLabel(
-                                            displayName: _names.resolve(
-                                                2, l10n.player2Label),
-                                            defaultLabel: l10n.player2Label,
-                                            style: AppTypography.playerLabel(
-                                                context),
-                                            editHint: l10n.editNameHint,
-                                            textKey: const Key(
-                                                'player2PreviewNameText'),
-                                            fieldKey: const Key(
-                                                'player2PreviewNameField'),
-                                            onChanged: (name) => setState(
-                                                () => _names.set(2, name)),
-                                          ),
-                                        ],
+                                        ),
                                       ),
-                                    )
-                                  : Padding(
-                                      padding: const EdgeInsets.only(top: 12),
-                                      child: Row(
-                                        key: const Key('doublesPlayerSlots'),
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          _TeamSlotPreview(
-                                            teamNumber: 1,
-                                            defaultTeamLabel: l10n.team1Label,
-                                            teamLabelKey: const Key(
-                                                'team1PreviewHeading'),
-                                            slots: const [1, 2],
-                                            defaultLabels: [
-                                              l10n.player1Label,
-                                              l10n.player2Label
-                                            ],
-                                            names: _names,
-                                            editHint: l10n.editNameHint,
-                                            onNameChanged: (slot, name) =>
-                                                setState(() =>
-                                                    _names.set(slot, name)),
-                                            onTeamNameChanged: (name) =>
-                                                setState(() =>
-                                                    _names.setTeam(1, name)),
-                                          ),
-                                          _TeamSlotPreview(
-                                            teamNumber: 2,
-                                            defaultTeamLabel: l10n.team2Label,
-                                            teamLabelKey: const Key(
-                                                'team2PreviewHeading'),
-                                            slots: const [3, 4],
-                                            defaultLabels: [
-                                              l10n.player3Label,
-                                              l10n.player4Label
-                                            ],
-                                            names: _names,
-                                            editHint: l10n.editNameHint,
-                                            onNameChanged: (slot, name) =>
-                                                setState(() =>
-                                                    _names.set(slot, name)),
-                                            onTeamNameChanged: (name) =>
-                                                setState(() =>
-                                                    _names.setTeam(2, name)),
-                                          ),
+                                    ],
+                                  ],
+                                )
+                              : Row(
+                                  key: const Key('doublesPlayerSlots'),
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _TeamSlotPreview(
+                                        teamNumber: 1,
+                                        defaultTeamLabel: l10n.team1Label,
+                                        teamLabelKey:
+                                            const Key('team1PreviewHeading'),
+                                        slots: const [1, 2],
+                                        defaultLabels: [
+                                          l10n.player1Label,
+                                          l10n.player2Label
                                         ],
+                                        names: _names,
+                                        editHint: l10n.editNameHint,
+                                        onNameChanged: (slot, name) => setState(
+                                            () => _names.set(slot, name)),
+                                        onTeamNameChanged: (name) => setState(
+                                            () => _names.setTeam(1, name)),
                                       ),
                                     ),
-                            ),
-                          ],
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _TeamSlotPreview(
+                                        teamNumber: 2,
+                                        defaultTeamLabel: l10n.team2Label,
+                                        teamLabelKey:
+                                            const Key('team2PreviewHeading'),
+                                        slots: const [3, 4],
+                                        defaultLabels: [
+                                          l10n.player3Label,
+                                          l10n.player4Label
+                                        ],
+                                        names: _names,
+                                        editHint: l10n.editNameHint,
+                                        onNameChanged: (slot, name) => setState(
+                                            () => _names.set(slot, name)),
+                                        onTeamNameChanged: (name) => setState(
+                                            () => _names.setTeam(2, name)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _SectionGroup(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _eyebrow(l10n.bestOfLabel),
-                            SegmentedButton<int>(
-                              key: const Key('bestOfSelector'),
-                              segments: [3, 5, 7]
-                                  .map((bestOf) => ButtonSegment(
-                                        value: bestOf,
-                                        // Every language shows a bare number
-                                        // here — the explanatory word lives
-                                        // once, in the eyebrow heading above
-                                        // ("Best of" / "Gewinnsätze" / "Au
-                                        // meilleur de"), never inside the
-                                        // segment itself. German used to
-                                        // embed "Gewinnsätze" in each
-                                        // segment, tripling its text versus
-                                        // English/French and overflowing the
-                                        // segment — see PHASE4B_UI_POLISH.md.
-                                        label: Text(l10n.bestOfSegmentLabel(
-                                          bestOf,
-                                          (bestOf ~/ 2) + 1,
-                                        )),
-                                      ))
-                                  .toList(),
-                              selected: {_bestOf},
-                              onSelectionChanged: (selection) {
-                                setState(() => _bestOf = selection.first);
-                              },
+                      const SizedBox(height: 22),
+                      _eyebrow(l10n.bestOfLabel),
+                      OptionTiles<int>(
+                        key: const Key('bestOfSelector'),
+                        options: [
+                          for (final bestOf in const [3, 5, 7])
+                            (
+                              bestOf,
+                              // Every language shows a bare number here —
+                              // the explanatory word lives once, in the
+                              // label above ("Best of" / "Gewinnsätze" /
+                              // "Au meilleur de"), never inside the tile
+                              // itself. German used to embed
+                              // "Gewinnsätze" in each segment, tripling
+                              // its text versus English/French and
+                              // overflowing it — see PHASE4B_UI_POLISH.md.
+                              l10n.bestOfSegmentLabel(
+                                  bestOf, (bestOf ~/ 2) + 1),
                             ),
-                          ],
-                        ),
+                        ],
+                        selected: _bestOf,
+                        onSelected: (bestOf) =>
+                            setState(() => _bestOf = bestOf),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
                       // Not height-constrained: the toss prompt wraps to two
                       // lines in German/French (it's noticeably longer than
                       // English), so a fixed-height box here would clip it. Only
@@ -718,7 +711,7 @@ class _SetupScreenState extends State<SetupScreen> {
                             l10n.tossPrompt,
                             key: const Key('tossPromptText'),
                             textAlign: TextAlign.center,
-                            style: AppTypography.playerLabel(context),
+                            style: AppTypography.prompt(context),
                           ),
                         ),
                       // The coin is the toss control itself (Phase 4I) — there is
@@ -743,29 +736,9 @@ class _SetupScreenState extends State<SetupScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      ElevatedButton(
-                        key: const Key('startMatchButton'),
+                      _StartMatchButton(
+                        label: l10n.startMatchButton,
                         onPressed: _firstServer == null ? null : _start,
-                        // ALL-CAPS + letter-spacing + a trailing arrow (Phase
-                        // 4P) — a bolder, more deliberate call-to-action than
-                        // plain sentence-case text. `.toUpperCase()` at display
-                        // time only (matching `_eyebrow`'s existing approach),
-                        // so the underlying `l10n.startMatchButton` string
-                        // itself, and everything keyed off it, is unchanged.
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              l10n.startMatchButton.toUpperCase(),
-                              style: const TextStyle(
-                                letterSpacing: 1.2,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward, size: 20),
-                          ],
-                        ),
                       ),
                     ],
                   ),
@@ -779,33 +752,115 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 }
 
-/// Wraps a control group (the singles/doubles mode toggle + name
-/// previews; the best-of selector) with a thin orange accent line along
-/// its top edge — Phase 4P's replacement for a full bordered card, so
-/// each group reads as its own distinct unit within the setup screen's
-/// otherwise flat list without the heavier boxed-in look a full border
-/// on every side would give.
-class _SectionGroup extends StatelessWidget {
-  final Widget child;
+/// The setup screen's one primary action. Disabled (a quiet outlined
+/// slab) until the toss has picked a first server, then solid accent
+/// with a soft accent shadow beneath it.
+class _StartMatchButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
 
-  const _SectionGroup({required this.child});
+  const _StartMatchButton({required this.label, required this.onPressed});
+
+  static const _radius = 14.0;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(top: 12),
+    final palette = context.palette;
+    final enabled = onPressed != null;
+    return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: context.palette.accent, width: 2),
+        borderRadius: BorderRadius.circular(_radius),
+        boxShadow: enabled
+            ? [
+                BoxShadow(
+                  color: palette.accent.withValues(alpha: 0.30),
+                  blurRadius: 40,
+                  offset: const Offset(0, 10),
+                ),
+              ]
+            : null,
+      ),
+      child: ElevatedButton(
+        key: const Key('startMatchButton'),
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size.fromHeight(64),
+          side: enabled ? null : BorderSide(color: palette.divider),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_radius),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: AppTypography.uiFamily,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Shrinks a long translation (or a large system font) to
+            // the button's width rather than overflowing it.
+            Flexible(
+              child: FittedBox(fit: BoxFit.scaleDown, child: Text(label)),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward, size: 20),
+          ],
         ),
       ),
-      child: child,
+    );
+  }
+}
+
+/// A surface tile with a thin colored bar down its leading edge — one
+/// player's name field in singles, one team's group of names in
+/// doubles. The bar tells the two sides apart at a glance: a quiet
+/// neutral for side 1, the accent for side 2.
+class _FieldTile extends StatelessWidget {
+  final Color barColor;
+  final Widget child;
+
+  const _FieldTile({required this.barColor, required this.child});
+
+  static const _barWidth = 4.0;
+
+  /// The inset a tile's content should keep, clear of the bar.
+  static const contentPadding =
+      EdgeInsetsDirectional.fromSTEB(_barWidth + 14, 16, 14, 16);
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: palette.surface,
+        border: Border.all(color: palette.divider),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      // A transparent Material so the name's own ink ripple paints on
+      // this tile's surface rather than underneath it.
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          children: [
+            child,
+            PositionedDirectional(
+              start: 0,
+              top: 0,
+              bottom: 0,
+              width: _barWidth,
+              child: ColoredBox(color: barColor),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
 /// A team's pair of player names, grouped visually under a "Team
-/// 1"/"Team 2" heading and a light bordered box — without it, two
+/// 1"/"Team 2" heading inside one [_FieldTile] — without it, two
 /// unlabeled name columns read as "four separate players," not
 /// obviously two pairs. See PHASE4D_TEAM_CLARITY_AND_TRANSITION.md.
 ///
@@ -842,39 +897,41 @@ class _TeamSlotPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: context.palette.divider),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          EditableNameLabel(
-            displayName: names.resolveTeam(teamNumber, defaultTeamLabel),
-            defaultLabel: defaultTeamLabel,
-            style: AppTypography.eyebrow(context),
-            editHint: editHint,
-            textKey: teamLabelKey,
-            fieldKey: Key('team${teamNumber}PreviewHeadingField'),
-            onChanged: onTeamNameChanged,
-          ),
-          const SizedBox(height: 6),
-          for (var i = 0; i < slots.length; i++)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: EditableNameLabel(
-                displayName: names.resolve(slots[i], defaultLabels[i]),
-                defaultLabel: defaultLabels[i],
-                style: AppTypography.compactPlayerLabel(context),
-                editHint: editHint,
-                textKey: Key('player${slots[i]}PreviewNameText'),
-                fieldKey: Key('player${slots[i]}PreviewNameField'),
-                onChanged: (name) => onNameChanged(slots[i], name),
-              ),
+    final nameStyle = AppTypography.fieldName(context).copyWith(fontSize: 17);
+    return _FieldTile(
+      barColor:
+          teamNumber == 1 ? context.palette.neutralBar : context.palette.accent,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(18, 12, 12, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            EditableNameLabel(
+              displayName: names.resolveTeam(teamNumber, defaultTeamLabel),
+              defaultLabel: defaultTeamLabel,
+              style: AppTypography.eyebrow(context),
+              editHint: editHint,
+              textKey: teamLabelKey,
+              fieldKey: Key('team${teamNumber}PreviewHeadingField'),
+              onChanged: onTeamNameChanged,
             ),
-        ],
+            const SizedBox(height: 6),
+            for (var i = 0; i < slots.length; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: EditableNameLabel(
+                  displayName: names.resolve(slots[i], defaultLabels[i]),
+                  defaultLabel: defaultLabels[i],
+                  style: nameStyle,
+                  editHint: editHint,
+                  textKey: Key('player${slots[i]}PreviewNameText'),
+                  fieldKey: Key('player${slots[i]}PreviewNameField'),
+                  onChanged: (name) => onNameChanged(slots[i], name),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

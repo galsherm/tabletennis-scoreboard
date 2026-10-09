@@ -230,7 +230,7 @@ void main() {
           find.byKey(const Key('player1PreviewNameField')), 'Sam');
       // Deliberately not calling receiveAction(TextInputAction.done) —
       // the whole point of this test is the non-Enter, tap-away path.
-      await tester.tap(find.text('BEST OF'));
+      await tester.tap(find.text('Best of'));
       await tester.pumpAndSettle();
 
       expect(find.text('Sam'), findsOneWidget);
@@ -691,7 +691,7 @@ void main() {
           .widget<Text>(find.byKey(const Key('matchCompleteMessageText')))
           .style!;
       expect(messageStyle.fontSize, greaterThanOrEqualTo(24));
-      expect(messageStyle.fontWeight, FontWeight.w800);
+      expect(messageStyle.fontWeight, FontWeight.w600);
       expect(find.text('Player 1 wins the match!'), findsOneWidget);
     });
 

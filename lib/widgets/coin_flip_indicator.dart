@@ -93,8 +93,8 @@ class CoinFlipIndicator extends StatefulWidget {
   /// pattern. Defaults to a real [AudioPlayersSoundEffectPlayer].
   final SoundEffectPlayer? soundEffectPlayer;
 
-  /// Shown on the coin's idle, not-yet-tossed face (Phase 4P) — "TAP TO
-  /// TOSS" or its localized equivalent. Resolved by the caller via
+  /// Shown on the coin's idle, not-yet-tossed face (Phase 4P) — "Tap to
+  /// toss" or its localized equivalent. Resolved by the caller via
   /// `AppLocalizations` (see `SetupScreen`), the same way
   /// [player1Label]/[player2Label] already are, rather than this widget
   /// reaching for `AppLocalizations.of(context)` itself — that keeps
@@ -114,7 +114,7 @@ class CoinFlipIndicator extends StatefulWidget {
     required this.onComplete,
     this.muted = false,
     this.soundEffectPlayer,
-    this.idleLabel = 'TAP TO TOSS',
+    this.idleLabel = 'Tap to toss',
   });
 
   /// Total flip duration, spin-plus-bounce combined — comfortably under a
@@ -133,13 +133,6 @@ class CoinFlipIndicator extends StatefulWidget {
   /// room — a two-word result label or a short caps hint both need more
   /// room to read clearly than the plain disc did.
   static const _diameter = 104.0;
-
-  /// How far down-and-right the darker rim circle sits behind the main
-  /// face (Phase 4P's "simpler, more physically convincing" redesign —
-  /// see [_CoinFace]) — a flat offset silhouette standing in for
-  /// thickness/a cast shadow, deliberately not a blurred drop-shadow or
-  /// gradient.
-  static const _rimOffset = 5.0;
 
   /// How high (in logical pixels) the coin appears to lift mid-flip —
   /// a purely visual arc, not a real physics simulation. Phase 4P
@@ -188,9 +181,7 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
     // PASS.md for why this, not the trigger mechanism (already tied to
     // the animation controller's own frame callback), was the real
     // source of a perceptible landing/sound gap on a real device.
-    _sound
-        .preload(CoinFlipIndicator._landingSoundAsset)
-        .catchError((_) {});
+    _sound.preload(CoinFlipIndicator._landingSoundAsset).catchError((_) {});
     _flipController = AnimationController(
       vsync: this,
       duration: CoinFlipIndicator._totalDuration,
@@ -394,15 +385,11 @@ class _CoinFlipIndicatorState extends State<CoinFlipIndicator>
   }
 }
 
-/// The coin's visible face — Phase 4P replaced the earlier
-/// gradient-plus-blurred-shadow disc with a simpler, more physically
-/// convincing pair of flat concentric shapes: a darker rim circle
-/// offset slightly down-and-right behind the main face (standing in for
-/// thickness/a cast shadow, live review found a real gradient/shine
-/// overlay here read as *less* convincing, not more) and the face
-/// itself as a single flat brand-orange circle with a thin darker-orange
-/// edge stroke for definition. No highlight/shine circle — reviewed and
-/// deliberately left out.
+/// The coin's visible face: a disc lit from its upper left (a radial
+/// gradient from [AppPalette.accentHighlight] through the accent to its
+/// dim shade) with a soft accent glow around it. The glow is what gives
+/// it presence on the near-black background, where the flat offset rim
+/// it replaces (Phase 4P) had nothing to read against.
 class _CoinFace extends StatelessWidget {
   /// `null` means idle/untossed — shown as [idleLabel] instead of a
   /// result.
@@ -420,7 +407,6 @@ class _CoinFace extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     const diameter = CoinFlipIndicator._diameter;
-    const boundsSize = diameter + CoinFlipIndicator._rimOffset;
 
     final content = label != null
         ? FittedBox(
@@ -431,9 +417,9 @@ class _CoinFace extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 2,
               style: TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontFamily: AppTypography.uiFamily,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
                 color: palette.onAccent,
               ),
             ),
@@ -454,47 +440,38 @@ class _CoinFace extends StatelessWidget {
               // PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
               maxLines: 1,
               style: TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.0,
-                color: palette.onAccent.withValues(alpha: 0.85),
+                fontFamily: AppTypography.uiFamily,
+                fontSize: 19,
+                fontWeight: FontWeight.w600,
+                color: palette.onAccent,
               ),
             ),
           );
 
-    final face = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // The darker rim — a flat offset silhouette, not a blur, so it
-        // reads as a distinct edge of thickness rather than a soft glow.
-        Positioned(
-          left: CoinFlipIndicator._rimOffset,
-          top: CoinFlipIndicator._rimOffset,
-          child: Container(
-            width: diameter,
-            height: diameter,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: palette.accentDim,
-            ),
-          ),
+    final sized = Container(
+      width: diameter,
+      height: diameter,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          // The highlight sits at 35% / 28% of the face.
+          center: const Alignment(-0.30, -0.44),
+          radius: 0.85,
+          colors: [palette.accentHighlight, palette.accent, palette.accentDim],
+          stops: const [0, 0.55, 1],
         ),
-        Container(
-          width: diameter,
-          height: diameter,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: palette.accent,
-            border: Border.all(color: palette.accentDim, width: 2.5),
+        boxShadow: [
+          BoxShadow(
+            color: palette.accent.withValues(alpha: 0.35),
+            blurRadius: 28,
+            spreadRadius: 1,
           ),
-          child: content,
-        ),
-      ],
+        ],
+      ),
+      child: content,
     );
-    final sized = SizedBox(width: boundsSize, height: boundsSize, child: face);
     if (!mirrored) return sized;
     return Transform(
       alignment: Alignment.center,

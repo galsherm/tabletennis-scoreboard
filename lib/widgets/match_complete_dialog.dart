@@ -100,7 +100,7 @@ class _MatchCompleteDialogState extends State<MatchCompleteDialog> {
             ),
             const SizedBox(height: 18),
             Text(
-              widget.titleText.toUpperCase(),
+              widget.titleText,
               style: AppTypography.eyebrow(context),
             ),
             const SizedBox(height: 10),
@@ -109,9 +109,9 @@ class _MatchCompleteDialogState extends State<MatchCompleteDialog> {
               key: const Key('matchCompleteMessageText'),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Roboto',
+                fontFamily: AppTypography.uiFamily,
                 fontSize: 26,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 height: 1.25,
                 color: palette.scoreText,
               ),

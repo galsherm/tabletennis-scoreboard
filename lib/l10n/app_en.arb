@@ -16,9 +16,15 @@
   "@languageMenuTooltip": {
     "description": "Section label for the language options within the app-bar overflow menu (Phase 4I) — previously this was its own icon button's tooltip, before the theme/language/Pro icons were consolidated into one menu."
   },
-  "languageSystemOption": "System default",
-  "@languageSystemOption": {
-    "description": "Language-picker option that follows the device's own language setting rather than overriding it."
+  "languageAutomatic": "Automatic ({language})",
+  "@languageAutomatic": {
+    "description": "Language-picker option that follows the device's own language setting rather than overriding it. The placeholder is the language that setting currently resolves to, written in that language itself (English, Deutsch, Français) — only the word \"Automatic\" is translated.",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "English"
+      }
+    }
   },
   "bestOfLabel": "Best of",
   "@bestOfLabel": {
@@ -52,9 +58,9 @@
       }
     }
   },
-  "tapToTossLabel": "TAP TO TOSS",
+  "tapToTossLabel": "Tap to toss",
   "@tapToTossLabel": {
-    "description": "Shown in small caps on the coin's idle face, inviting the first tap — the coin itself is the only toss control, there is no separate button. Must always fit on a single line at the coin's actual rendered size (enforced by a FittedBox, verified by a dedicated test) — see PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md."
+    "description": "Shown on the coin's idle face, inviting the first tap — the coin itself is the only toss control, there is no separate button. Must always fit on a single line at the coin's actual rendered size (enforced by a FittedBox, verified by a dedicated test) — see PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md."
   },
   "startMatchButton": "Start match",
   "@startMatchButton": {

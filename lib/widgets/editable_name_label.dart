@@ -44,6 +44,12 @@ class EditableNameLabel extends StatefulWidget {
   final Key? textKey;
   final Key? fieldKey;
 
+  /// When set, the label fills the width it is given, start-aligned
+  /// with this padding around it — so the whole of a surrounding field
+  /// tile is the tap target, not just the glyphs of the name. Null (the
+  /// default) keeps the label shrink-wrapped and centered.
+  final EdgeInsetsGeometry? fillPadding;
+
   const EditableNameLabel({
     super.key,
     required this.displayName,
@@ -53,6 +59,7 @@ class EditableNameLabel extends StatefulWidget {
     required this.editHint,
     this.textKey,
     this.fieldKey,
+    this.fillPadding,
   });
 
   @override
@@ -104,48 +111,64 @@ class _EditableNameLabelState extends State<EditableNameLabel> {
 
   @override
   Widget build(BuildContext context) {
+    final fillPadding = widget.fillPadding;
     if (_editing) {
+      final field = TextField(
+        key: widget.fieldKey,
+        controller: _controller,
+        focusNode: _focusNode,
+        maxLength: PlayerNames.maxLength,
+        style: widget.style,
+        textAlign: fillPadding == null ? TextAlign.center : TextAlign.start,
+        decoration: const InputDecoration(
+          isDense: true,
+          counterText: '',
+          border: UnderlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(vertical: 2),
+        ),
+        onSubmitted: (_) => _commit(),
+      );
+      if (fillPadding != null) {
+        return Padding(padding: fillPadding, child: field);
+      }
       return ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 80, maxWidth: 160),
-        child: IntrinsicWidth(
-          child: TextField(
-            key: widget.fieldKey,
-            controller: _controller,
-            focusNode: _focusNode,
-            maxLength: PlayerNames.maxLength,
-            style: widget.style,
-            textAlign: TextAlign.center,
-            decoration: const InputDecoration(
-              isDense: true,
-              counterText: '',
-              border: UnderlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(vertical: 2),
-            ),
-            onSubmitted: (_) => _commit(),
-          ),
-        ),
+        child: IntrinsicWidth(child: field),
       );
     }
+    final label = _buildLabel(context);
     return InkWell(
       key: widget.textKey == null ? null : Key('${widget.textKey}_tap'),
       onTap: _startEditing,
-      child: Tooltip(
-        message: widget.editHint,
-        child: Text(
-          widget.displayName,
-          key: widget.textKey,
-          // A thin dashed underline signals "this is editable" without
-          // an icon competing with the name for attention — see the
-          // class doc comment.
-          style: widget.style.copyWith(
-            decoration: TextDecoration.underline,
-            decorationStyle: TextDecorationStyle.dashed,
-            decorationColor: context.palette.faintText,
-            decorationThickness: 1.2,
-          ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
+      child: fillPadding == null
+          ? label
+          : Padding(
+              padding: fillPadding,
+              child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  heightFactor: 1,
+                  child: label),
+            ),
+    );
+  }
+
+  Widget _buildLabel(BuildContext context) {
+    return Tooltip(
+      message: widget.editHint,
+      child: Text(
+        widget.displayName,
+        key: widget.textKey,
+        // A thin dashed underline signals "this is editable" without
+        // an icon competing with the name for attention — see the
+        // class doc comment.
+        style: widget.style.copyWith(
+          decoration: TextDecoration.underline,
+          decorationStyle: TextDecorationStyle.dashed,
+          decorationColor: context.palette.faintText,
+          decorationThickness: 1.2,
         ),
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
       ),
     );
   }
