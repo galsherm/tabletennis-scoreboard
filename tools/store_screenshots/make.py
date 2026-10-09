@@ -14,6 +14,7 @@ app, so nothing is downloaded. See README.md in this folder.
 import json
 import math
 import sys
+import time
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -244,6 +245,22 @@ def contact_sheet(finals):
     return sheet
 
 
+def save_png(image, path):
+    """Saves an optimized PNG, retrying while the file is briefly locked.
+
+    A file-sync client (the repo may live in a synced folder) or an open
+    image viewer can hold the previous version of an output for a moment.
+    """
+    for attempt in range(6):
+        try:
+            image.save(path, optimize=True)
+            return
+        except OSError:
+            if attempt == 5:
+                raise
+            time.sleep(2)
+
+
 def main():
     captions = json.loads(CAPTIONS_PATH.read_text(encoding="utf-8"))
     missing = [
@@ -267,12 +284,12 @@ def main():
         for shot in shots:
             image = compose(RAW_DIR / locale / f"{shot['file']}.png", shot["caption"])
             out_path = out_dir / f"{shot['file']}.png"
-            image.save(out_path, optimize=True)
+            save_png(image, out_path)
             finals[locale].append(image)
             print(f"{out_path.relative_to(REPO)}  {out_path.stat().st_size // 1024} KB")
 
     sheet_path = OUT_DIR / "contact_sheet.png"
-    contact_sheet(finals).save(sheet_path, optimize=True)
+    save_png(contact_sheet(finals), sheet_path)
     print(sheet_path.relative_to(REPO))
 
 

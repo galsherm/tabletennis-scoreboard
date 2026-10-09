@@ -9,9 +9,10 @@ the app on the setup screen in Dark theme with the language set to
 Automatic on a device whose language resolves to English, Singles
 selected, default names, no toss yet.
 
-    python tools/store_screenshots/capture_s23.py [SERIAL]
+    python tools/store_screenshots/capture_s23.py [SERIAL] [--language-menu-only]
 
-Writes store/raw/<locale>/01_setup.png ... 06_help.png. It changes no
+Writes store/raw/<locale>/01_setup.png ... 06_help.png, or with
+--language-menu-only just 05_language.png for each locale. It changes no
 phone settings; it leaves the app on the setup screen, back on Automatic.
 """
 
@@ -28,7 +29,9 @@ from PIL import Image
 REPO = Path(__file__).resolve().parent.parent.parent
 RAW_DIR = REPO / "store" / "raw"
 
-SERIAL = sys.argv[1] if len(sys.argv) > 1 else None
+ARGS = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+SERIAL = ARGS[0] if ARGS else None
+LANGUAGE_MENU_ONLY = "--language-menu-only" in sys.argv
 ADB = shutil.which("adb") or str(
     Path(os.environ.get("LOCALAPPDATA", "")) / "Android/Sdk/platform-tools/adb.exe"
 )
@@ -37,7 +40,9 @@ ADB = shutil.which("adb") or str(
 MENU = (84, 164)
 MENU_LANGUAGE = (140, 480)
 MENU_HELP = (250, 627)
-LANGUAGE_OPTION = {"en-US": (730, 480), "de-DE": (730, 768), "fr-FR": (730, 912)}
+# The Language submenu drops down under its own row. "en-US" taps
+# Automatic, which is English when the device language resolves to it.
+LANGUAGE_OPTION = {"en-US": (450, 624), "de-DE": (450, 912), "fr-FR": (450, 1056)}
 OUTSIDE_MENU = (540, 2120)
 MODE_SINGLES = (300, 567)
 MODE_DOUBLES = (780, 567)
@@ -144,6 +149,8 @@ def capture(locale):
     open_language_menu()
     save(locale, "05_language")
     tap(OUTSIDE_MENU, pause=1.5)
+    if LANGUAGE_MENU_ONLY:
+        return
 
     save(locale, "01_setup")
 
