@@ -6,7 +6,7 @@ import '../theme/app_theme.dart';
 
 /// The hero header shared by the setup screen and the help page —
 /// introduced for the setup screen (Phase 4P), replacing the previous
-/// plain Material `AppBar` — a large title sitting at the *bottom*-left
+/// plain Material `AppBar` — a large one-line title at the *bottom*-left
 /// of a tall band, with the hamburger menu at its top-left, doesn't fit
 /// a standard 56dp toolbar's layout at all. A background with a large
 /// orange diagonal shape in the upper-right corner echoes the app
@@ -43,56 +43,37 @@ class HeroBand extends StatelessWidget {
   // measurement.
   static const _titleStyle = TextStyle(
     fontFamily: AppTypography.uiFamily,
-    fontSize: 46,
+    fontSize: 35,
     height: 1.05,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.6,
   );
 
-  /// The title may wrap onto a second line, but never further.
-  static const _titleMaxLines = 2;
-
-  /// How much of the band's width the title may take before wrapping —
-  /// the rest is the diagonal's.
+  /// How much of the band's width the title may take before it starts
+  /// shrinking — the rest is the diagonal's.
   static const _titleWidthFraction = 0.62;
 
-  /// The diagonal covers the top of the band only; a two-line title
-  /// makes the band taller, not the wedge.
+  /// The diagonal covers the top of the band only, however tall the
+  /// band's content makes it.
   static const _wedgeMaxHeight = 114.0;
 
   static const _accentBarHeight = 4.0;
 
-  /// Lays the title out within [maxWidth], shrinking the font only as
-  /// far as needed for its longest single word to fit on a line — a
-  /// large system font or a long translated word then gets a smaller
-  /// title instead of one broken mid-word.
-  static TextPainter _layoutTitle(
+  /// The title's natural single-line width at the ambient text scale.
+  static double _titleNaturalWidth(
     String title,
-    double maxWidth,
     TextScaler textScaler,
     TextDirection textDirection,
   ) {
-    TextPainter paint(String text, TextStyle style, {int? maxLines}) =>
-        TextPainter(
-          text: TextSpan(text: text, style: style),
-          textDirection: textDirection,
-          textScaler: textScaler,
-          maxLines: maxLines,
-        );
-
-    var style = _titleStyle;
-    var widestWord = 0.0;
-    for (final word in title.split(RegExp(r'\s+'))) {
-      final painter = paint(word, style)..layout();
-      widestWord = max(widestWord, painter.width);
-      painter.dispose();
-    }
-    if (widestWord > maxWidth && widestWord > 0) {
-      style = style.copyWith(
-          fontSize: _titleStyle.fontSize! * maxWidth / widestWord);
-    }
-    return paint(title, style, maxLines: _titleMaxLines)
-      ..layout(maxWidth: maxWidth);
+    final painter = TextPainter(
+      text: TextSpan(text: title, style: _titleStyle),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
   }
 
   @override
@@ -168,24 +149,25 @@ class HeroBand extends StatelessWidget {
                   const leadingInset = 4.0;
                   const titleInset = 24.0;
 
-                  // Measured directly (rather than reading the rendered
-                  // Text's own size after layout) so the diagonal's
+                  // The title is always one line: past this width it
+                  // shrinks (see the `FittedBox` below) rather than
+                  // wrapping or running into the diagonal. Its drawn
+                  // width is measured directly (rather than read off the
+                  // rendered Text after layout) so the diagonal's
                   // clearance is known in the very same build/paint pass
                   // — no post-frame callback or extra rebuild needed.
-                  // This is what lets the wedge stay clear of the title
-                  // in every shipped language. See the "hero band"
-                  // section of PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
+                  // See the "hero band" section of
+                  // PHASE4P_PREMIUM_VISUAL_AND_MOTION_PASS.md.
                   final titleMaxWidth = max(0.0,
                       constraints.maxWidth * _titleWidthFraction - titleInset);
-                  final titlePainter = _layoutTitle(
-                    title,
+                  final titleWidth = min(
                     titleMaxWidth,
-                    MediaQuery.textScalerOf(context),
-                    Directionality.of(context),
+                    _titleNaturalWidth(
+                      title,
+                      MediaQuery.textScalerOf(context),
+                      Directionality.of(context),
+                    ),
                   );
-                  final titleStyle = titlePainter.text!.style!;
-                  final titleWidth = titlePainter.width;
-                  titlePainter.dispose();
 
                   return Stack(
                     clipBehavior: Clip.none,
@@ -241,17 +223,19 @@ class HeroBand extends StatelessWidget {
                             const SizedBox(height: 14),
                             Padding(
                               padding: const EdgeInsets.only(left: titleInset),
-                              // The same width limit the measurement
-                              // above used, so the text wraps exactly
-                              // as measured.
                               child: ConstrainedBox(
                                 constraints:
                                     BoxConstraints(maxWidth: titleMaxWidth),
-                                child: Text(
-                                  title,
-                                  maxLines: _titleMaxLines,
-                                  style: titleStyle.copyWith(
-                                      color: palette.scoreText),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    title,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: _titleStyle.copyWith(
+                                        color: palette.scoreText),
+                                  ),
                                 ),
                               ),
                             ),
