@@ -75,9 +75,14 @@ adb shell settings put global sysui_demo_allowed 0
 ```
 
 Samsung's One UI ignores these broadcasts (checked on the S23, One UI
-6.1), so the committed captures show that phone's real status bar. For
-a clean one, capture on a Pixel or an emulator, or clear notifications
-and charge the phone first.
+6.1), so the committed raw captures still contain that phone's real
+status bar. `make.py` therefore paints the status bar's contents out
+of every capture before composing: the strip becomes the app's own
+background, nothing is drawn in its place, and the app's accent top
+bar and corner glow are kept where they run under it. The strip's
+height is `RAW_STATUS_BAR` in `make.py` (81px, the S23's); change it
+for captures from another device, or set it to 0 to leave captures
+untouched (for example ones taken in demo mode).
 
 ## Google Play limits
 

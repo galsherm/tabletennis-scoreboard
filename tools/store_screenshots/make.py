@@ -1,8 +1,8 @@
 """Composes the Google Play phone screenshots.
 
 Reads the raw device captures in store/raw/<locale>/ and the captions
-in captions.json (next to this script), and writes one captioned
-1080x1920 PNG per shot to store/screenshots/<locale>/, plus a contact
+in captions.json (next to this script), paints the status bar's contents
+out of each capture, and writes one captioned 1080x1920 PNG per shot to store/screenshots/<locale>/, plus a contact
 sheet of all of them. Re-runnable: every output is rebuilt from scratch.
 
     python tools/store_screenshots/make.py
@@ -39,6 +39,14 @@ BORDER = (0x23, 0x2A, 0x35)
 TOP_BAR = 12
 GLOW_RADIUS = 1150
 GLOW_ALPHA = 0.28
+
+# The raw captures' status bar (clock, battery, notification icons) is
+# painted out before composing. Its height in raw-capture pixels: 81 on
+# the Samsung S23 the committed captures come from. Set to 0 to keep it.
+RAW_STATUS_BAR = 81
+# The app's own corner glow, as HeroBand draws it: centered on the
+# top-right corner, this fraction of the screen width in radius.
+APP_GLOW_RADIUS = 0.95
 
 SIDE_MARGIN = 72
 CAPTION_TOP = 92
@@ -115,6 +123,67 @@ def fit_caption(draw, text):
     )
 
 
+def is_accent(pixel):
+    return all(abs(a - b) <= 24 for a, b in zip(pixel, ACCENT))
+
+
+def clean_status_bar(shot):
+    """Paints the status bar's contents out of a raw capture.
+
+    Nothing is drawn in their place - the strip just becomes the app's
+    own background. Where the app draws its accent top bar and corner
+    glow under the status bar (setup and help screens), those are kept:
+    the top bar's rows are left alone, and the rows below it are
+    refilled with the glow, recomputed and then matched column by
+    column to the capture's own glow just under the strip so there is
+    no seam. Everywhere else the strip is plain background.
+    """
+    height = min(RAW_STATUS_BAR, shot.height)
+    if height <= 0:
+        return shot
+    shot = shot.copy()
+    width = shot.width
+    pixels = shot.load()
+
+    bar = 0
+    while bar < height and is_accent(pixels[width // 2, bar]):
+        bar += 1
+    if bar == 0:
+        ImageDraw.Draw(shot).rectangle((0, 0, width - 1, height - 1), fill=BACKGROUND)
+        return shot
+
+    radius = APP_GLOW_RADIUS * width
+
+    def glow(x, y):
+        alpha = GLOW_ALPHA * max(0.0, 1 - math.hypot(x - width, y) / radius)
+        return [b + (a - b) * alpha for a, b in zip(ACCENT, BACKGROUND)]
+
+    # How far the capture's real glow is from the computed one, per
+    # column, read from the clean rows just below the strip and smoothed
+    # so the renderer's dithering does not turn into vertical streaks.
+    rows = range(height + 2, height + 8)
+    raw_offset = [
+        [
+            sum(pixels[x, y][c] - glow(x, y)[c] for y in rows) / len(rows)
+            for c in range(3)
+        ]
+        for x in range(width)
+    ]
+    reach = 12
+    offset = []
+    for x in range(width):
+        window = raw_offset[max(0, x - reach) : x + reach + 1]
+        offset.append([sum(o[c] for o in window) / len(window) for c in range(3)])
+
+    for y in range(bar, height):
+        for x in range(width):
+            model = glow(x, y)
+            pixels[x, y] = tuple(
+                max(0, min(255, round(model[c] + offset[x][c]))) for c in range(3)
+            )
+    return shot
+
+
 def rounded_mask(size, radius):
     mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, size[0] - 1, size[1] - 1), radius, fill=255)
@@ -130,7 +199,7 @@ def compose(raw_path, caption):
     for index, line in enumerate(lines):
         draw.text((SIDE_MARGIN, CAPTION_TOP + index * line_height), line, font=font, fill=TEXT)
 
-    shot = Image.open(raw_path).convert("RGB")
+    shot = clean_status_bar(Image.open(raw_path).convert("RGB"))
     box_w = WIDTH - 2 * SIDE_MARGIN
     box_h = HEIGHT - SHOT_TOP - SHOT_BOTTOM_MARGIN
     scale = min(box_w / shot.width, box_h / shot.height)
