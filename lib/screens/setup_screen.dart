@@ -276,12 +276,9 @@ class _SetupScreenState extends State<SetupScreen> {
         children: [
           Text(flag, style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 6),
-          // Flexible + ellipsis defensively, as elsewhere in this menu —
-          // a submenu flyout has more room than the old single-level
-          // popup menu did, but a very long localized label still
-          // shouldn't be able to overflow it. See
-          // PHASE4I_POLISH_ROUND2.md.
-          Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+          // Flexible so a label too long for the menu's width (see
+          // [_menuWidth]) wraps onto a second line — never an ellipsis.
+          Flexible(child: Text(label)),
         ],
       );
 
@@ -316,22 +313,104 @@ class _SetupScreenState extends State<SetupScreen> {
   /// Colors.transparent` disables that blend so the menu shows this
   /// app's real surface color unmodified. See
   /// PHASE4K_AUDIO_MENU_AND_ICON.md.
-  MenuStyle _menuStyle(BuildContext context) => MenuStyle(
+  ///
+  /// [submenu] makes the panel drop down directly beneath the row that
+  /// opened it instead of flying out beside it — see [_menuWidth].
+  MenuStyle _menuStyle(BuildContext context, {bool submenu = false}) =>
+      MenuStyle(
         backgroundColor: WidgetStatePropertyAll(context.palette.surface),
         surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
         elevation: const WidgetStatePropertyAll(3),
         side:
             WidgetStatePropertyAll(BorderSide(color: context.palette.divider)),
+        alignment: submenu ? AlignmentDirectional.bottomStart : null,
       );
+
+  /// The gap kept between the menu and the screen's edges.
+  static const _menuScreenMargin = 12.0;
+
+  /// One width for the menu and both of its submenus: just wide enough
+  /// for the longest row in any of them on one line, capped at the
+  /// screen's width less a margin (past which a label wraps onto a
+  /// second line rather than being cut off).
+  ///
+  /// The panels share a width because a phone has no room for a submenu
+  /// *beside* the menu: Flutter would slide it back over the menu,
+  /// leaving the rows underneath half covered and reading as truncated
+  /// ("Politique de c", "Datenschutzer" — found on a real device). With
+  /// equal widths and [_menuStyle]'s `submenu` placement, a submenu
+  /// instead drops down exactly over the rows below the one that opened
+  /// it, so a row is either fully visible or fully covered.
+  ///
+  /// The per-row extras below are `MenuItemButton`'s own layout: 12
+  /// padding at each end, a 12 gap after a leading widget, a 20 icon or
+  /// the 24 check-mark slot (see [_leadingCheck]), a 24 submenu arrow.
+  double _menuWidth(
+    BuildContext context,
+    AppLocalizations l10n,
+    String detectedLanguage,
+  ) {
+    final textScaler = MediaQuery.textScalerOf(context);
+    final labelStyle = Theme.of(context).textTheme.labelLarge;
+    double textWidth(String text, [TextStyle? style]) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style ?? labelStyle),
+        textDirection: Directionality.of(context),
+        textScaler: textScaler,
+        maxLines: 1,
+      )..layout();
+      final width = painter.width;
+      painter.dispose();
+      return width;
+    }
+
+    const submenuRow = 12.0 + 12 + 24 + 12;
+    const iconRow = 12.0 + 20 + 12 + 12;
+    const checkRow = 12.0 + 24 + 12 + 12;
+    // The flag glyph and the gap after it — see [_flagOption].
+    final flag = textWidth('🇬🇧', const TextStyle(fontSize: 16)) + 6;
+
+    final rows = [
+      textWidth(l10n.themeMenuTooltip) + submenuRow,
+      textWidth(l10n.languageMenuTooltip) + submenuRow,
+      textWidth(l10n.helpTitle) + iconRow,
+      if (_monetization.monetizationEnabled)
+        textWidth(l10n.proMenuTooltip) + iconRow,
+      if (_monetization.privacyOptionsRequired)
+        textWidth(l10n.privacyOptionsMenuItem) + iconRow,
+      textWidth(l10n.privacyPolicyMenuItem) + iconRow,
+      textWidth(l10n.rateAppMenuItem) + iconRow,
+      textWidth(l10n.themeSystemOption) + checkRow,
+      textWidth(l10n.themeLightOption) + checkRow,
+      textWidth(l10n.themeDarkOption) + checkRow,
+      textWidth(l10n.languageAutomatic(detectedLanguage)) + checkRow + flag,
+      for (final locale in AppLocalizations.supportedLocales)
+        textWidth(nativeLanguageName(locale)) + checkRow + flag,
+    ];
+    // A little slack so sub-pixel rounding never tips a label that
+    // exactly fits onto a second line.
+    final widest = rows.reduce(max) + 4;
+    final available = MediaQuery.sizeOf(context).width - 2 * _menuScreenMargin;
+    return min(widest, max(0.0, available));
+  }
 
   /// Forces a menu row's own text/icon color onto [AppPalette.scoreText]
   /// (this app's primary foreground) instead of Material 3's
   /// auto-derived `onSurface`, matching the "explicit `AppColors`, not
   /// Material-derived" fix alongside [_menuStyle]. Shared by every
   /// `MenuItemButton` and `SubmenuButton` row in this menu.
-  ButtonStyle _menuItemStyle(BuildContext context) => ButtonStyle(
+  ///
+  /// [width] fixes every row — and with it the panel, which is exactly
+  /// as wide as its rows — at the menu's shared width; see
+  /// [_menuWidth]. (A width set on the `MenuStyle` itself has no effect:
+  /// a vertical menu sizes itself to its rows.) Rows keep their usual
+  /// minimum height and grow taller if a label wraps.
+  ButtonStyle _menuItemStyle(BuildContext context, {required double width}) =>
+      ButtonStyle(
         foregroundColor: WidgetStatePropertyAll(context.palette.scoreText),
         iconColor: WidgetStatePropertyAll(context.palette.scoreText),
+        minimumSize: WidgetStatePropertyAll(Size(width, 48)),
+        maximumSize: WidgetStatePropertyAll(Size(width, double.infinity)),
       );
 
   /// The single settings menu covering theme, language, and the Pro
@@ -348,8 +427,6 @@ class _SetupScreenState extends State<SetupScreen> {
   /// flat, one-tap `MenuItemButton`: a single purchase flow doesn't
   /// benefit from being tucked behind another expand step.
   Widget _buildOverflowMenu(AppLocalizations l10n) {
-    final menuStyle = _menuStyle(context);
-    final itemStyle = _menuItemStyle(context);
     // What "Automatic" currently means: the same resolution
     // `MaterialApp` applies to the device's locale list, so an
     // unsupported device language reads "Automatic (English)".
@@ -357,6 +434,10 @@ class _SetupScreenState extends State<SetupScreen> {
       WidgetsBinding.instance.platformDispatcher.locales,
       AppLocalizations.supportedLocales,
     ));
+    final menuWidth = _menuWidth(context, l10n, detectedLanguage);
+    final itemStyle = _menuItemStyle(context, width: menuWidth);
+    final menuStyle = _menuStyle(context);
+    final submenuStyle = _menuStyle(context, submenu: true);
     return MenuAnchor(
       key: const Key('overflowMenuAnchor'),
       style: menuStyle,
@@ -376,7 +457,10 @@ class _SetupScreenState extends State<SetupScreen> {
         SubmenuButton(
           key: const Key('themeSubmenu'),
           style: itemStyle,
-          menuStyle: menuStyle,
+          menuStyle: submenuStyle,
+          // Flush under its own row: the default offset is tuned for a
+          // submenu opening to the side.
+          alignmentOffset: Offset.zero,
           menuChildren: [
             MenuItemButton(
               key: const Key('themeOptionSystem'),
@@ -408,7 +492,10 @@ class _SetupScreenState extends State<SetupScreen> {
         SubmenuButton(
           key: const Key('languageSubmenu'),
           style: itemStyle,
-          menuStyle: menuStyle,
+          menuStyle: submenuStyle,
+          // Flush under its own row: the default offset is tuned for a
+          // submenu opening to the side.
+          alignmentOffset: Offset.zero,
           menuChildren: [
             MenuItemButton(
               key: const Key('languageOptionSystem'),
