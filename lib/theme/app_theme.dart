@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 /// [AppPalette] bundles every color role as a [ThemeExtension], so the
 /// same semantic names (background, surface, accent, ...) resolve to
 /// different actual colors depending on [ThemeData.brightness] — see
-/// [AppPalette.dark] (the original Phase 4B palette, unchanged) and
+/// [AppPalette.dark] (the default "Arena" look) and
 /// [AppPalette.light] (Phase 4F: a real light palette designed with the
 /// same contrast/role discipline, not just the dark colors inverted).
 /// Access it via `context.palette` (the [AppPaletteContext] extension
@@ -26,11 +26,38 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color error;
 
   /// Foreground for content drawn on top of [accent] (button labels, the
-  /// coin's face text) — black in both palettes, since both accent
-  /// oranges are light/saturated enough for black to stay the higher-
-  /// contrast choice, but kept as its own token rather than hardcoding
-  /// `Colors.black` at each call site.
+  /// coin's face text) — near-black in both palettes, since both accent
+  /// oranges are light/saturated enough for a dark label to stay the
+  /// higher-contrast choice.
   final Color onAccent;
+
+  /// A lighter tint of [accent] for accent-coloured *text* (the serving
+  /// side's name on the scoreboard), where the full-strength accent
+  /// reads too heavy at small sizes.
+  final Color accentSoft;
+
+  /// The lit spot on the toss coin's face — [accent] catching the light.
+  final Color accentHighlight;
+
+  /// Toolbar icons (back, mute, undo, reset) — a step below [scoreText]
+  /// so they sit back from the score.
+  final Color icon;
+
+  /// A quiet structural neutral: Player 1's field bar, and the outline
+  /// of a game pip not yet won.
+  final Color neutralBar;
+
+  /// Label and fill of a disabled primary button ("Start match" before
+  /// the toss).
+  final Color disabledText;
+  final Color disabledFill;
+
+  /// The wash behind the serving half of the scoreboard, at its
+  /// strongest (top) — it fades to transparent down the half.
+  final Color serverGlow;
+
+  /// The soft halo behind the serving side's score digits.
+  final Color scoreGlow;
 
   const AppPalette({
     required this.background,
@@ -44,37 +71,51 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.success,
     required this.error,
     required this.onAccent,
+    required this.accentSoft,
+    required this.accentHighlight,
+    required this.icon,
+    required this.neutralBar,
+    required this.disabledText,
+    required this.disabledFill,
+    required this.serverGlow,
+    required this.scoreGlow,
   });
 
-  /// The original Phase 4B palette. Dark is the default (not just
-  /// "supported"): a near-black background reads reliably under variable
-  /// hall lighting and glare, and gives the score digits the highest
-  /// achievable contrast. See PHASE4B_UI_POLISH.md.
+  /// The "Arena" palette: near-black, one orange accent. Dark is the
+  /// default (not just "supported"): a near-black background reads
+  /// reliably under variable hall lighting and glare, and gives the
+  /// score digits the highest achievable contrast. See
+  /// PHASE4B_UI_POLISH.md for that reasoning; the values themselves were
+  /// retuned for the Arena redesign.
   static const dark = AppPalette(
     // Near-black, not pure black — a very slightly blue-tinted dark tone
-    // reads as intentional/premium rather than a plain OLED-black void,
-    // and avoids the smearing pure black can show on some panels.
-    background: Color(0xFF0B0F14),
-    // One step up from background — app bar, dividers' surroundings.
-    surface: Color(0xFF141A21),
-    // The single accent color, used sparingly and only functionally: the
-    // serve/receive indicators and primary call-to-action buttons. A warm
-    // table-tennis-ball orange — distinct from the score's neutral white
-    // so the accent never competes with the score for attention.
+    // reads as intentional rather than a plain OLED-black void.
+    background: Color(0xFF07090D),
+    // One step up from background — cards, fields, selector tiles.
+    surface: Color(0xFF10141B),
+    // The single accent color: the serving side, the selected option,
+    // the primary call to action.
     accent: Color(0xFFFF8A34),
     accentDim: Color(0xFFCC6E29),
-    // Near-white, reserved for the score digits — the one element that
-    // should always read at maximum contrast against background.
+    // Near-white, for the score digits and primary text.
     scoreText: Color(0xFFF5F7FA),
-    // Muted foreground for everything that should visually defer to the
-    // score: player labels, games-won counts, headings.
-    mutedText: Color(0xFFA7B0BC),
-    // Even more muted — secondary hints, disabled-ish states.
-    faintText: Color(0xFF5B6472),
-    divider: Color(0xFF232B34),
+    // Secondary text: player labels, prompts.
+    mutedText: Color(0xFF8B95A3),
+    // Tertiary text: small labels and captions.
+    faintText: Color(0xFF5E6978),
+    // Surface borders and hairlines.
+    divider: Color(0xFF232A35),
     success: Color(0xFF35C46A),
     error: Color(0xFFE5484D),
-    onAccent: Colors.black,
+    onAccent: Color(0xFF07090D),
+    accentSoft: Color(0xFFFFB27A),
+    accentHighlight: Color(0xFFFFB27A),
+    icon: Color(0xFFC9D1DB),
+    neutralBar: Color(0xFF3A4350),
+    disabledText: Color(0xFF4A5362),
+    disabledFill: Color(0xFF141920),
+    serverGlow: Color(0x38FF8A34),
+    scoreGlow: Color(0x8CFF8A34),
   );
 
   /// Phase 4F's light palette. Built with the same role discipline as
@@ -97,7 +138,17 @@ class AppPalette extends ThemeExtension<AppPalette> {
     divider: Color(0xFFDEE1E6),
     success: Color(0xFF1B8F4C),
     error: Color(0xFFC22C2C),
-    onAccent: Colors.black,
+    onAccent: Color(0xFF07090D),
+    // On a light background the soft variant has to go *darker* than the
+    // accent to stay readable as text, not lighter.
+    accentSoft: Color(0xFFB8580F),
+    accentHighlight: Color(0xFFF59A5C),
+    icon: Color(0xFF3A4350),
+    neutralBar: Color(0xFFB4BBC6),
+    disabledText: Color(0xFF9AA2AE),
+    disabledFill: Color(0xFFE9ECF0),
+    serverGlow: Color(0x2EE06A1F),
+    scoreGlow: Color(0x4DE06A1F),
   );
 
   @override
@@ -113,6 +164,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? success,
     Color? error,
     Color? onAccent,
+    Color? accentSoft,
+    Color? accentHighlight,
+    Color? icon,
+    Color? neutralBar,
+    Color? disabledText,
+    Color? disabledFill,
+    Color? serverGlow,
+    Color? scoreGlow,
   }) {
     return AppPalette(
       background: background ?? this.background,
@@ -126,6 +185,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
       success: success ?? this.success,
       error: error ?? this.error,
       onAccent: onAccent ?? this.onAccent,
+      accentSoft: accentSoft ?? this.accentSoft,
+      accentHighlight: accentHighlight ?? this.accentHighlight,
+      icon: icon ?? this.icon,
+      neutralBar: neutralBar ?? this.neutralBar,
+      disabledText: disabledText ?? this.disabledText,
+      disabledFill: disabledFill ?? this.disabledFill,
+      serverGlow: serverGlow ?? this.serverGlow,
+      scoreGlow: scoreGlow ?? this.scoreGlow,
     );
   }
 
@@ -144,6 +211,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
       success: Color.lerp(success, other.success, t)!,
       error: Color.lerp(error, other.error, t)!,
       onAccent: Color.lerp(onAccent, other.onAccent, t)!,
+      accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
+      accentHighlight: Color.lerp(accentHighlight, other.accentHighlight, t)!,
+      icon: Color.lerp(icon, other.icon, t)!,
+      neutralBar: Color.lerp(neutralBar, other.neutralBar, t)!,
+      disabledText: Color.lerp(disabledText, other.disabledText, t)!,
+      disabledFill: Color.lerp(disabledFill, other.disabledFill, t)!,
+      serverGlow: Color.lerp(serverGlow, other.serverGlow, t)!,
+      scoreGlow: Color.lerp(scoreGlow, other.scoreGlow, t)!,
     );
   }
 }
@@ -166,6 +241,11 @@ extension AppPaletteContext on BuildContext {
 /// screen, so every other role (labels, buttons, headings) is
 /// deliberately smaller and lower-contrast, never competing with it.
 ///
+/// Two bundled families (see `pubspec.yaml`, `assets/fonts/`): Barlow
+/// for all UI text, in exactly two weights — 500 and 600 — and Barlow
+/// Condensed 900 for the score digits only. UI text is sentence case
+/// with next to no tracking; nothing here is all-caps.
+///
 /// Every style here is a method taking [BuildContext] (not a plain
 /// `const` field) specifically so its color resolves from the active
 /// [AppPalette] — a hardcoded color baked into a `const TextStyle` can't
@@ -179,48 +259,65 @@ extension AppPaletteContext on BuildContext {
 class AppTypography {
   AppTypography._();
 
+  static const uiFamily = 'Barlow';
+  static const scoreFamily = 'BarlowCondensed';
+
   static TextStyle scoreDisplay(BuildContext context) => TextStyle(
-        fontFamily: 'Roboto',
-        fontSize: 176,
+        fontFamily: scoreFamily,
+        fontSize: 250,
         height: 1.0,
         fontWeight: FontWeight.w900,
         color: context.palette.scoreText,
         fontFeatures: const [FontFeature.tabularFigures()],
-        letterSpacing: -2,
       );
 
   static TextStyle playerLabel(BuildContext context) => TextStyle(
-        fontFamily: 'Roboto',
-        fontSize: 19,
+        fontFamily: uiFamily,
+        fontSize: 18,
         fontWeight: FontWeight.w600,
         color: context.palette.mutedText,
-        letterSpacing: 0.1,
+        letterSpacing: 0.4,
       );
 
   static TextStyle compactPlayerLabel(BuildContext context) => TextStyle(
-        fontFamily: 'Roboto',
-        fontSize: 15,
+        fontFamily: uiFamily,
+        fontSize: 16,
         fontWeight: FontWeight.w600,
         color: context.palette.mutedText,
       );
 
   static TextStyle gamesLabel(BuildContext context) => TextStyle(
-        fontFamily: 'Roboto',
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
+        fontFamily: uiFamily,
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
         color: context.palette.faintText,
-        letterSpacing: 0.2,
       );
 
-  /// Short, all-caps-style "eyebrow" heading above a selector (e.g.
-  /// "Best of", "Gewinnsätze") — a common pattern for labeling a control
-  /// without competing with it visually.
+  /// A small label above a control or group (e.g. "Best of",
+  /// "Gewinnsätze", a doubles team's name) — names it without competing
+  /// with it.
   static TextStyle eyebrow(BuildContext context) => TextStyle(
-        fontFamily: 'Roboto',
+        fontFamily: uiFamily,
         fontSize: 13,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w500,
+        color: context.palette.faintText,
+      );
+
+  /// A sentence of guidance next to the control it refers to (the toss
+  /// prompt).
+  static TextStyle prompt(BuildContext context) => TextStyle(
+        fontFamily: uiFamily,
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
         color: context.palette.mutedText,
-        letterSpacing: 1.1,
+      );
+
+  /// The name inside a setup-screen player field.
+  static TextStyle fieldName(BuildContext context) => TextStyle(
+        fontFamily: uiFamily,
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: context.palette.scoreText,
       );
 
   /// The energetic "Let's Play!" phrase shown during the match-start
@@ -228,11 +325,10 @@ class AppTypography {
   /// full-screen moment's one focal point, but well below [scoreDisplay]
   /// since it's a brief flourish, not the score.
   static TextStyle transitionHeadline(BuildContext context) => TextStyle(
-        fontFamily: 'Roboto',
+        fontFamily: uiFamily,
         fontSize: 40,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w600,
         color: context.palette.scoreText,
-        letterSpacing: 0.3,
       );
 }
 
@@ -242,7 +338,10 @@ class AppMetrics {
   AppMetrics._();
 
   static const minTouchTarget = 56.0;
-  static const iconButtonSize = 26.0;
+
+  /// The scoreboard toolbar's icons and their hit targets.
+  static const iconButtonSize = 24.0;
+  static const toolbarTouchTarget = 44.0;
 }
 
 /// Builds the app's [ThemeData] for one [brightness] — [AppPalette.dark]
@@ -252,9 +351,8 @@ class AppMetrics {
 /// PHASE4F_THEME_AND_NAMES.md for why this became parameterized instead
 /// of the single hardcoded dark theme from Phase 4B.
 ThemeData buildAppTheme(Brightness brightness) {
-  final palette = brightness == Brightness.dark
-      ? AppPalette.dark
-      : AppPalette.light;
+  final palette =
+      brightness == Brightness.dark ? AppPalette.dark : AppPalette.light;
 
   final colorScheme = ColorScheme.fromSeed(
     seedColor: palette.accent,
@@ -275,12 +373,20 @@ ThemeData buildAppTheme(Brightness brightness) {
     // Committed explicitly rather than left to Material's default fallback
     // chain, so the app's typeface is the same deliberate choice on every
     // platform instead of drifting toward whatever each OS substitutes.
-    fontFamily: 'Roboto',
+    fontFamily: AppTypography.uiFamily,
     splashFactory: InkRipple.splashFactory,
     extensions: [palette],
     appBarTheme: AppBarTheme(
-      backgroundColor: palette.surface,
+      backgroundColor: palette.background,
       foregroundColor: palette.scoreText,
+      iconTheme:
+          IconThemeData(color: palette.icon, size: AppMetrics.iconButtonSize),
+      titleTextStyle: TextStyle(
+        fontFamily: AppTypography.uiFamily,
+        color: palette.scoreText,
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+      ),
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
@@ -289,17 +395,22 @@ ThemeData buildAppTheme(Brightness brightness) {
       style: IconButton.styleFrom(
         minimumSize:
             const Size(AppMetrics.minTouchTarget, AppMetrics.minTouchTarget),
-        foregroundColor: palette.scoreText,
-        disabledForegroundColor: palette.faintText,
+        foregroundColor: palette.icon,
+        disabledForegroundColor: palette.disabledText,
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: palette.accent,
         foregroundColor: palette.onAccent,
+        disabledBackgroundColor: palette.disabledFill,
+        disabledForegroundColor: palette.disabledText,
+        elevation: 0,
         minimumSize: const Size.fromHeight(AppMetrics.minTouchTarget),
         textStyle: const TextStyle(
-            fontFamily: 'Roboto', fontSize: 17, fontWeight: FontWeight.w700),
+            fontFamily: AppTypography.uiFamily,
+            fontSize: 17,
+            fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -311,7 +422,9 @@ ThemeData buildAppTheme(Brightness brightness) {
         side: BorderSide(color: palette.divider, width: 1.5),
         minimumSize: const Size.fromHeight(AppMetrics.minTouchTarget),
         textStyle: const TextStyle(
-            fontFamily: 'Roboto', fontSize: 16, fontWeight: FontWeight.w600),
+            fontFamily: AppTypography.uiFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -327,26 +440,40 @@ ThemeData buildAppTheme(Brightness brightness) {
         selectedForegroundColor: palette.onAccent,
         side: BorderSide(color: palette.divider),
         textStyle: const TextStyle(
-            fontFamily: 'Roboto', fontSize: 16, fontWeight: FontWeight.w700),
+            fontFamily: AppTypography.uiFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w600),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: palette.surface,
       contentTextStyle: TextStyle(
-          fontFamily: 'Roboto', color: palette.scoreText, fontSize: 15),
+          fontFamily: AppTypography.uiFamily,
+          color: palette.scoreText,
+          fontSize: 16,
+          fontWeight: FontWeight.w500),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: palette.divider),
+      ),
+      elevation: 0,
       behavior: SnackBarBehavior.floating,
       actionTextColor: palette.accent,
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: palette.surface,
+      surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(
-        fontFamily: 'Roboto',
+        fontFamily: AppTypography.uiFamily,
         color: palette.scoreText,
         fontSize: 20,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
       ),
       contentTextStyle: TextStyle(
-          fontFamily: 'Roboto', color: palette.mutedText, fontSize: 16),
+          fontFamily: AppTypography.uiFamily,
+          color: palette.mutedText,
+          fontSize: 16,
+          fontWeight: FontWeight.w500),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     tooltipTheme: TooltipThemeData(
@@ -355,7 +482,7 @@ ThemeData buildAppTheme(Brightness brightness) {
         borderRadius: BorderRadius.circular(6),
       ),
       textStyle: TextStyle(
-        fontFamily: 'Roboto',
+        fontFamily: AppTypography.uiFamily,
         color: palette.onAccent,
         fontWeight: FontWeight.w600,
         fontSize: 12,
@@ -363,7 +490,13 @@ ThemeData buildAppTheme(Brightness brightness) {
     ),
     popupMenuTheme: PopupMenuThemeData(
       color: palette.surface,
-      textStyle: TextStyle(fontFamily: 'Roboto', color: palette.scoreText),
+      surfaceTintColor: Colors.transparent,
+      textStyle: TextStyle(
+          fontFamily: AppTypography.uiFamily, color: palette.scoreText),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: palette.surface,
+      surfaceTintColor: Colors.transparent,
     ),
   );
 }

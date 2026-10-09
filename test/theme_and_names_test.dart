@@ -82,8 +82,8 @@ void main() {
       expect(AppPalette.light.accent, isNot(AppPalette.dark.accent));
     });
 
-    test('dark keeps the exact Phase 4B colors unchanged', () {
-      expect(AppPalette.dark.background, const Color(0xFF0B0F14));
+    test('dark uses the Arena palette colors', () {
+      expect(AppPalette.dark.background, const Color(0xFF07090D));
       expect(AppPalette.dark.scoreText, const Color(0xFFF5F7FA));
       expect(AppPalette.dark.accent, const Color(0xFFFF8A34));
     });
