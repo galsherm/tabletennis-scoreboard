@@ -4,7 +4,7 @@ description: >
   and doubles, voice announcements, English/German/French. Published on
   Google Play as com.kozmokramer.tabletennisscoreboard.
 publish_to: 'none'
-version: 0.1.0
+version: 0.1.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
